@@ -24,6 +24,8 @@ type AccountState = {
   setActiveAccount: (userId: string) => void;
   updateActive: (patch: Partial<Account>) => void;
   logoutActive: () => void;
+  logout: () => void; 
+
 };
 
 export const useAccountStore = create<AccountState>()(
@@ -93,7 +95,8 @@ export const useAccountStore = create<AccountState>()(
             activeAccountId: nextAccounts[0]?.userId ?? null,
           };
         });
-      },
+          },
+      logout: () => get().logoutActive(),
     }),
     {
       name: "bratnava.accounts.v1",

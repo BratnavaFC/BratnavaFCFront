@@ -49,7 +49,7 @@ http.interceptors.response.use(
         return http(original);
       } catch (e) {
         const active = useAccountStore.getState().getActive();
-        if (active?.userId) useAccountStore.getState().logout(active.userId);
+        //if (active?.userId) useAccountStore.getState().logout(active.userId);
       }
     }
     throw err;
