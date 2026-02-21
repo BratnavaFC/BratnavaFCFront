@@ -43,7 +43,7 @@ export default function Topbar() {
             <div className="flex items-center gap-2">
                 <div className="relative">
                     <select
-                        value={activeAccountId ?? ""}                 {/* ✅ nunca null */}
+                        value={activeAccountId ?? ""}               
                         onChange={(e) => setActiveAccount(e.target.value)}
                         className="input pr-10"
                     >
