@@ -276,13 +276,15 @@ export default function MatchesPage() {
 
     const stepKey = useMemo(() => {
         if (!current) return 'create';
-        const status = current.statusName ?? current.status;
 
-        if (status === 'Created' || status === 0) return 'invite';
-        if (status === 'TeamsGenerated' || status === 1) return 'teams';
-        if (status === 'Started' || status === 2) return 'playing';
-        if (status === 'Ended' || status === 3) return 'post';
-        if (status === 'Finalized' || status === 4) return 'done';
+        const statusName = current.statusName;  
+        const statusCode = current.status;      
+
+        if (statusName === 'Created' || statusCode === 0) return 'invite';
+        if (statusName === 'TeamsGenerated' || statusCode === 1) return 'teams';
+        if (statusName === 'Started' || statusCode === 2) return 'playing';
+        if (statusName === 'Ended' || statusCode === 3) return 'post';
+        if (statusName === 'Finalized' || statusCode === 4) return 'done';
 
         return 'invite';
     }, [current]);

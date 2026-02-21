@@ -4,10 +4,9 @@ import { LogOut, UserCircle2, ChevronDown } from "lucide-react";
 import { useAccountStore } from "../auth/accountStore";
 import { getRole } from "../auth/guards";
 
-function roleLabel(role: number | null) {
-    if (role === 3) return "GodMode";
-    if (role === 2) return "Admin";
-    return "User";
+function roleLabel(role: string | null) {
+    if (!role) return "User";
+    return role;
 }
 
 export default function Topbar() {
