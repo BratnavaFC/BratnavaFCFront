@@ -15,8 +15,18 @@ export function getUserIdFromJwt(token: string): string | null {
 }
 
 // ClaimTypes.Role normalmente vira "role"
-export function getRoleFromJwt(token: string): number | null {
-  const p = parseJwt(token);
-  const r = p?.role;
-  return r == null ? null : Number(r);
+export function getRoleFromJwt(token: string): string | null {
+    const p = parseJwt(token);
+    if (!p) return null;
+
+    // 1) formato moderno: "role"
+    if (typeof p.role === "string") return p.role;
+
+    // 2) formato .NET ClaimTypes.Role
+    const msKey = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+    const ms = p[msKey];
+
+    if (typeof ms === "string") return ms;
+
+    return null;
 }

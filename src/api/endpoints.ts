@@ -62,8 +62,8 @@ export const MatchesApi = {
   create: (groupId: string, dto: CreateMatchDto) => http.post(`/api/Matches/group/${groupId}`, dto),
   update: (groupId: string, matchId: string, dto: UpdateMatchDto) => http.put(`/api/Matches/group/${groupId}/${matchId}`, dto),
   syncPlayers: (groupId: string, matchId: string) => http.post(`/api/Matches/group/${groupId}/${matchId}/players/sync`),
-  accept: (groupId: string, matchId: string, dto: InviteActionDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/invite/accept`, dto),
-  reject: (groupId: string, matchId: string, dto: InviteActionDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/invite/reject`, dto),
+  accept: (groupId: string, matchId: string, dto: InviteActionDto) => http.patch(`/api/Matches/group/${groupId}/${matchId}/invite/accept`, dto),
+  reject: (groupId: string, matchId: string, dto: InviteActionDto) => http.patch(`/api/Matches/group/${groupId}/${matchId}/invite/reject`, dto),
   setColors: (groupId: string, matchId: string, dto: SetMatchColorsRequestDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/colors`, dto),
   start: (groupId: string, matchId: string) => http.post(`/api/Matches/group/${groupId}/${matchId}/start`),
   end: (groupId: string, matchId: string) => http.post(`/api/Matches/group/${groupId}/${matchId}/end`),
@@ -76,7 +76,7 @@ export const MatchesApi = {
   assignTeams: (groupId: string, matchId: string, dto: AssignTeamsDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/teams`, dto),
   swap: (groupId: string, matchId: string, dto: SwapPlayersDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/swap`, dto),
   finalize: (groupId: string, matchId: string) => http.post(`/api/Matches/group/${groupId}/${matchId}/finalize`),
-  details: (matchId: string) => http.get(`/api/Matches/${matchId}/details`),
+  details: (groupId: string, matchId: string) => http.get(`/api/Matches/group/${groupId}/${matchId}/details`),
 };
 
 export const TeamGenApi = {

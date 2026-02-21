@@ -1,25 +1,44 @@
-import React from 'react';
+import React, { useMemo } from "react";
 
-export function UniformPreview({ hex }: { hex: string }){
-  const stroke = '#0f172a';
-  const fill = hex || '#ffffff';
-  return (
-    <svg viewBox="0 0 220 220" className="w-full h-48">
-      <defs>
-        <linearGradient id="shirt" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor={fill} />
-          <stop offset="1" stopColor={fill} />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="220" height="220" rx="18" fill="#f8fafc" />
-      <path
-        d="M70 45 L95 30 Q110 20 125 30 L150 45 L175 70 L160 85 L150 75 L150 175 Q150 190 135 190 L85 190 Q70 190 70 175 L70 75 L60 85 L45 70 Z"
-        fill="url(#shirt)" stroke={stroke} strokeWidth="5" strokeLinejoin="round"
-      />
-      <path d="M100 35 Q110 45 120 35" fill="none" stroke={stroke} strokeWidth="5" strokeLinecap="round" />
-      <circle cx="110" cy="92" r="5" fill={stroke} opacity="0.6"/>
-      <circle cx="110" cy="112" r="5" fill={stroke} opacity="0.6"/>
-      <circle cx="110" cy="132" r="5" fill={stroke} opacity="0.6"/>
-    </svg>
-  );
+type Props = {
+    hex: string;
+    className?: string;
+};
+
+function normalizeHex(input: string) {
+    const v = (input ?? "").trim();
+    if (!v) return "#e2e8f0";
+    return v.startsWith("#") ? v : `#${v}`;
+}
+
+export function UniformPreview({ hex, className }: Props) {
+    const color = useMemo(() => normalizeHex(hex), [hex]);
+
+    return (
+        <div
+            className={className}
+            // variável CSS LOCAL (cada preview tem a sua)
+            style={{ ["--kit" as any]: color }}
+        >
+            <svg viewBox="0 0 220 220" className="w-full h-auto">
+                {/* camisa (exemplo) */}
+                <path
+                    d="M60 55 L90 35 L110 55 L130 35 L160 55 L145 85 L145 175 L75 175 L75 85 Z"
+                    fill="var(--kit)"
+                    stroke="#0f172a"
+                    strokeWidth="4"
+                    strokeLinejoin="round"
+                />
+
+                {/* detalhes (exemplo) */}
+                <path
+                    d="M90 35 L110 55 L130 35"
+                    fill="none"
+                    stroke="#0f172a"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                />
+            </svg>
+        </div>
+    );
 }
