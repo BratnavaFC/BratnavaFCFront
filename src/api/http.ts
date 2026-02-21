@@ -2,20 +2,16 @@
 import { useAccountStore } from "../auth/accountStore";
 import type { RefreshTokenDto } from "./generated/types";
 
-// ✅ Normaliza e valida env (evita cair no GitHub Pages sem perceber)
-const rawBaseURL = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-const baseURL = rawBaseURL.trim().replace(/\/+$/, ""); // remove trailing /
+const baseURL = (import.meta.env.VITE_API_URL as string | undefined)?.trim()?.replace(/\/+$/, "");
 
-function assertBaseUrl() {
-    if (!baseURL) {
-        // Mensagem bem direta pra debug em prod
-        throw new Error(
-            "VITE_API_URL não definido no build. Configure GitHub Actions vars.VITE_API_URL com https://bratnavafcapi.fly.dev"
-        );
-    }
+// ✅ debug: isso aparece no console do site publicado
+console.log("[CONFIG] VITE_API_URL =", baseURL);
+
+if (!baseURL) {
+    throw new Error(
+        "VITE_API_URL está vazio no build publicado. Configure GitHub Actions repo variable VITE_API_URL e faça novo deploy."
+    );
 }
-
-assertBaseUrl();
 
 export const http: AxiosInstance = axios.create({ baseURL });
 
@@ -37,7 +33,6 @@ async function doRefresh(): Promise<void> {
 
     const payload: RefreshTokenDto = { refreshToken: active.refreshToken } as any;
 
-    // ✅ Use o mesmo client (baseURL garantido) e caminho relativo
     const res = await http.post("/api/Authentication/refresh-token", payload, {
         headers: active.accessToken
             ? { Authorization: `Bearer ${active.accessToken}` }
@@ -60,21 +55,14 @@ http.interceptors.response.use(
 
         if (status === 401 && !original?._retry) {
             original._retry = true;
-
             try {
-                if (!refreshPromise) {
-                    refreshPromise = doRefresh().finally(() => (refreshPromise = null));
-                }
+                if (!refreshPromise) refreshPromise = doRefresh().finally(() => (refreshPromise = null));
                 await refreshPromise;
-
-                // ✅ reexecuta a request original já com token atualizado
                 return http(original);
             } catch {
-                // ✅ seu store não tem logout(userId). Use logout() (que chama logoutActive())
-                useAccountStore.getState().logout();
+                useAccountStore.getState().logout(); // ✅ no seu store existe logout()
             }
         }
-
         throw err;
     }
 );
