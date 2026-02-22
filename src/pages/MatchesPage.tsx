@@ -1222,8 +1222,8 @@ export default function MatchesPage() {
                                                         </select>
 
                                                         <MiniShirt
-                                                            color={teamAColor?.hexValue ?? current.teamAColor?.hexValue ?? "#e2e8f0"}
-                                                            label={teamAColor?.name ?? current.teamAColor?.name ?? "—"}
+                                                            color={teamAColor?.hexValue ?? current?.teamAColor?.hexValue ?? "#e2e8f0"}
+                                                            label={teamAColor?.name ?? current?.teamAColor?.name ?? "—"}
                                                         />
                                                     </div>
 
@@ -1241,8 +1241,8 @@ export default function MatchesPage() {
                                                         </select>
 
                                                         <MiniShirt
-                                                            color={teamBColor?.hexValue ?? current.teamBColor?.hexValue ?? "#e2e8f0"}
-                                                            label={teamBColor?.name ?? current.teamBColor?.name ?? "—"}
+                                                            color={teamBColor?.hexValue ?? current?.teamBColor?.hexValue ?? "#e2e8f0"}
+                                                            label={teamBColor?.name ?? current?.teamBColor?.name ?? "—"}
                                                         />
                                                     </div>
 
@@ -1459,7 +1459,7 @@ export default function MatchesPage() {
                                                 <div className="mt-3 flex items-center justify-between gap-3">
                                                     <div className="text-xs text-slate-500">
                                                         MVP atual:{" "}
-                                                        <b>{current.computedMvp?.playerName?.trim() ? current.computedMvp.playerName : "—"}</b>
+                                                        <b>{current?.computedMvp?.playerName?.trim() ? current!.computedMvp!.playerName : "—"}</b>
                                                     </div>
 
                                                     <button

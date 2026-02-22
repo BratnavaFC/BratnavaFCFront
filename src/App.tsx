@@ -14,6 +14,7 @@ import MatchesPage from './pages/MatchesPage';
 import HistoryPage from './pages/HistoryPage';
 import MatchDetailsPage from './pages/MatchDetailsPage';
 import UsersAdminPage from './pages/admin/UsersAdminPage';
+import VisualStatsPage from "./pages/VisualStatsPage";
 
 export default function App(){
   return (
@@ -37,6 +38,7 @@ export default function App(){
         <Route path="matches" element={<MatchesPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="history/:groupId/:matchId" element={<MatchDetailsPage />} />
+        <Route path="groups/:groupId/visual-stats" element={<VisualStatsPage />} />
 
         <Route
           path="settings"
