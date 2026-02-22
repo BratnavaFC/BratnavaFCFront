@@ -357,7 +357,7 @@ export default function MatchesPage() {
     const stepKey = useMemo(() => {
         if (!current) return "create";
 
-        const s = Number(current.status);
+        const s = Number(current?.status);
 
         if (s === 0) return "create";
         if (s === 1) return "accept";
@@ -390,9 +390,9 @@ export default function MatchesPage() {
     const allPlayers = useMemo<PlayerInMatchDto[]>(() => {
         if (!current) return [];
         return [
-            ...(current.unassignedPlayers ?? []),
-            ...(current.teamAPlayers ?? []),
-            ...(current.teamBPlayers ?? []),
+            ...(current?.unassignedPlayers ?? []),
+            ...(current?.teamAPlayers ?? []),
+            ...(current?.teamBPlayers ?? []),
         ];
     }, [current]);
 
@@ -400,8 +400,8 @@ export default function MatchesPage() {
         if (!current) return [];
 
         // Fonte mais confiável: times setados
-        const a = Array.isArray(current.teamAPlayers) ? current.teamAPlayers : [];
-        const b = Array.isArray(current.teamBPlayers) ? current.teamBPlayers : [];
+        const a = Array.isArray(current?.teamAPlayers) ? current?.teamAPlayers : [];
+        const b = Array.isArray(current?.teamBPlayers) ? current?.teamBPlayers : [];
 
         const base = [...a, ...b];
 
@@ -526,8 +526,8 @@ export default function MatchesPage() {
     useEffect(() => {
         if (!current) return;
 
-        const aId = current.teamAColor?.id ?? "";
-        const bId = current.teamBColor?.id ?? "";
+        const aId = current?.teamAColor?.id ?? "";
+        const bId = current?.teamBColor?.id ?? "";
 
         const alreadySet = !!aId || !!bId;
 
@@ -751,16 +751,16 @@ export default function MatchesPage() {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center justify-between">
                         <div className="font-semibold text-slate-900">Times setados • Time A</div>
-                        <span className="pill">{current.teamAPlayers.length}</span>
+                        <span className="pill">{current?.teamAPlayers.length}</span>
                     </div>
-                    {renderPlayers(current.teamAPlayers)}
+                    {renderPlayers(current?.teamAPlayers)}
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center justify-between">
                         <div className="font-semibold text-slate-900">Times setados • Time B</div>
-                        <span className="pill">{current.teamBPlayers.length}</span>
+                        <span className="pill">{current?.teamBPlayers.length}</span>
                     </div>
-                    {renderPlayers(current.teamBPlayers)}
+                    {renderPlayers(current?.teamBPlayers)}
                 </div>
             </div>
         );
@@ -1026,7 +1026,7 @@ export default function MatchesPage() {
                                         <div className="min-w-0">
                                             <div className="font-semibold">Partida Atual</div>
                                             <div className="muted mt-1 truncate">
-                                                {current?.playedAt ? new Date(current.playedAt).toLocaleString() : "—"} •{" "}
+                                                {current?.playedAt ? new Date(current?.playedAt).toLocaleString() : "—"} •{" "}
                                                 {current?.placeName ?? "—"}
                                             </div>
                                             <div className="muted">Status: {String(current?.statusName ?? current?.status)}</div>
@@ -1475,10 +1475,10 @@ export default function MatchesPage() {
                                                 <div className="mt-4">
                                                     <div className="text-sm font-semibold text-slate-900">Parciais</div>
                                                     <div className="mt-2 grid gap-2">
-                                                        {(current.voteCounts ?? []).length === 0 ? (
+                                                        {(current?.voteCounts ?? []).length === 0 ? (
                                                             <div className="muted">Sem votos ainda.</div>
                                                         ) : (
-                                                            (current.voteCounts ?? []).map((v) => (
+                                                            (current?.voteCounts ?? []).map((v) => (
                                                                 <div
                                                                     key={v.votedForMatchPlayerId}
                                                                     className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
@@ -1511,7 +1511,7 @@ export default function MatchesPage() {
 
                                                     <div className="mt-3 flex items-center justify-between">
                                                         <div className="text-xs text-slate-500">
-                                                            Atual: <b>{current.teamAGoals ?? "—"}</b> x <b>{current.teamBGoals ?? "—"}</b>
+                                                            Atual: <b>{current?.teamAGoals ?? "—"}</b> x <b>{current?.teamBGoals ?? "—"}</b>
                                                         </div>
 
                                                         <button
@@ -1588,10 +1588,10 @@ export default function MatchesPage() {
                                                     <div className="mt-4">
                                                         <div className="text-sm font-semibold text-slate-900">Lista de gols</div>
                                                         <div className="mt-2 grid gap-2">
-                                                            {(current.goals ?? []).length === 0 ? (
+                                                            {(current?.goals ?? []).length === 0 ? (
                                                                 <div className="muted">Sem gols.</div>
                                                             ) : (
-                                                                (current.goals ?? []).map((g) => (
+                                                                (current?.goals ?? []).map((g) => (
                                                                     <div key={g.goalId} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                                                                         <div className="min-w-0">
                                                                             <div className="font-medium text-slate-900 truncate">
@@ -1634,10 +1634,10 @@ export default function MatchesPage() {
                                         </div>
 
                                         <div className="mt-3 text-sm">
-                                            Placar: <b>{current.teamAGoals ?? "—"}</b> x <b>{current.teamBGoals ?? "—"}</b>
+                                            Placar: <b>{current?.teamAGoals ?? "—"}</b> x <b>{current?.teamBGoals ?? "—"}</b>
                                         </div>
                                         <div className="mt-1 text-sm">
-                                            MVP: <b>{current.computedMvp?.playerName ?? "—"}</b>
+                                            MVP: <b>{current?.computedMvp?.playerName ?? "—"}</b>
                                         </div>
                                     </div>
                                 ) : null}
