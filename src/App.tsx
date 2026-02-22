@@ -36,7 +36,7 @@ export default function App(){
         <Route path="team-colors" element={<TeamColorsPage />} />
         <Route path="matches" element={<MatchesPage />} />
         <Route path="history" element={<HistoryPage />} />
-        <Route path="history/:matchId" element={<MatchDetailsPage />} />
+        <Route path="history/:groupId/:matchId" element={<MatchDetailsPage />} />
 
         <Route
           path="settings"

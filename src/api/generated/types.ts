@@ -16,8 +16,8 @@ export interface AddGoalsBulkRequestDto {
 }
 
 export interface AssignTeamsDto {
-  teamAMatchPlayerIds?: string[];
-  teamBMatchPlayerIds?: string[];
+    TeamAMatchPlayerIds?: string[];
+    TeamBMatchPlayerIds?: string[];
 }
 
 export interface CreateGroupDto {
