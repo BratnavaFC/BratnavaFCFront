@@ -45,6 +45,8 @@ export const PlayersApi = {
   remove: (playerId: string) => http.delete(`/api/Players/${playerId}`),
   inactivate: (playerId: string) => http.post(`/api/Players/${playerId}/inactivate`),
   reactivate: (playerId: string) => http.post(`/api/Players/${playerId}/reactivate`),
+  mine: () => http.get("/api/Players/mine"),
+  byUser: (userId: string) => http.get(`/api/Players/by-user/${userId}`),
 };
 
 export const TeamColorApi = {
