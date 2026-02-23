@@ -1,4 +1,4 @@
-# Bratnava Frontend (React)
+# Bratnava Frontend (React)  
 
 Gerado em 2026-02-21 a partir do `swagger.json` do BratnavaAPI.
 
