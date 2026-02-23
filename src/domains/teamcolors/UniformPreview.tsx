@@ -17,27 +17,43 @@ export function UniformPreview({ hex, className }: Props) {
     return (
         <div
             className={className}
-            // variável CSS LOCAL (cada preview tem a sua)
             style={{ ["--kit" as any]: color }}
         >
-            <svg viewBox="0 0 220 220" className="w-full h-auto">
-                {/* camisa (exemplo) */}
+            <svg viewBox="0 0 240 220" className="w-full h-auto">
+
+                {/* Camisa clean */}
                 <path
-                    d="M60 55 L90 35 L110 55 L130 35 L160 55 L145 85 L145 175 L75 175 L75 85 Z"
+                    d="
+            M80 55
+            L105 40
+            L120 55
+            L135 40
+            L160 55
+            L185 70
+            L170 95
+            L160 90
+            L160 185
+            L80 185
+            L80 90
+            L70 95
+            L55 70
+            Z
+          "
                     fill="var(--kit)"
                     stroke="#0f172a"
-                    strokeWidth="4"
+                    strokeWidth="2"
                     strokeLinejoin="round"
                 />
 
-                {/* detalhes (exemplo) */}
+                {/* Gola simples */}
                 <path
-                    d="M90 35 L110 55 L130 35"
+                    d="M105 40 L120 60 L135 40"
                     fill="none"
                     stroke="#0f172a"
-                    strokeWidth="4"
+                    strokeWidth="2"
                     strokeLinecap="round"
                 />
+
             </svg>
         </div>
     );
