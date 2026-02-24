@@ -97,6 +97,29 @@ type MatchDetailsDto = {
     goals?: GoalDto[];
 };
 
+type PlayerWeightDto = {
+    playerId: string;
+    weight: number; // EffectiveWinRate
+};
+
+type TeamOptionDto = {
+    teamA: PlayerWeightDto[];
+    teamB: PlayerWeightDto[];
+    unassigned: PlayerWeightDto[];
+
+    teamAWeight: number;
+    teamBWeight: number;
+
+    balanceDiff: number;
+    goalkeeperDiff: number;
+    synergyTotal: number;
+    score: number;
+};
+
+type TeamsOptionsResultDto = {
+    options: TeamOptionDto[];
+};
+
 const InviteResponse = {
     None: 1,
     Rejected: 2,
@@ -271,12 +294,21 @@ export default function MatchesPage() {
     const [removingGoal, setRemovingGoal] = useState<Record<string, boolean>>({});
     const [finalizing, setFinalizing] = useState(false);
 
+    const [teamGenOptions, setTeamGenOptions] = useState<TeamOptionDto[] | null>(null);
+    const [selectedTeamGenIdx, setSelectedTeamGenIdx] = useState<number>(0);
+
     const maxPlayers = useMemo(() => getMaxPlayers(groupSettings), [groupSettings]);
 
     const placeNameOk = placeName.trim().length > 0;
     const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(playedAtDate);
     const timeOk = isValidHHmm(playedAtTime);
     const canCreateMatch = admin && !!groupId && placeNameOk && dateOk && timeOk && !creating;
+
+    function normalizeTeamGenOptions(data: any): TeamOptionDto[] {
+        const opts = (data?.options ?? data?.Options ?? data?.items ?? data) as any;
+        if (!Array.isArray(opts)) return [];
+        return opts;
+    }
 
     function pickActiveMatch(list: any[]) {
         if (!Array.isArray(list) || list.length === 0) return null;
@@ -290,6 +322,140 @@ export default function MatchesPage() {
         if (!groupId || !matchId) return;
         const res = await MatchesApi.details(groupId, matchId);
         setCurrent(res.data as MatchDetailsDto);
+    }
+
+    function fmt(n: number) {
+        if (!Number.isFinite(n)) return "—";
+        return n.toFixed(3);
+    }
+
+    function TeamGenCarousel({
+        options,
+        selectedIndex,
+        onSelect,
+        adminView,
+        byPlayerId,
+    }: {
+        options: TeamOptionDto[];
+        selectedIndex: number;
+        onSelect: (idx: number) => void;
+        adminView: boolean;
+        byPlayerId: Map<string, PlayerInMatchDto>;
+    }) {
+        const safeIdx = Math.max(0, Math.min(selectedIndex, options.length - 1));
+        const opt = options[safeIdx];
+
+        const renderTeam = (title: string, list: PlayerWeightDto[]) => (
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-center justify-between">
+                    <div className="font-semibold text-slate-900">{title}</div>
+                    <span className="pill">{list.length}</span>
+                </div>
+
+                <ul className="mt-3 space-y-2 text-sm">
+                    {list.map((x) => {
+                        const p = byPlayerId.get(x.playerId);
+                        const name = p?.playerName ?? x.playerId;
+                        const isGk = !!p?.isGoalkeeper;
+
+                        return (
+                            <li
+                                key={x.playerId}
+                                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                            >
+                                <span className="truncate font-medium text-slate-900">
+                                    {name} {isGk ? <span title="Goleiro">🧤</span> : null}
+                                </span>
+
+                                {adminView ? (
+                                    <span className="text-xs font-mono text-slate-600">
+                                        {fmt(x.weight)}
+                                    </span>
+                                ) : null}
+                            </li>
+                        );
+                    })}
+
+                    {list.length === 0 ? <li className="text-slate-500">Nenhum.</li> : null}
+                </ul>
+            </div>
+        );
+
+        return (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <div className="font-semibold text-slate-900">Opções geradas</div>
+                        <div className="text-xs text-slate-500">
+                            {adminView
+                                ? "Escolha 1 opção no carrossel. Pesos são EffectiveWinRate."
+                                : "Aguardando opção escolhida pelo admin."}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            className={cls("btn h-9", safeIdx <= 0 && "opacity-50 pointer-events-none")}
+                            disabled={safeIdx <= 0}
+                            onClick={() => onSelect(safeIdx - 1)}
+                            title="Anterior"
+                        >
+                            ◀
+                        </button>
+                        <button
+                            className={cls("btn h-9", safeIdx >= options.length - 1 && "opacity-50 pointer-events-none")}
+                            disabled={safeIdx >= options.length - 1}
+                            onClick={() => onSelect(safeIdx + 1)}
+                            title="Próximo"
+                        >
+                            ▶
+                        </button>
+                    </div>
+                </div>
+
+                {/* “dots” */}
+                <div className="mt-3 flex items-center justify-center gap-2">
+                    {options.map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => onSelect(i)}
+                            className={cls(
+                                "h-2.5 w-2.5 rounded-full",
+                                i === safeIdx ? "bg-slate-900" : "bg-slate-300 hover:bg-slate-400"
+                            )}
+                            title={`Opção ${i + 1}`}
+                        />
+                    ))}
+                </div>
+
+                {/* resumo admin */}
+                {adminView ? (
+                    <div className="mt-3 grid md:grid-cols-4 gap-2 text-xs">
+                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <div className="text-slate-500">A weight</div>
+                            <div className="font-semibold text-slate-900">{fmt(opt.teamAWeight)}</div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <div className="text-slate-500">B weight</div>
+                            <div className="font-semibold text-slate-900">{fmt(opt.teamBWeight)}</div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <div className="text-slate-500">Diff</div>
+                            <div className="font-semibold text-slate-900">{fmt(opt.balanceDiff)}</div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <div className="text-slate-500">GK diff</div>
+                            <div className="font-semibold text-slate-900">{opt.goalkeeperDiff ?? 0}</div>
+                        </div>
+                    </div>
+                ) : null}
+
+                <div className="mt-4 grid md:grid-cols-2 gap-4">
+                    {renderTeam(`Opção ${safeIdx + 1} • Time A`, opt.teamA)}
+                    {renderTeam(`Opção ${safeIdx + 1} • Time B`, opt.teamB)}
+                </div>
+            </div>
+        );
     }
 
     async function loadList() {
@@ -583,9 +749,13 @@ export default function MatchesPage() {
 
         if (players.length < 2) return;
 
-        const req = { players, strategyType, playersPerTeam, includeGoalkeepers };
+        const req = { players, strategyType, playersPerTeam, includeGoalkeepers, optionsCount: 3 };
+
         const res = await TeamGenApi.generate(req as any);
-        setCurrent((c: any) => ({ ...c, generatedTeams: res.data }));
+        const options = normalizeTeamGenOptions(res.data);
+
+        setTeamGenOptions(options);
+        setSelectedTeamGenIdx(0); // por padrão escolhe a primeira
     }
 
     async function setColorsRandomDistinct() {
@@ -623,29 +793,6 @@ export default function MatchesPage() {
         return a > 0 && b > 0;
     }, [current?.teamAPlayers, current?.teamBPlayers]);
 
-    async function assignTeamsFromGenerated() {
-        if (!admin || !groupId || !currentMatchId) return;
-
-        const gt = (current as any)?.generatedTeams as GeneratedTeamsDto | undefined;
-        if (!gt) return;
-
-        const teamAPlayerIds = Array.isArray(gt.teamA) ? gt.teamA : [];
-        const teamBPlayerIds = Array.isArray(gt.teamB) ? gt.teamB : [];
-
-        if (teamAPlayerIds.length === 0 || teamBPlayerIds.length === 0) return;
-
-        setAssigningTeams(true);
-        try {
-            await MatchesApi.assignTeams(groupId, currentMatchId, {
-                TeamAMatchPlayerIds: teamAPlayerIds,
-                TeamBMatchPlayerIds: teamBPlayerIds,
-            } as any);
-            await refreshCurrent();
-        } finally {
-            setAssigningTeams(false);
-        }
-    }
-
     async function swapPlayers() {
         if (!admin || !groupId || !currentMatchId) return;
         if (!swapA || !swapB) return;
@@ -665,11 +812,13 @@ export default function MatchesPage() {
     }
 
     const canAssignTeams = useMemo(() => {
-        const gt = (current as any)?.generatedTeams as GeneratedTeamsDto | undefined;
-        const a = gt?.teamA?.length ?? 0;
-        const b = gt?.teamB?.length ?? 0;
-        return admin && !teamsAlreadyAssigned && a > 0 && b > 0;
-    }, [admin, current, teamsAlreadyAssigned]);
+        if (!admin) return false;
+        if (teamsAlreadyAssigned) return false;
+        const opt = teamGenOptions?.[Math.max(0, Math.min(selectedTeamGenIdx, (teamGenOptions?.length ?? 1) - 1))];
+        const a = opt?.teamA?.length ?? 0;
+        const b = opt?.teamB?.length ?? 0;
+        return a > 0 && b > 0;
+    }, [admin, teamsAlreadyAssigned, teamGenOptions, selectedTeamGenIdx]);
 
     const canSwap = admin && teamsAlreadyAssigned;
 
@@ -684,101 +833,54 @@ export default function MatchesPage() {
     );
 
     const generatedTeamsView = useMemo(() => {
-        const gt = (current as any)?.generatedTeams as GeneratedTeamsDto | undefined;
-        if (!gt || !current) return null;
+        if (!current) return null;
+        if (!teamGenOptions || teamGenOptions.length === 0) return null;
 
-        const teamAIds = Array.isArray(gt.teamA) ? gt.teamA : [];
-        const teamBIds = Array.isArray(gt.teamB) ? gt.teamB : [];
+        const opt = teamGenOptions[Math.max(0, Math.min(selectedTeamGenIdx, teamGenOptions.length - 1))];
 
         const byPlayerId = new Map<string, PlayerInMatchDto>();
         for (const p of allPlayers) {
             if (p?.playerId) byPlayerId.set(p.playerId, p);
         }
 
-        const renderList = (ids: string[]) => (
-            <ul className="mt-3 space-y-2 text-sm">
-                {ids.map((playerId) => {
-                    const p = byPlayerId.get(playerId);
-                    const name = p?.playerName ?? playerId;
-                    const isGk = !!p?.isGoalkeeper;
-
-                    return (
-                        <li
-                            key={playerId}
-                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2"
-                        >
-                            <span className="truncate font-medium text-slate-900">
-                                {name} {isGk ? <span title="Goleiro">🧤</span> : null}
-                            </span>
-                            <span className="text-xs text-slate-500 truncate">{playerId}</span>
-                        </li>
-                    );
-                })}
-                {ids.length === 0 ? <li className="text-slate-500">Nenhum.</li> : null}
-            </ul>
-        );
-
+        // ADMIN: mostra pesos; USER: só nomes
         return (
-            <div className="mt-4 grid md:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="font-semibold text-slate-900">Prévia • Time A</div>
-                        <span className="pill">{teamAIds.length}</span>
-                    </div>
-                    {renderList(teamAIds)}
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="font-semibold text-slate-900">Prévia • Time B</div>
-                        <span className="pill">{teamBIds.length}</span>
-                    </div>
-                    {renderList(teamBIds)}
-                </div>
-            </div>
+            <TeamGenCarousel
+                options={teamGenOptions}
+                selectedIndex={selectedTeamGenIdx}
+                onSelect={setSelectedTeamGenIdx}
+                adminView={admin}
+                byPlayerId={byPlayerId}
+            />
         );
-    }, [current, allPlayers]);
+    }, [current, allPlayers, teamGenOptions, selectedTeamGenIdx, admin]);
 
-    const assignedTeamsView = useMemo(() => {
-        if (!current) return null;
-        if (!teamsAlreadyAssigned) return null;
+    async function assignTeamsFromGenerated() {
+        if (!admin || !groupId || !currentMatchId) return;
+        if (!teamGenOptions || teamGenOptions.length === 0) return;
 
-        const renderPlayers = (ps: PlayerInMatchDto[]) => (
-            <ul className="mt-3 space-y-2 text-sm">
-                {ps.map((p) => (
-                    <li
-                        key={p.playerId}
-                        className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2"
-                    >
-                        <span className="truncate font-medium text-slate-900">
-                            {p.playerName} {p.isGoalkeeper ? <span title="Goleiro">🧤</span> : null}
-                        </span>
-                        <span className="text-xs text-slate-500 truncate">{p.playerId}</span>
-                    </li>
-                ))}
-                {ps.length === 0 ? <li className="text-slate-500">Nenhum.</li> : null}
-            </ul>
-        );
+        const opt = teamGenOptions[Math.max(0, Math.min(selectedTeamGenIdx, teamGenOptions.length - 1))];
 
-        return (
-            <div className="mt-4 grid md:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="font-semibold text-slate-900">Times setados • Time A</div>
-                        <span className="pill">{current?.teamAPlayers.length}</span>
-                    </div>
-                    {renderPlayers(current?.teamAPlayers)}
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="font-semibold text-slate-900">Times setados • Time B</div>
-                        <span className="pill">{current?.teamBPlayers.length}</span>
-                    </div>
-                    {renderPlayers(current?.teamBPlayers)}
-                </div>
-            </div>
-        );
-    }, [current, teamsAlreadyAssigned]);
+        const teamAPlayerIds = Array.isArray(opt.teamA) ? opt.teamA.map(x => x.playerId) : [];
+        const teamBPlayerIds = Array.isArray(opt.teamB) ? opt.teamB.map(x => x.playerId) : [];
+
+        if (teamAPlayerIds.length === 0 || teamBPlayerIds.length === 0) return;
+
+        setAssigningTeams(true);
+        try {
+            await MatchesApi.assignTeams(groupId, currentMatchId, {
+                TeamAMatchPlayerIds: teamAPlayerIds,
+                TeamBMatchPlayerIds: teamBPlayerIds,
+            } as any);
+
+            // depois que setou, você pode limpar o preview local (opcional)
+            // setTeamGenOptions(null);
+
+            await refreshCurrent();
+        } finally {
+            setAssigningTeams(false);
+        }
+    }
 
     const canStartNow = useMemo(() => {
         return admin && stepKey === "teams" && teamsAlreadyAssigned;
@@ -942,7 +1044,32 @@ export default function MatchesPage() {
         const a = current?.teamAPlayers ?? [];
         const b = current?.teamBPlayers ?? [];
 
-        const renderPlayers = (ps: PlayerInMatchDto[]) => (
+        const byPlayerId = new Map<string, PlayerInMatchDto>();
+        for (const p of allPlayers) if (p?.playerId) byPlayerId.set(p.playerId, p);
+
+        const renderNamesFromIds = (list: PlayerWeightDto[]) => (
+            <ul className="mt-3 space-y-2 text-sm">
+                {list.map((x) => {
+                    const p = byPlayerId.get(x.playerId);
+                    const name = p?.playerName ?? x.playerId;
+                    const isGk = !!p?.isGoalkeeper;
+
+                    return (
+                        <li
+                            key={x.playerId}
+                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                        >
+                            <span className="truncate font-medium text-slate-900">
+                                {name} {isGk ? <span title="Goleiro">🧤</span> : null}
+                            </span>
+                        </li>
+                    );
+                })}
+                {list.length === 0 ? <li className="text-slate-500">Aguardando admin.</li> : null}
+            </ul>
+        );
+
+        const renderPlayersAssigned = (ps: PlayerInMatchDto[]) => (
             <ul className="mt-3 space-y-2 text-sm">
                 {ps.map((p) => (
                     <li
@@ -952,12 +1079,48 @@ export default function MatchesPage() {
                         <span className="truncate font-medium text-slate-900">
                             {p.playerName} {p.isGoalkeeper ? <span title="Goleiro">🧤</span> : null}
                         </span>
-                        <span className="text-xs text-slate-500 truncate">{p.playerId}</span>
                     </li>
                 ))}
                 {ps.length === 0 ? <li className="text-slate-500">Aguardando admin definir times.</li> : null}
             </ul>
         );
+
+        // se já setou times, segue normal (visualização)
+        if (teamsAlreadyAssigned) {
+            return (
+                <div className="card p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <div className="font-semibold">MatchMaking</div>
+                            <div className="text-xs text-slate-500">Somente visualização (admin controla)</div>
+                        </div>
+                        <span className="pill">Times definidos</span>
+                    </div>
+
+                    <div className="mt-4 grid md:grid-cols-2 gap-4">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="font-semibold text-slate-900">Time A</div>
+                                <span className="pill">{a.length}</span>
+                            </div>
+                            <MiniShirt color={current?.teamAColor?.hexValue ?? "#e2e8f0"} label={current?.teamAColor?.name ?? "—"} />
+                            {renderPlayersAssigned(a)}
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="font-semibold text-slate-900">Time B</div>
+                                <span className="pill">{b.length}</span>
+                            </div>
+                            <MiniShirt color={current?.teamBColor?.hexValue ?? "#e2e8f0"} label={current?.teamBColor?.name ?? "—"} />
+                            {renderPlayersAssigned(b)}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // se não setou times ainda, mas admin já escolheu/gerou preview local
+        const opt = teamGenOptions?.[Math.max(0, Math.min(selectedTeamGenIdx, (teamGenOptions?.length ?? 1) - 1))];
 
         return (
             <div className="card p-4">
@@ -966,34 +1129,26 @@ export default function MatchesPage() {
                         <div className="font-semibold">MatchMaking</div>
                         <div className="text-xs text-slate-500">Somente visualização (admin controla)</div>
                     </div>
-                    <span className="pill">{teamsAlreadyAssigned ? "Times definidos" : "Aguardando"}</span>
+                    <span className="pill">{opt ? `Opção ${Math.max(0, selectedTeamGenIdx) + 1} escolhida` : "Aguardando"}</span>
                 </div>
 
-                <div className="mt-4 grid md:grid-cols-2 gap-4">
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center justify-between">
-                            <div className="font-semibold text-slate-900">Time A</div>
-                            <span className="pill">{a.length}</span>
+                {!opt ? (
+                    <div className="mt-4 text-sm text-slate-500">Aguardando admin definir times.</div>
+                ) : (
+                    <div className="mt-4 grid md:grid-cols-2 gap-4">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="font-semibold text-slate-900">Prévia • Time A</div>
+                            {renderNamesFromIds(opt.teamA)}
                         </div>
-                        <MiniShirt color={current?.teamAColor?.hexValue ?? "#e2e8f0"} label={current?.teamAColor?.name ?? "—"} />
-                        {renderPlayers(a)}
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center justify-between">
-                            <div className="font-semibold text-slate-900">Time B</div>
-                            <span className="pill">{b.length}</span>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="font-semibold text-slate-900">Prévia • Time B</div>
+                            {renderNamesFromIds(opt.teamB)}
                         </div>
-                        <MiniShirt color={current?.teamBColor?.hexValue ?? "#e2e8f0"} label={current?.teamBColor?.name ?? "—"} />
-                        {renderPlayers(b)}
                     </div>
-                </div>
-
-                {(current as any)?.generatedTeams ? (
-                    <div className="mt-3 text-xs text-slate-500">Prévia de times foi gerada pelo admin (não editável).</div>
-                ) : null}
+                )}
             </div>
         );
-    }, [current, teamsAlreadyAssigned]);
+    }, [current, teamsAlreadyAssigned, allPlayers, teamGenOptions, selectedTeamGenIdx]);
 
     const readOnlyPostGameView = useMemo(() => {
         if (!current) return null;
@@ -1516,9 +1671,6 @@ export default function MatchesPage() {
                                                         </span>
                                                     ) : null}
                                                 </div>
-
-                                                {/* TIMES SETADOS */}
-                                                {assignedTeamsView}
 
                                                 {/* SWAP */}
                                                 {canSwap ? (
