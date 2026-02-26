@@ -2,6 +2,7 @@
 import { useParams } from "react-router-dom";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
+import { useIsMobile } from "../hooks/UseIsMobile";
 
 /* ===================== helpers gerais ===================== */
 
@@ -119,17 +120,20 @@ function TabButton({
     active,
     onClick,
     children,
+    compact,
 }: {
     active: boolean;
     onClick: () => void;
     children: any;
+    compact?: boolean;
 }) {
     return (
         <button
             type="button"
             onClick={onClick}
             className={cn(
-                "px-3 py-1.5 rounded-lg text-sm border transition",
+                compact ? "px-2.5 py-1.5 text-[13px]" : "px-3 py-1.5 text-sm",
+                "rounded-lg border transition whitespace-nowrap",
                 active
                     ? "bg-slate-900 text-white border-slate-900"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -157,12 +161,11 @@ function parseClock(raw?: string | null): Clock | null {
 
     const v = String(raw)
         .normalize("NFKC")
-        .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
         .trim();
 
     if (!v) return null;
 
-    // pega primeiro HH:MM(:SS)
     const m = v.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if (!m) return null;
 
@@ -189,10 +192,6 @@ function diffSecClock(goal: Clock, startMinOfDay: number): number {
     return diffMin * 60 + goal.s;
 }
 
-/**
- * ✅ inferência do início (mantive sua ideia), mas agora SEM depender de timeSeconds.
- * E com desempate que favorece colocar o 1º gol o mais próximo de 0 possível.
- */
 function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
     const clocks = (goals ?? []).map((g) => parseClock(g.time)).filter(Boolean) as Clock[];
     if (clocks.length === 0) return null;
@@ -214,7 +213,6 @@ function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
 
     const uniq = Array.from(new Set(candidates)).sort((a, b) => a - b);
 
-    // usaremos também o primeiro gol para desempatar (queremos ele mais perto do 0)
     const first = clocks.slice().sort((a, b) => a.minOfDay - b.minOfDay)[0];
 
     let best: { start: number; countIn: number; maxDiff: number; firstDiff: number } | null = null;
@@ -250,7 +248,6 @@ function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
             continue;
         }
 
-        // 🔥 desempate extra: deixe o 1º gol mais perto do 0
         if (cand.countIn === best.countIn && cand.maxDiff === best.maxDiff && cand.firstDiff < best.firstDiff) {
             best = cand;
             continue;
@@ -268,7 +265,7 @@ function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
     }
 
     if (!best || best.countIn === 0) {
-        return first.h * 60; // HH:00 do primeiro gol
+        return first.h * 60;
     }
 
     return best.start;
@@ -291,11 +288,6 @@ type GoalEvent = GoalDto & {
     team: 1 | 2 | 0;
 };
 
-/**
- * ✅ REGRA CORRETA:
- * - Usa SEMPRE g.time (relógio) quando existir
- * - NÃO usa timeSeconds aqui (você removeu, e era fonte do bug)
- */
 function goalToGameSeconds(g: GoalDto, startMinOfDay: number | null): number | null {
     const c = parseClock(g.time);
     if (!c || startMinOfDay == null) return null;
@@ -414,12 +406,6 @@ export function MatchTimeSimulationTimeline({
         </button>
     );
 
-    const Pill = ({ children }: { children: any }) => (
-        <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800">
-            {children}
-        </span>
-    );
-
     const renderBar = (teamLabel: string, team: 1 | 2, colorHex: string) => {
         const teamGoals = timeline.filter((g) => g.team === team);
         const totalTeamGoals = teamGoals.length;
@@ -428,7 +414,9 @@ export function MatchTimeSimulationTimeline({
         return (
             <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                    <div className={cls("font-semibold", team === 1 ? "text-blue-700" : "text-orange-700")}>{teamLabel}</div>
+                    <div className={cls("font-semibold", team === 1 ? "text-blue-700" : "text-orange-700")}>
+                        {teamLabel}
+                    </div>
                     <div className="text-slate-600 font-medium">
                         {currentTeamGoals}/{totalTeamGoals}
                     </div>
@@ -489,7 +477,7 @@ export function MatchTimeSimulationTimeline({
                 <div>
                     <div className="font-semibold text-slate-900">Simulação do jogo</div>
                     <div className="text-xs text-slate-500">
-                        {totalMinutes} minutos em <b>{Math.round(SIM_DURATION_MS / 1000)}s</b> • jogo inferido: <b>{startLabel}</b> → <b>{endLabel}</b>
+                        {totalMinutes} min em <b>{Math.round(SIM_DURATION_MS / 1000)}s</b> • inferido: <b>{startLabel}</b> → <b>{endLabel}</b>
                     </div>
                 </div>
 
@@ -524,9 +512,15 @@ export function MatchTimeSimulationTimeline({
 
 export default function MatchDetailsPage() {
     const { groupId, matchId } = useParams<{ groupId: string; matchId: string }>();
-    const [data, setData] = useState<any>(null);
+    const isMobile = useIsMobile(768);
 
+    const [data, setData] = useState<any>(null);
     const [goalsTab, setGoalsTab] = useState<"gols" | "timeline" | "teamA" | "teamB">("gols");
+
+    // mobile: aba da escalação
+    const [lineupTab, setLineupTab] = useState<"A" | "B">("A");
+    // mobile: colapsar detalhes técnicos
+    const [techOpen, setTechOpen] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -564,7 +558,6 @@ export default function MatchDetailsPage() {
         return m;
     }, [teamIndex]);
 
-    /** ✅ ordenar por `time` (não por timeSeconds) */
     const sortedGoals = useMemo(() => {
         const goals = [...(data?.goals ?? [])].sort((a, b) => {
             const ca = parseClock(a?.time);
@@ -617,7 +610,7 @@ export default function MatchDetailsPage() {
 
     if (!data) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-4">
                 <Section title="Detalhes da partida">
                     <div className="text-sm text-slate-500">Carregando...</div>
                 </Section>
@@ -625,133 +618,217 @@ export default function MatchDetailsPage() {
         );
     }
 
+    const scoreA = data.teamAGoals ?? "-";
+    const scoreB = data.teamBGoals ?? "-";
+
     return (
-        <div className="space-y-6">
+        <div className={cn("space-y-4", isMobile ? "pb-2" : "space-y-6")}>
+            {/* ===================== PLACAR (mobile-first) ===================== */}
             <Section title="Placar">
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex justify-between items-start flex-wrap gap-4">
-                        <div>
-                            <div className="text-sm text-slate-500">{data.groupName}</div>
-                            <div className="text-lg font-semibold text-slate-900">{data.placeName}</div>
-                            <div className="text-xs text-slate-500">{data.playedAt ? formatDate(data.playedAt) : "-"}</div>
+                <div className={cn("rounded-2xl border border-slate-200 bg-white shadow-sm", isMobile ? "p-4" : "p-6")}>
+                    <div className={cn("flex items-start justify-between gap-4", isMobile ? "flex-col" : "flex-row flex-wrap")}>
+                        <div className="min-w-0">
+                            <div className="text-sm text-slate-500 truncate">{data.groupName}</div>
+                            <div className={cn("font-semibold text-slate-900", isMobile ? "text-lg" : "text-lg")}>
+                                {data.placeName}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                                {data.playedAt ? formatDate(data.playedAt) : "-"} • {data.statusName ?? data.status}
+                            </div>
+
+                            {/* cores compactas (mobile) */}
+                            {isMobile ? (
+                                <div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
+                                    <div className="flex items-center gap-2">
+                                        <ColorSwatch color={aColor} size={14} />
+                                        <span>Time A</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <ColorSwatch color={bColor} size={14} />
+                                        <span>Time B</span>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
 
-                        <div className="text-center min-w-[260px]">
-                            <div className="text-4xl font-bold">
-                                <span style={teamTextStyle(aColor)}>{data.teamAGoals ?? "-"}</span>{" "}
+                        <div className={cn("text-center", isMobile ? "w-full" : "min-w-[260px]")}>
+                            <div className={cn("font-bold", isMobile ? "text-5xl" : "text-4xl")}>
+                                <span style={teamTextStyle(aColor)}>{scoreA}</span>{" "}
                                 <span className="text-slate-400">x</span>{" "}
-                                <span style={teamTextStyle(bColor)}>{data.teamBGoals ?? "-"}</span>
+                                <span style={teamTextStyle(bColor)}>{scoreB}</span>
                             </div>
 
-                            <div className="text-sm text-slate-500">{data.status}</div>
+                            {/* detalhes técnicos colapsáveis (mobile) */}
+                            {isMobile ? (
+                                <div className="mt-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTechOpen((v) => !v)}
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 transition"
+                                    >
+                                        {techOpen ? "Ocultar detalhes técnicos" : "Mostrar detalhes técnicos"}
+                                    </button>
 
-                            <div className="mt-4 text-left">
-                                <MatchTimeSimulationTimeline
-                                    goals={(data?.goals ?? []) as GoalDto[]}
-                                    teamByPlayerId={teamByPlayerIdNum}
-                                    teamAHex={aColor}
-                                    teamBHex={bColor}
-                                    totalMinutes={60}
-                                    durationMs={5000}
-                                    autoPlay
-                                />
-                            </div>
-                        </div>
-
-                        <div className="text-xs text-slate-500 text-right max-w-[280px]">
-                            <div className="font-medium text-slate-700">MatchId</div>
-                            <div className="break-all">{data.matchId}</div>
+                                    {techOpen ? (
+                                        <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 space-y-2">
+                                            <div>
+                                                <div className="font-medium text-slate-700">MatchId</div>
+                                                <div className="break-all">{data.matchId}</div>
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-slate-700">GroupId</div>
+                                                <div className="break-all">{data.groupId}</div>
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : (
+                                <div className="mt-3 text-xs text-slate-500 text-right max-w-[280px] ml-auto">
+                                    <div className="font-medium text-slate-700">MatchId</div>
+                                    <div className="break-all">{data.matchId}</div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </Section>
 
-            <Section title="Informações Gerais">
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="text-slate-700">
-                            <b>GroupId:</b> <span className="text-slate-600 break-all">{data.groupId}</span>
-                        </div>
-                        <div className="text-slate-700 mt-2">
-                            <b>Status:</b> <span className="text-slate-600">{data.statusName}</span>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center gap-2 text-slate-700">
-                            <b>Cor Time A:</b>
-                            <span className="text-slate-600">{data.teamAColor?.name ?? "-"}</span>
-                            <ColorSwatch color={aColor} size={16} title={`Time A ${aColor}`} />
-                        </div>
-
-                        <div className="flex items-center gap-2 text-slate-700 mt-2">
-                            <b>Cor Time B:</b>
-                            <span className="text-slate-600">{data.teamBColor?.name ?? "-"}</span>
-                            <ColorSwatch color={bColor} size={16} title={`Time B ${bColor}`} />
-                        </div>
-                    </div>
+            {/* ===================== SIMULAÇÃO ===================== */}
+            <Section title="Simulação">
+                <div className={cn(isMobile ? "" : "")}>
+                    <MatchTimeSimulationTimeline
+                        goals={(data?.goals ?? []) as GoalDto[]}
+                        teamByPlayerId={teamByPlayerIdNum}
+                        teamAHex={aColor}
+                        teamBHex={bColor}
+                        totalMinutes={60}
+                        durationMs={isMobile ? 4500 : 5000}
+                        autoPlay
+                    />
                 </div>
             </Section>
 
+            {/* ===================== INFO (desktop) ===================== */}
+            {!isMobile ? (
+                <Section title="Informações Gerais">
+                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="text-slate-700">
+                                <b>GroupId:</b> <span className="text-slate-600 break-all">{data.groupId}</span>
+                            </div>
+                            <div className="text-slate-700 mt-2">
+                                <b>Status:</b> <span className="text-slate-600">{data.statusName}</span>
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex items-center gap-2 text-slate-700">
+                                <b>Cor Time A:</b>
+                                <span className="text-slate-600">{data.teamAColor?.name ?? "-"}</span>
+                                <ColorSwatch color={aColor} size={16} title={`Time A ${aColor}`} />
+                            </div>
+
+                            <div className="flex items-center gap-2 text-slate-700 mt-2">
+                                <b>Cor Time B:</b>
+                                <span className="text-slate-600">{data.teamBColor?.name ?? "-"}</span>
+                                <ColorSwatch color={bColor} size={16} title={`Time B ${bColor}`} />
+                            </div>
+                        </div>
+                    </div>
+                </Section>
+            ) : null}
+
+            {/* ===================== ESCALAÇÃO ===================== */}
             <Section title="Escalação">
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="font-semibold mb-3 flex items-center gap-2">
-                            <ColorSwatch color={aColor} size={14} title={`Time A ${aColor}`} />
-                            <span style={teamTextStyle(aColor)}>
-                                Time A <span className="text-slate-400 font-normal">({teamAPlayers.length})</span>
-                            </span>
+                {isMobile ? (
+                    <div className="rounded-xl border border-slate-200 bg-white p-3">
+                        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                            <TabButton active={lineupTab === "A"} onClick={() => setLineupTab("A")} compact>
+                                <span className="inline-flex items-center gap-2">
+                                    <ColorSwatch color={aColor} size={12} /> Time A ({teamAPlayers.length})
+                                </span>
+                            </TabButton>
+                            <TabButton active={lineupTab === "B"} onClick={() => setLineupTab("B")} compact>
+                                <span className="inline-flex items-center gap-2">
+                                    <ColorSwatch color={bColor} size={12} /> Time B ({teamBPlayers.length})
+                                </span>
+                            </TabButton>
                         </div>
 
-                        <ul className="space-y-2 text-sm">
-                            {teamAPlayers.map((p: any) => (
-                                <li key={p.matchPlayerId} className="flex items-center justify-between gap-3">
-                                    <span className="text-slate-800 flex items-center gap-2">
-                                        <span>{p.playerName}</span>
+                        <ul className="space-y-2 text-sm mt-2">
+                            {(lineupTab === "A" ? teamAPlayers : teamBPlayers).map((p: any) => (
+                                <li key={p.matchPlayerId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                                    <span className="text-slate-800 flex items-center gap-2 min-w-0">
                                         {p.isGoalkeeper && <span title="Goleiro">🧤</span>}
+                                        <span className="truncate">{p.playerName}</span>
                                     </span>
-                                    <span className="text-slate-500 text-xs">{InviteStatusLabel(p.inviteResponse)}</span>
+                                    <span className="text-slate-500 text-xs shrink-0">{InviteStatusLabel(p.inviteResponse)}</span>
                                 </li>
                             ))}
                         </ul>
                     </div>
+                ) : (
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="font-semibold mb-3 flex items-center gap-2">
+                                <ColorSwatch color={aColor} size={14} title={`Time A ${aColor}`} />
+                                <span style={teamTextStyle(aColor)}>
+                                    Time A <span className="text-slate-400 font-normal">({teamAPlayers.length})</span>
+                                </span>
+                            </div>
 
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="font-semibold mb-3 flex items-center gap-2">
-                            <ColorSwatch color={bColor} size={14} title={`Time B ${bColor}`} />
-                            <span style={teamTextStyle(bColor)}>
-                                Time B <span className="text-slate-400 font-normal">({teamBPlayers.length})</span>
-                            </span>
+                            <ul className="space-y-2 text-sm">
+                                {teamAPlayers.map((p: any) => (
+                                    <li key={p.matchPlayerId} className="flex items-center justify-between gap-3">
+                                        <span className="text-slate-800 flex items-center gap-2">
+                                            <span>{p.playerName}</span>
+                                            {p.isGoalkeeper && <span title="Goleiro">🧤</span>}
+                                        </span>
+                                        <span className="text-slate-500 text-xs">{InviteStatusLabel(p.inviteResponse)}</span>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
 
-                        <ul className="space-y-2 text-sm">
-                            {teamBPlayers.map((p: any) => (
-                                <li key={p.matchPlayerId} className="flex items-center justify-between gap-3">
-                                    <span className="text-slate-800 flex items-center gap-2">
-                                        <span>{p.playerName}</span>
-                                        {p.isGoalkeeper && <span title="Goleiro">🧤</span>}
-                                    </span>
-                                    <span className="text-slate-500 text-xs">{InviteStatusLabel(p.inviteResponse)}</span>
-                                </li>
-                            ))}
-                        </ul>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="font-semibold mb-3 flex items-center gap-2">
+                                <ColorSwatch color={bColor} size={14} title={`Time B ${bColor}`} />
+                                <span style={teamTextStyle(bColor)}>
+                                    Time B <span className="text-slate-400 font-normal">({teamBPlayers.length})</span>
+                                </span>
+                            </div>
+
+                            <ul className="space-y-2 text-sm">
+                                {teamBPlayers.map((p: any) => (
+                                    <li key={p.matchPlayerId} className="flex items-center justify-between gap-3">
+                                        <span className="text-slate-800 flex items-center gap-2">
+                                            <span>{p.playerName}</span>
+                                            {p.isGoalkeeper && <span title="Goleiro">🧤</span>}
+                                        </span>
+                                        <span className="text-slate-500 text-xs">{InviteStatusLabel(p.inviteResponse)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
-                </div>
+                )}
             </Section>
 
+            {/* ===================== GOLS ===================== */}
             <Section title="Gols">
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <TabButton active={goalsTab === "gols"} onClick={() => setGoalsTab("gols")}>
+                <div className={cn("rounded-xl border border-slate-200 bg-white", isMobile ? "p-3" : "p-4")}>
+                    {/* tabs: no mobile vira scroll horizontal */}
+                    <div className={cn("flex items-center gap-2 mb-3", isMobile ? "overflow-x-auto pb-1 -mx-1 px-1" : "flex-wrap")}>
+                        <TabButton active={goalsTab === "gols"} onClick={() => setGoalsTab("gols")} compact={isMobile}>
                             Gols ({sortedGoals.length})
                         </TabButton>
-                        <TabButton active={goalsTab === "timeline"} onClick={() => setGoalsTab("timeline")}>
+                        <TabButton active={goalsTab === "timeline"} onClick={() => setGoalsTab("timeline")} compact={isMobile}>
                             Linha do tempo
                         </TabButton>
-                        <TabButton active={goalsTab === "teamA"} onClick={() => setGoalsTab("teamA")}>
+                        <TabButton active={goalsTab === "teamA"} onClick={() => setGoalsTab("teamA")} compact={isMobile}>
                             Time A
                         </TabButton>
-                        <TabButton active={goalsTab === "teamB"} onClick={() => setGoalsTab("teamB")}>
+                        <TabButton active={goalsTab === "teamB"} onClick={() => setGoalsTab("teamB")} compact={isMobile}>
                             Time B
                         </TabButton>
                     </div>
@@ -762,22 +839,18 @@ export default function MatchDetailsPage() {
                                 <div className="text-slate-500">Nenhum gol para exibir.</div>
                             ) : (
                                 goalsForTab.map((g: any) => (
-                                    <div key={g.goalId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
-                                        <div className="text-slate-800">
-                                            <span className="mr-2" aria-hidden>
-                                                ⚽
-                                            </span>
+                                    <div key={g.goalId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                                        <div className="text-slate-800 min-w-0">
+                                            <span className="mr-2" aria-hidden>⚽</span>
                                             <span className="font-medium">{g.scorerName ?? "-"}</span>
                                             {g.assistName ? (
                                                 <span className="text-slate-600">
                                                     {" "}
-                                                    <span className="mx-1" aria-hidden>
-                                                        🤝
-                                                    </span>
+                                                    <span className="mx-1" aria-hidden>🤝</span>
                                                     {g.assistName}
                                                 </span>
                                             ) : null}
-                                            {g.time ? <span className="text-slate-500"> - {g.time}</span> : null}
+                                            {g.time ? <span className="text-slate-500"> • {g.time}</span> : null}
                                         </div>
                                     </div>
                                 ))
@@ -789,31 +862,28 @@ export default function MatchDetailsPage() {
                                 <div className="text-slate-500">Nenhum gol registrado.</div>
                             ) : (
                                 timeline.map((t: any) => (
-                                    <div key={t.goalId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
-                                        <div className="text-slate-800">
+                                    <div key={t.goalId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                                        <div className="text-slate-800 min-w-0">
                                             <span className="text-slate-400 mr-2">#{t.idx}</span>
-                                            <span className="mr-2" aria-hidden>
-                                                ⚽
-                                            </span>
+                                            <span className="mr-2" aria-hidden>⚽</span>
                                             <span className="font-medium">{t.scorerName ?? "-"}</span>
                                             {t.assistName ? (
                                                 <span className="text-slate-600">
                                                     {" "}
-                                                    <span className="mx-1" aria-hidden>
-                                                        🤝
-                                                    </span>
+                                                    <span className="mx-1" aria-hidden>🤝</span>
                                                     {t.assistName}
                                                 </span>
                                             ) : null}
-                                            {t.time ? <span className="text-slate-500"> — {t.time}</span> : null}
+                                            {t.time ? <span className="text-slate-500"> • {t.time}</span> : null}
                                         </div>
 
-                                        <div className="text-right">
+                                        <div className="text-right shrink-0">
                                             <div className="font-semibold">
-                                                <span style={teamTextStyle(aColor)}>{t.scoreA}</span> <span className="text-slate-400">x</span>{" "}
+                                                <span style={teamTextStyle(aColor)}>{t.scoreA}</span>{" "}
+                                                <span className="text-slate-400">x</span>{" "}
                                                 <span style={teamTextStyle(bColor)}>{t.scoreB}</span>
                                             </div>
-                                            <div className="text-xs text-slate-500">{t.leader}</div>
+                                            {!isMobile ? <div className="text-xs text-slate-500">{t.leader}</div> : null}
                                         </div>
                                     </div>
                                 ))
@@ -823,23 +893,34 @@ export default function MatchDetailsPage() {
                 </div>
             </Section>
 
+            {/* ===================== VOTAÇÃO ===================== */}
             <Section title="Votação">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                <div className={cn("rounded-xl border border-slate-200 bg-white text-sm text-slate-700", isMobile ? "p-3" : "p-4")}>
                     <div>
                         <b>MVP:</b>{" "}
                         {data.computedMvp?.playerName
-                            ? `${data.computedMvp.playerName}${data.computedMvp.team ? ` (Time ${data.computedMvp.team === 1 ? "A" : data.computedMvp.team === 2 ? "B" : "?"})` : ""
+                            ? `${data.computedMvp.playerName}${data.computedMvp.team
+                                ? ` (Time ${data.computedMvp.team === 1 ? "A" : data.computedMvp.team === 2 ? "B" : "?"})`
+                                : ""
                             }`
                             : "—"}
                     </div>
 
-                    <div className="mt-1">
-                        <b>votes:</b> {data.votes?.length ?? 0}
-                    </div>
+                    {!isMobile ? (
+                        <>
+                            <div className="mt-1">
+                                <b>votes:</b> {data.votes?.length ?? 0}
+                            </div>
 
-                    <div className="mt-1">
-                        <b>voteCounts:</b> {data.voteCounts?.length ?? 0}
-                    </div>
+                            <div className="mt-1">
+                                <b>voteCounts:</b> {data.voteCounts?.length ?? 0}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="mt-1 text-slate-600">
+                            <b>Votos:</b> {data.votes?.length ?? 0}
+                        </div>
+                    )}
                 </div>
             </Section>
         </div>
