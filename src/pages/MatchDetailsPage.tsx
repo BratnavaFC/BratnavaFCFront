@@ -1,7 +1,9 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
+
+/* ===================== helpers gerais ===================== */
 
 function formatDate(date: string) {
     return new Date(date).toLocaleString("pt-BR");
@@ -55,7 +57,7 @@ function isWhiteHex(hex?: string) {
     return h === "#ffffff";
 }
 
-/** ✅ Contorno MAIS FINO possível, mas SÓ quando a cor do time for branca */
+/** ✅ Contorno mais fino possível, mas só quando o time for branco */
 function teamTextStyle(color: string): React.CSSProperties {
     const hex = safeHex(color) || color;
     if (isWhiteHex(hex)) {
@@ -68,7 +70,7 @@ function teamTextStyle(color: string): React.CSSProperties {
     return { color: hex };
 }
 
-/** ✅ Swatch com borda + fundo “checker” (branco não some) */
+/** ✅ Swatch com borda + checker */
 function ColorSwatch({
     color,
     size = 16,
@@ -128,7 +130,9 @@ function TabButton({
             onClick={onClick}
             className={cn(
                 "px-3 py-1.5 rounded-lg text-sm border transition",
-                active ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                active
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
         >
             {children}
@@ -136,184 +140,387 @@ function TabButton({
     );
 }
 
+/* ===================== timeline / clocks ===================== */
+
+function cls(...xs: Array<string | false | null | undefined>) {
+    return xs.filter(Boolean).join(" ");
+}
+function clamp(n: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, n));
+}
+
+type Clock = { h: number; m: number; s: number; minOfDay: number };
+
+/** ✅ parseClock robusto */
+function parseClock(raw?: string | null): Clock | null {
+    if (raw == null) return null;
+
+    const v = String(raw)
+        .normalize("NFKC")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width
+        .trim();
+
+    if (!v) return null;
+
+    // pega primeiro HH:MM(:SS)
+    const m = v.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+
+    const h = Number(m[1]);
+    const mm = Number(m[2]);
+    const s = m[3] != null ? Number(m[3]) : 0;
+
+    if (!Number.isFinite(h) || !Number.isFinite(mm) || !Number.isFinite(s)) return null;
+    if (h < 0 || h > 23 || mm < 0 || mm > 59 || s < 0 || s > 59) return null;
+
+    return { h, m: mm, s, minOfDay: h * 60 + mm };
+}
+
+function toHHMM(minOfDay: number) {
+    const md = ((minOfDay % 1440) + 1440) % 1440;
+    const h = Math.floor(md / 60);
+    const m = md % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function diffSecClock(goal: Clock, startMinOfDay: number): number {
+    let diffMin = goal.minOfDay - startMinOfDay;
+    if (diffMin < 0) diffMin += 1440;
+    return diffMin * 60 + goal.s;
+}
+
 /**
- * ✅ 2 barrinhas (A em cima, B em baixo)
- * - Cada barrinha tem uma bola (⚽) que “anda” somente quando o time faz gol
- * - A ordem é cronológica dos gols
- * - Duração total: 4s
- * - No fim: a bola vira o número final de gols daquele time
- * - Replay para rodar novamente
+ * ✅ inferência do início (mantive sua ideia), mas agora SEM depender de timeSeconds.
+ * E com desempate que favorece colocar o 1º gol o mais próximo de 0 possível.
  */
-function ScoreProgressAnimationStacked({
-    goals,
-    teamAHex,
-    teamBHex,
-    finalA,
-    finalB,
-}: {
-    goals: Array<{ team: GoalTeam }>;
-    teamAHex?: string;
-    teamBHex?: string;
-    finalA: number;
-    finalB: number;
-}) {
-    const seq = useMemo(() => goals.filter((g) => g.team === "A" || g.team === "B"), [goals]);
-    const totalGoals = seq.length;
-    const segments = Math.max(totalGoals, 1);
+function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
+    const clocks = (goals ?? []).map((g) => parseClock(g.time)).filter(Boolean) as Clock[];
+    if (clocks.length === 0) return null;
 
-    const [isRunning, setIsRunning] = useState(false);
-    const [isDone, setIsDone] = useState(false);
-    const [stepA, setStepA] = useState(0);
-    const [stepB, setStepB] = useState(0);
+    const hours = Array.from(new Set(clocks.map((c) => c.h))).sort((a, b) => a - b);
+    const hourCandidates = new Set<number>();
 
-    const timersRef = useRef<number[]>([]);
+    for (const h of hours) {
+        hourCandidates.add(h);
+        hourCandidates.add((h + 23) % 24);
+        hourCandidates.add((h + 1) % 24);
+    }
 
-    const clearTimers = () => {
-        for (const t of timersRef.current) window.clearTimeout(t);
-        timersRef.current = [];
-    };
+    const candidates: number[] = [];
+    for (const h of hourCandidates) {
+        candidates.push(h * 60 + 0);
+        candidates.push(h * 60 + 30);
+    }
 
-    const start = () => {
-        clearTimers();
-        setIsDone(false);
-        setIsRunning(true);
-        setStepA(0);
-        setStepB(0);
+    const uniq = Array.from(new Set(candidates)).sort((a, b) => a - b);
 
-        if (totalGoals === 0) {
-            const t = window.setTimeout(() => {
-                setIsDone(true);
-                setIsRunning(false);
-            }, 150);
-            timersRef.current.push(t);
-            return;
+    // usaremos também o primeiro gol para desempatar (queremos ele mais perto do 0)
+    const first = clocks.slice().sort((a, b) => a.minOfDay - b.minOfDay)[0];
+
+    let best: { start: number; countIn: number; maxDiff: number; firstDiff: number } | null = null;
+
+    for (const start of uniq) {
+        let countIn = 0;
+        let maxDiff = 0;
+
+        for (const c of clocks) {
+            const d = diffSecClock(c, start);
+            if (d >= 0 && d <= 3600) {
+                countIn += 1;
+                if (d > maxDiff) maxDiff = d;
+            }
         }
 
-        const stepMs = 8000 / totalGoals;
+        const firstDiff = diffSecClock(first, start);
 
-        let a = 0;
-        let b = 0;
+        const cand = { start, countIn, maxDiff, firstDiff };
 
-        seq.forEach((g, idx) => {
-            const t = window.setTimeout(() => {
-                if (g.team === "A") {
-                    a += 1;
-                    setStepA(a);
-                } else if (g.team === "B") {
-                    b += 1;
-                    setStepB(b);
-                }
-            }, Math.round((idx + 1) * stepMs));
-            timersRef.current.push(t);
-        });
+        if (!best) {
+            best = cand;
+            continue;
+        }
 
-        const endT = window.setTimeout(() => {
-            setIsDone(true);
-            setIsRunning(false);
-        }, 8100);
-        timersRef.current.push(endT);
-    };
+        if (cand.countIn > best.countIn) {
+            best = cand;
+            continue;
+        }
+
+        if (cand.countIn === best.countIn && cand.maxDiff < best.maxDiff) {
+            best = cand;
+            continue;
+        }
+
+        // 🔥 desempate extra: deixe o 1º gol mais perto do 0
+        if (cand.countIn === best.countIn && cand.maxDiff === best.maxDiff && cand.firstDiff < best.firstDiff) {
+            best = cand;
+            continue;
+        }
+
+        if (
+            cand.countIn === best.countIn &&
+            cand.maxDiff === best.maxDiff &&
+            cand.firstDiff === best.firstDiff &&
+            cand.start < best.start
+        ) {
+            best = cand;
+            continue;
+        }
+    }
+
+    if (!best || best.countIn === 0) {
+        return first.h * 60; // HH:00 do primeiro gol
+    }
+
+    return best.start;
+}
+
+type GoalDto = {
+    goalId: string;
+    scorerMatchPlayerId: string;
+    scorerPlayerId: string;
+    scorerName: string;
+    assistMatchPlayerId?: string | null;
+    assistPlayerId?: string | null;
+    assistName?: string | null;
+    time?: string | null;
+};
+
+type GoalEvent = GoalDto & {
+    minute: number;
+    tSec: number;
+    team: 1 | 2 | 0;
+};
+
+/**
+ * ✅ REGRA CORRETA:
+ * - Usa SEMPRE g.time (relógio) quando existir
+ * - NÃO usa timeSeconds aqui (você removeu, e era fonte do bug)
+ */
+function goalToGameSeconds(g: GoalDto, startMinOfDay: number | null): number | null {
+    const c = parseClock(g.time);
+    if (!c || startMinOfDay == null) return null;
+    const d = diffSecClock(c, startMinOfDay);
+    return clamp(d, 0, 3600);
+}
+
+type SimulationProps = {
+    goals: GoalDto[];
+    teamByPlayerId: Map<string, number>;
+    teamAHex?: string;
+    teamBHex?: string;
+    totalMinutes?: number;
+    durationMs?: number;
+    autoPlay?: boolean;
+};
+
+export function MatchTimeSimulationTimeline({
+    goals,
+    teamByPlayerId,
+    teamAHex = "#1d4ed8",
+    teamBHex = "#f97316",
+    totalMinutes = 60,
+    durationMs = 15000,
+    autoPlay = true,
+}: SimulationProps) {
+    const SIM_DURATION_MS = durationMs;
+
+    const inferredStart = useMemo(() => inferStartMinOfDayFromGoals(goals ?? []), [goals]);
+
+    const timeline = useMemo(() => {
+        const list: GoalEvent[] = (goals ?? [])
+            .map((g) => {
+                const tSec = goalToGameSeconds(g, inferredStart) ?? totalMinutes * 60;
+                const minute = clamp(Math.floor(tSec / 60), 0, totalMinutes);
+
+                const teamRaw = teamByPlayerId.get(String(g.scorerPlayerId));
+                const team = (teamRaw === 1 ? 1 : teamRaw === 2 ? 2 : 0) as 1 | 2 | 0;
+
+                return { ...g, tSec, minute, team };
+            })
+            .sort((a, b) => a.tSec - b.tSec);
+
+        return list;
+    }, [goals, teamByPlayerId, totalMinutes, inferredStart]);
+
+    const [running, setRunning] = useState<boolean>(!!autoPlay);
+    const [elapsedMs, setElapsedMs] = useState<number>(0);
+
+    const simSec = useMemo(() => {
+        const p = SIM_DURATION_MS > 0 ? Math.min(1, elapsedMs / SIM_DURATION_MS) : 0;
+        return p * (totalMinutes * 60);
+    }, [elapsedMs, SIM_DURATION_MS, totalMinutes]);
+
+    const simMinuteInt = clamp(Math.floor(simSec / 60), 0, totalMinutes);
+
+    const visibleGoals = useMemo(() => timeline.filter((g) => g.tSec <= simSec), [timeline, simSec]);
+
+    const scoreA = useMemo(() => visibleGoals.filter((g) => g.team === 1).length, [visibleGoals]);
+    const scoreB = useMemo(() => visibleGoals.filter((g) => g.team === 2).length, [visibleGoals]);
 
     useEffect(() => {
-        start();
-        return () => clearTimers();
+        if (!running) return;
+
+        let raf = 0;
+        const start = performance.now() - elapsedMs;
+
+        const tick = (now: number) => {
+            const e = now - start;
+            const clamped = clamp(e, 0, SIM_DURATION_MS);
+            setElapsedMs(clamped);
+
+            if (clamped >= SIM_DURATION_MS) {
+                setRunning(false);
+                return;
+            }
+
+            raf = requestAnimationFrame(tick);
+        };
+
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [totalGoals]);
+    }, [running, SIM_DURATION_MS]);
 
-    const aColor = safeHex(teamAHex) || "#0f172a";
-    const bColor = safeHex(teamBHex) || "#0f172a";
+    function resetAndPlay() {
+        setElapsedMs(0);
+        setRunning(true);
+    }
 
-    const posA = `${(stepA / segments) * 100}%`;
-    const posB = `${(stepB / segments) * 100}%`;
+    const progressPct = SIM_DURATION_MS ? Math.min(100, (elapsedMs / SIM_DURATION_MS) * 100) : 0;
 
-    const ballBase =
-        "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-9 w-9 rounded-full shadow-sm border flex items-center justify-center text-sm font-bold select-none bg-white";
-
-    const trackBase = "relative h-12";
-    const trackLine =
-        "absolute left-0 right-0 top-1/2 -translate-y-1/2 h-3 rounded-full bg-slate-100 border border-slate-200";
-
-    const markers = (
-        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-3">
-            {Array.from({ length: segments + 1 }).map((_, i) => (
-                <div
-                    key={i}
-                    className="absolute top-1/2 -translate-y-1/2 w-px h-5 bg-slate-200"
-                    style={{ left: `${(i / segments) * 100}%` }}
-                />
-            ))}
-        </div>
+    const Btn = ({
+        children,
+        title,
+        onClick,
+        disabled,
+    }: {
+        children: any;
+        title?: string;
+        onClick: () => void;
+        disabled?: boolean;
+    }) => (
+        <button
+            type="button"
+            title={title}
+            onClick={onClick}
+            disabled={disabled}
+            className={cls(
+                "h-9 px-3 rounded-lg border text-sm font-medium transition",
+                disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50",
+                "border-slate-200 bg-white text-slate-800"
+            )}
+        >
+            {children}
+        </button>
     );
 
-    const renderTrack = (team: "A" | "B") => {
-        const isA = team === "A";
-        const color = isA ? aColor : bColor;
-        const left = isA ? posA : posB;
-        const doneValue = isA ? finalA : finalB;
+    const Pill = ({ children }: { children: any }) => (
+        <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800">
+            {children}
+        </span>
+    );
+
+    const renderBar = (teamLabel: string, team: 1 | 2, colorHex: string) => {
+        const teamGoals = timeline.filter((g) => g.team === team);
+        const totalTeamGoals = teamGoals.length;
+        const currentTeamGoals = team === 1 ? scoreA : scoreB;
 
         return (
-            <div className={trackBase}>
-                <div className={trackLine} />
-                {markers}
-                <div className={cn(ballBase, "transition-[left] duration-300 ease-out")} style={{ left, borderColor: color }}>
-                    {isDone ? doneValue : "⚽"}
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                    <div className={cls("font-semibold", team === 1 ? "text-blue-700" : "text-orange-700")}>{teamLabel}</div>
+                    <div className="text-slate-600 font-medium">
+                        {currentTeamGoals}/{totalTeamGoals}
+                    </div>
+                </div>
+
+                <div className="relative h-10">
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 rounded-full bg-slate-100 border border-slate-200" />
+
+                    <div
+                        className="absolute top-1/2 -translate-y-1/2 h-3 rounded-full opacity-25"
+                        style={{ width: `${progressPct}%`, backgroundColor: colorHex }}
+                    />
+
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-1 pointer-events-none">
+                        {Array.from({ length: 13 }).map((_, i) => (
+                            <div key={i} className="h-5 w-px bg-slate-200" />
+                        ))}
+                    </div>
+
+                    {teamGoals.map((g) => {
+                        const leftPct = (g.tSec / (totalMinutes * 60)) * 100;
+                        const isVisible = g.tSec <= simSec;
+
+                        return (
+                            <div
+                                key={g.goalId}
+                                className={cls(
+                                    "absolute top-1/2 -translate-y-1/2",
+                                    "transition-all duration-300",
+                                    isVisible ? "opacity-100 scale-100" : "opacity-0 scale-75"
+                                )}
+                                style={{ left: `calc(${leftPct}% - 10px)` }}
+                                title={`${g.minute}' • ${g.scorerName}${g.assistName ? ` (${g.assistName})` : ""} •`}
+                            >
+                                <div className="relative">
+                                    <div
+                                        className={cls("absolute -inset-1 rounded-full blur-[0.2px]", isVisible ? "animate-pulse" : "")}
+                                        style={{ backgroundColor: colorHex, opacity: 0.25 }}
+                                    />
+                                    <div className="h-6 w-6 rounded-full grid place-items-center border bg-white shadow-sm" style={{ borderColor: colorHex }}>
+                                        ⚽
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );
     };
 
+    const startLabel = inferredStart == null ? "--:--" : toHHMM(inferredStart);
+    const endLabel = inferredStart == null ? "--:--" : toHHMM(inferredStart + 60);
+
     return (
-        <div className="mt-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-slate-500">{isRunning ? "Reproduzindo (4s)..." : isDone ? "Fim da animação" : "—"}</div>
-                <button
-                    type="button"
-                    onClick={start}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700"
-                >
-                    Replay
-                </button>
-            </div>
-
-            <div className="mt-3 space-y-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
                 <div>
-                    <div className="mb-1 flex items-center justify-between">
-                        <div className="text-xs font-semibold" style={teamTextStyle(aColor)}>
-                            Time A
-                        </div>
-                        <div className="text-xs text-slate-500">
-                            {stepA}/{finalA}
-                        </div>
+                    <div className="font-semibold text-slate-900">Simulação do jogo</div>
+                    <div className="text-xs text-slate-500">
+                        {totalMinutes} minutos em <b>{Math.round(SIM_DURATION_MS / 1000)}s</b> • jogo inferido: <b>{startLabel}</b> → <b>{endLabel}</b>
                     </div>
-                    {renderTrack("A")}
                 </div>
 
-                <div>
-                    <div className="mb-1 flex items-center justify-between">
-                        <div className="text-xs font-semibold" style={teamTextStyle(bColor)}>
-                            Time B
-                        </div>
-                        <div className="text-xs text-slate-500">
-                            {stepB}/{finalB}
-                        </div>
+                <div className="flex items-center gap-2">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-mono text-sm text-slate-900">
+                        ⏱ {simMinuteInt}/{totalMinutes}
                     </div>
-                    {renderTrack("B")}
+
+                    <Btn onClick={resetAndPlay} title="Reiniciar">
+                        ↻
+                    </Btn>
+
+                    <Btn onClick={() => setRunning(true)} title="Play" disabled={running}>
+                        ▶
+                    </Btn>
+
+                    <Btn onClick={() => setRunning(false)} title="Pause" disabled={!running}>
+                        ❚❚
+                    </Btn>
                 </div>
             </div>
 
-            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                <div className="flex items-center gap-2">
-                    <ColorSwatch color={aColor} size={14} title={`Time A ${aColor}`} />
-                    <span>Cor Time A</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <ColorSwatch color={bColor} size={14} title={`Time B ${bColor}`} />
-                    <span>Cor Time B</span>
-                </div>
+            <div className="mt-4 space-y-4">
+                {renderBar("Time A", 1, teamAHex)}
+                {renderBar("Time B", 2, teamBHex)}
             </div>
         </div>
     );
 }
+
+/* ===================== page ===================== */
 
 export default function MatchDetailsPage() {
     const { groupId, matchId } = useParams<{ groupId: string; matchId: string }>();
@@ -348,11 +555,27 @@ export default function MatchDetailsPage() {
         return { byMatchPlayerId, byPlayerId };
     }, [data]);
 
+    const teamByPlayerIdNum = useMemo(() => {
+        const m = new Map<string, number>();
+        for (const [playerId, t] of teamIndex.byPlayerId.entries()) {
+            if (t === "A") m.set(playerId, 1);
+            else if (t === "B") m.set(playerId, 2);
+        }
+        return m;
+    }, [teamIndex]);
+
+    /** ✅ ordenar por `time` (não por timeSeconds) */
     const sortedGoals = useMemo(() => {
-        const goals = [...(data?.goals ?? [])].sort((a, b) => (a.timeSeconds ?? 0) - (b.timeSeconds ?? 0));
+        const goals = [...(data?.goals ?? [])].sort((a, b) => {
+            const ca = parseClock(a?.time);
+            const cb = parseClock(b?.time);
+            const va = ca ? ca.minOfDay * 60 + ca.s : Number.POSITIVE_INFINITY;
+            const vb = cb ? cb.minOfDay * 60 + cb.s : Number.POSITIVE_INFINITY;
+            return va - vb;
+        });
+
         return goals.map((g) => {
-            const teamFromMatchPlayerId =
-                g?.scorerMatchPlayerId && teamIndex.byMatchPlayerId.get(g.scorerMatchPlayerId);
+            const teamFromMatchPlayerId = g?.scorerMatchPlayerId && teamIndex.byMatchPlayerId.get(g.scorerMatchPlayerId);
             const teamFromPlayerId = g?.scorerPlayerId && teamIndex.byPlayerId.get(g.scorerPlayerId);
             const team: GoalTeam = (teamFromMatchPlayerId ?? teamFromPlayerId ?? "?") as GoalTeam;
             return { ...g, team };
@@ -389,9 +612,6 @@ export default function MatchDetailsPage() {
         return sortedGoals;
     }, [sortedGoals, goalsTab]);
 
-    const finalA = Number(data?.teamAGoals ?? 0);
-    const finalB = Number(data?.teamBGoals ?? 0);
-
     const aColor = safeHex(data?.teamAColor?.hexValue) || "#0f172a";
     const bColor = safeHex(data?.teamBColor?.hexValue) || "#0f172a";
 
@@ -425,13 +645,17 @@ export default function MatchDetailsPage() {
 
                             <div className="text-sm text-slate-500">{data.status}</div>
 
-                            <ScoreProgressAnimationStacked
-                                goals={sortedGoals}
-                                teamAHex={data.teamAColor?.hexValue}
-                                teamBHex={data.teamBColor?.hexValue}
-                                finalA={finalA}
-                                finalB={finalB}
-                            />
+                            <div className="mt-4 text-left">
+                                <MatchTimeSimulationTimeline
+                                    goals={(data?.goals ?? []) as GoalDto[]}
+                                    teamByPlayerId={teamByPlayerIdNum}
+                                    teamAHex={aColor}
+                                    teamBHex={bColor}
+                                    totalMinutes={60}
+                                    durationMs={5000}
+                                    autoPlay
+                                />
+                            </div>
                         </div>
 
                         <div className="text-xs text-slate-500 text-right max-w-[280px]">
@@ -553,9 +777,7 @@ export default function MatchDetailsPage() {
                                                     {g.assistName}
                                                 </span>
                                             ) : null}
-
                                             {g.time ? <span className="text-slate-500"> - {g.time}</span> : null}
-
                                         </div>
                                     </div>
                                 ))
@@ -588,8 +810,7 @@ export default function MatchDetailsPage() {
 
                                         <div className="text-right">
                                             <div className="font-semibold">
-                                                <span style={teamTextStyle(aColor)}>{t.scoreA}</span>{" "}
-                                                <span className="text-slate-400">x</span>{" "}
+                                                <span style={teamTextStyle(aColor)}>{t.scoreA}</span> <span className="text-slate-400">x</span>{" "}
                                                 <span style={teamTextStyle(bColor)}>{t.scoreB}</span>
                                             </div>
                                             <div className="text-xs text-slate-500">{t.leader}</div>
@@ -607,9 +828,7 @@ export default function MatchDetailsPage() {
                     <div>
                         <b>MVP:</b>{" "}
                         {data.computedMvp?.playerName
-                            ? `${data.computedMvp.playerName}${data.computedMvp.team
-                                ? ` (Time ${data.computedMvp.team === 1 ? "A" : data.computedMvp.team === 2 ? "B" : "?"})`
-                                : ""
+                            ? `${data.computedMvp.playerName}${data.computedMvp.team ? ` (Time ${data.computedMvp.team === 1 ? "A" : data.computedMvp.team === 2 ? "B" : "?"})` : ""
                             }`
                             : "—"}
                     </div>
