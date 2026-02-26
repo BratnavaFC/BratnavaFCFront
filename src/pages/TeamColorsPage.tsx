@@ -5,7 +5,7 @@ import { useAccountStore } from "../auth/accountStore";
 import { TeamColorCarousel } from "../domains/teamcolors/TeamColorCarousel";
 import { PreviewModal } from "../components/PreviewModal";
 import { TeamColorEditModal } from "../components/TeamColorEditModal";
-import { useIsMobile } from "../hooks/useIsMobile";
+import { useIsMobile } from "../hooks/UseIsMobile";
 import { isAdmin } from "../auth/guards"; // você já tem
 // Se você tiver isGodMode, use também. Se não tiver, deixei fallback por role string/number abaixo.
 
