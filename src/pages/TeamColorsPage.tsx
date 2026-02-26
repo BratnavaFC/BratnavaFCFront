@@ -23,7 +23,7 @@ export default function TeamColorsPage() {
 
     const isMobile = useIsMobile(768);
 
-    const canManage = !!active && (isAdmin(active) || isGodModeFallback(active));
+    const canManage = !!active && (isAdmin() || isGodModeFallback(active));
 
     const [items, setItems] = useState<Item[]>([]);
     const [loading, setLoading] = useState(false);
