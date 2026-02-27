@@ -17,10 +17,25 @@ export const AuthApi = {
 };
 
 export const UsersApi = {
-  create: (dto: CreateUserDto) => http.post('/api/Users', dto),
-  get: (userId: string) => http.get(`/api/Users/${userId}`),
-  inactivate: (userId: string) => http.post(`/api/Users/${userId}/inactivate`),
-  reactivate: (userId: string) => http.post(`/api/Users/${userId}/reactivate`),
+    create: (dto: CreateUserDto) => http.post('/api/Users', dto),
+    get: (userId: string) => http.get(`/api/Users/${userId}`),
+
+    list: (params?: {
+        search?: string;
+        status?: number; // 1 Active, 2 Inactive
+        role?: number;   // 1 User, 2 Admin, 3 GodMode
+        page?: number;
+        pageSize?: number;
+        includeInactive?: boolean;
+    }) => http.get(`/api/Users`, { params }),
+
+    update: (userId: string, dto: any) => http.put(`/api/Users/${userId}`, dto),
+
+    changePassword: (userId: string, dto: { currentPassword: string; newPassword: string }) =>
+        http.put(`/api/Users/${userId}/password`, dto),
+
+    inactivate: (userId: string) => http.put(`/api/Users/${userId}/inactivate`),
+    reactivate: (userId: string) => http.put(`/api/Users/${userId}/reactivate`),
 };
 
 export const GroupsApi = {
