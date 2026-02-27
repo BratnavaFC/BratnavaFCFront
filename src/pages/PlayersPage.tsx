@@ -10,6 +10,7 @@ export default function PlayersPage(){
 
   const [name, setName] = useState(active?.name ?? 'Jogador');
   const [isGoalkeeper, setIsGoalkeeper] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const [skillPoints, setSkillPoints] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -22,6 +23,7 @@ export default function PlayersPage(){
       groupId,
       skillPoints,
       isGoalkeeper,
+      isGuest,
       status: 1
     } as any);
     const playerId = res.data?.id ?? res.data?.playerId;
@@ -49,6 +51,10 @@ export default function PlayersPage(){
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={isGoalkeeper} onChange={(e)=>setIsGoalkeeper(e.target.checked)} />
                 <span className="text-sm font-medium text-slate-700">Goleiro</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={isGuest} onChange={(e)=>setIsGuest(e.target.checked)} />
+                <span className="text-sm font-medium text-slate-700">Convidado</span>
               </label>
 
               <button className="btn btn-primary" onClick={create}>Criar perfil neste grupo</button>
