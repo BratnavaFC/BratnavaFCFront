@@ -15,6 +15,9 @@ import {
     Loader2,
 } from "lucide-react";
 
+type Status = 1 | 2; // 1 Active, 2 Inactive
+type Role = 1 | 2 | 3; // 1 User, 2 Admin, 3 GodMode
+
 type UserListItemDto = {
     id: string;
     userName: string;
@@ -75,9 +78,11 @@ function fullName(u: { firstName?: string; lastName?: string }) {
 function extractApiErrorMessage(err: any): string {
     const data = err?.response?.data;
 
+    // 1) padrão { message }
     const msg = data?.message;
     if (typeof msg === "string" && msg.trim()) return msg;
 
+    // 2) modelstate { errors: { field: [..] } }
     const errors = data?.errors;
     if (errors && typeof errors === "object") {
         const firstKey = Object.keys(errors)[0];
@@ -85,15 +90,18 @@ function extractApiErrorMessage(err: any): string {
         if (Array.isArray(firstArr) && typeof firstArr[0] === "string") return firstArr[0];
     }
 
+    // 3) string crua
     if (typeof data === "string" && data.trim()) {
-        const line = data.split("\n").map((s: string) => s.trim()).find((s: string) => s.length > 0);
+        // se vier HTML/stacktrace gigante, tenta pegar a primeira linha útil
+        const line = data.split("\n").map(s => s.trim()).find(s => s.length > 0);
         if (line) return line.slice(0, 180);
         return data.slice(0, 180);
     }
 
+    // 4) fallback axios
     if (typeof err?.message === "string" && err.message.trim()) return err.message;
 
-    return "Falha na operação.";
+    return "Falha ao alterar senha.";
 }
 
 /** ========= UI helpers ========= */
@@ -119,25 +127,15 @@ function Modal({
                 className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
                 onClick={onClose}
             />
-            <div className="absolute inset-0 flex items-end md:items-center justify-center p-0 md:p-4">
-                {/* Mobile: fullscreen sheet | Desktop: centered modal */}
-                <div
-                    className={[
-                        "w-full bg-white shadow-2xl border overflow-hidden",
-                        "rounded-t-3xl md:rounded-2xl",
-                        "max-h-[92vh] md:max-h-[86vh]",
-                        "flex flex-col",
-                        "md:w-full",
-                        widthClass,
-                    ].join(" ")}
-                >
-                    <div className="flex items-center justify-between px-4 md:px-5 py-4 border-b">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className="h-9 w-9 shrink-0 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className={`w-full ${widthClass} rounded-2xl bg-white shadow-2xl border overflow-hidden`}>
+                    <div className="flex items-center justify-between px-5 py-4 border-b">
+                        <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
                                 <Shield size={18} />
                             </div>
-                            <div className="min-w-0">
-                                <div className="text-base font-semibold text-slate-900 truncate">{title}</div>
+                            <div>
+                                <div className="text-base font-semibold text-slate-900">{title}</div>
                                 <div className="text-xs text-slate-500">Bratnava FC</div>
                             </div>
                         </div>
@@ -152,9 +150,7 @@ function Modal({
                         </button>
                     </div>
 
-                    <div className="p-4 md:p-5 overflow-auto">
-                        {children}
-                    </div>
+                    <div className="p-5">{children}</div>
                 </div>
             </div>
         </div>
@@ -235,7 +231,6 @@ function Button({
     disabled,
     loading,
     iconLeft,
-    className,
 }: {
     children: React.ReactNode;
     onClick?: () => void;
@@ -243,7 +238,6 @@ function Button({
     disabled?: boolean;
     loading?: boolean;
     iconLeft?: React.ReactNode;
-    className?: string;
 }) {
     const cls =
         variant === "primary"
@@ -261,7 +255,6 @@ function Button({
                 "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition",
                 cls,
                 (disabled || loading) ? "opacity-60 cursor-not-allowed" : "",
-                className ?? "",
             ].join(" ")}
             onClick={onClick}
             disabled={disabled || loading}
@@ -305,6 +298,7 @@ function EditUserModal({
     useEffect(() => {
         if (!user) return;
         setError(null);
+
         setForm({
             firstName: user.firstName ?? "",
             lastName: user.lastName ?? "",
@@ -336,15 +330,20 @@ function EditUserModal({
 
             if (canEditAdminFields) {
                 payload.role = form.role ?? null;
-                payload.status = form.status ?? null;
+                payload.status = form.status ?? null; // backend vai aplicar Inactivate/Reactivate
             }
 
             await UsersApi.update(user.id, payload);
+
             await onSaved();
             onClose();
         } catch (e: any) {
-            const msg = extractApiErrorMessage(e);
-            setError(msg);
+            const msg =
+                e?.response?.data?.message ||
+                e?.response?.data ||
+                e?.message ||
+                "Falha ao salvar usuário.";
+            setError(String(msg));
         } finally {
             setSaving(false);
         }
@@ -362,15 +361,19 @@ function EditUserModal({
             await onSaved();
             onClose();
         } catch (e: any) {
-            const msg = extractApiErrorMessage(e);
-            setError(msg);
+            const msg =
+                e?.response?.data?.message ||
+                e?.response?.data ||
+                e?.message ||
+                "Falha ao alterar status.";
+            setError(String(msg));
         } finally {
             setToggleBusy(false);
         }
     }
 
     return (
-        <Modal open={open} onClose={onClose} title={canEditAdminFields ? "Editar usuário" : "Alterar meus dados"} widthClass="md:max-w-3xl">
+        <Modal open={open} onClose={onClose} title={canEditAdminFields ? "Editar usuário" : "Alterar meus dados"} widthClass="max-w-3xl">
             {!user ? (
                 <div className="text-sm text-slate-600">Nenhum usuário selecionado.</div>
             ) : (
@@ -426,7 +429,7 @@ function EditUserModal({
                         )}
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-2">
+                    <div className="flex items-center justify-between pt-2">
                         <div className="text-xs text-slate-500">
                             <div><span className="font-medium">Status:</span> {statusLabel(user.status)} {user.inactivatedAt ? `(desde ${fmtDate(user.inactivatedAt)})` : ""}</div>
                             <div><span className="font-medium">Role:</span> {roleLabel(user.role)}</div>
@@ -434,24 +437,21 @@ function EditUserModal({
                             {user.updateDate && <div><span className="font-medium">Atualizado:</span> {fmtDate(user.updateDate)}</div>}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex gap-2">
+                        <div className="flex gap-2">
                             {canEditAdminFields && (
                                 <Button
                                     variant={isInactive ? "secondary" : "danger"}
                                     onClick={handleToggleActive}
                                     loading={toggleBusy}
                                     iconLeft={isInactive ? <Check size={16} /> : <X size={16} />}
-                                    className="w-full md:w-auto"
                                 >
                                     {isInactive ? "Reativar" : "Inativar"}
                                 </Button>
                             )}
 
-                            <Button variant="secondary" onClick={onClose} className="w-full md:w-auto">
-                                Cancelar
-                            </Button>
+                            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
 
-                            <Button variant="primary" onClick={handleSave} loading={saving} iconLeft={<Check size={16} />} className="w-full md:w-auto">
+                            <Button variant="primary" onClick={handleSave} loading={saving} iconLeft={<Check size={16} />}>
                                 Salvar
                             </Button>
                         </div>
@@ -500,6 +500,7 @@ function ChangePasswordModal({
             onClose();
         } catch (e: any) {
             const msg = extractApiErrorMessage(e);
+
             if (msg.toLowerCase().includes("current password is invalid")) {
                 setError("A senha atual está incorreta.");
             } else {
@@ -511,7 +512,7 @@ function ChangePasswordModal({
     }
 
     return (
-        <Modal open={open} onClose={onClose} title="Alterar senha" widthClass="md:max-w-xl">
+        <Modal open={open} onClose={onClose} title="Alterar senha" widthClass="max-w-xl">
             <div className="space-y-4">
                 {error && (
                     <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -533,11 +534,9 @@ function ChangePasswordModal({
                     </Field>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                    <Button variant="secondary" onClick={onClose} className="w-full">
-                        Cancelar
-                    </Button>
-                    <Button variant="primary" onClick={handleSave} loading={saving} iconLeft={<KeyRound size={16} />} className="w-full">
+                <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+                    <Button variant="primary" onClick={handleSave} loading={saving} iconLeft={<KeyRound size={16} />}>
                         Alterar senha
                     </Button>
                 </div>
@@ -550,11 +549,7 @@ function ChangePasswordModal({
 
 export default function AdminUsersPage() {
     const active = useAccountStore((s) => s.getActive());
-    const isAdminOrGod = useMemo(
-        () => !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode")),
-        [active]
-    );
-
+    const isAdminOrGod = useMemo(() => !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode")), [active]);
     const myUserId = active?.userId ?? null;
 
     // Admin list
@@ -605,7 +600,7 @@ export default function AdminUsersPage() {
 
     async function loadMyProfile() {
         if (!myUserId) {
-            setMyError("Não foi possível identificar seu userId. Faça login novamente.");
+            setMyError("Não foi possível identificar seu userId (activeAccountId). Faça login novamente.");
             return;
         }
 
@@ -616,9 +611,10 @@ export default function AdminUsersPage() {
             const resp = await UsersApi.get(myUserId);
             const data = resp?.data ?? resp;
 
+            // ✅ agora depende do backend retornar esses campos (ajuste no UserDto/GetUserByIdAsync)
             const mapped: UserListItemDto = {
                 id: data.id,
-                userName: data.userName ?? "",
+                userName: data.userName ?? data.userName ?? "",
                 firstName: data.firstName ?? "",
                 lastName: data.lastName ?? "",
                 email: data.email ?? "",
@@ -633,7 +629,8 @@ export default function AdminUsersPage() {
 
             setMyUser(mapped);
         } catch (e: any) {
-            setMyError(extractApiErrorMessage(e));
+            const msg = e?.response?.data?.message || e?.message || "Falha ao carregar perfil.";
+            setMyError(String(msg));
         } finally {
             setMyLoading(false);
         }
@@ -657,29 +654,38 @@ export default function AdminUsersPage() {
 
     return (
         <Section
-            title={isAdminOrGod ? "Usuários" : "Minha conta"}
-            subtitle={isAdminOrGod ? "Administração de usuários (paginado)" : "Meus dados"}
-            icon={isAdminOrGod ? Shield : User}
+            title={isAdminOrGod ? "Administração de usuários (paginado)" : "Meus dados"}
+            right={
+                <div className="flex items-center gap-2">
+                    <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                        {isAdminOrGod ? <Shield size={18} /> : <User size={18} />}
+                    </div>
+                </div>
+            }
         >
             {isAdminOrGod ? (
+                // =========================
+                // ADMIN/GODMODE
+                // =========================
                 <div className="space-y-3">
-                    {/* Filters - responsive */}
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
-                        <div className="relative">
-                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
-                                placeholder="Buscar por nome, usuário ou email..."
-                                value={search}
-                                onChange={(e) => {
-                                    setPage(1);
-                                    setSearch(e.target.value);
-                                }}
-                            />
+                    <div className="flex flex-col md:flex-row md:items-center gap-2">
+                        <div className="flex-1">
+                            <div className="relative">
+                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                                    placeholder="Buscar por nome, usuário ou email..."
+                                    value={search}
+                                    onChange={(e) => {
+                                        setPage(1);
+                                        setSearch(e.target.value);
+                                    }}
+                                />
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex items-center gap-2">
-                            <label className="flex items-center gap-2 text-sm text-slate-700 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-2 text-sm text-slate-700">
                                 <input
                                     type="checkbox"
                                     checked={includeInactive}
@@ -705,12 +711,15 @@ export default function AdminUsersPage() {
                         </div>
                     </div>
 
-                    {/* List - desktop rows, mobile cards */}
                     <div className="rounded-2xl border bg-white overflow-hidden">
-                        <div className="px-4 py-3 border-b flex items-center justify-between gap-2">
+                        <div className="px-4 py-3 border-b flex items-center justify-between">
                             <div className="text-sm font-semibold text-slate-900">
-                                Lista de usuários <span className="ml-2 text-xs font-normal text-slate-500">({result?.total ?? 0})</span>
+                                Lista de usuários
+                                <span className="ml-2 text-xs font-normal text-slate-500">
+                                    ({result?.total ?? 0})
+                                </span>
                             </div>
+
                             <div className="text-xs text-slate-500">
                                 Página {result?.page ?? page} de {totalPages}
                             </div>
@@ -726,62 +735,60 @@ export default function AdminUsersPage() {
                         ) : (
                             <div className="divide-y">
                                 {result!.items.map((u) => (
-                                    <div key={u.id} className="px-4 py-3 hover:bg-slate-50 transition">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <div className="text-sm font-semibold text-slate-900 truncate">
-                                                        {fullName(u)}
-                                                    </div>
-
-                                                    <span
-                                                        className={[
-                                                            "text-[11px] px-2 py-0.5 rounded-full border",
-                                                            u.status === 2
-                                                                ? "bg-rose-50 border-rose-200 text-rose-700"
-                                                                : "bg-emerald-50 border-emerald-200 text-emerald-700",
-                                                        ].join(" ")}
-                                                    >
-                                                        {statusLabel(u.status)}
-                                                    </span>
-
-                                                    <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-50 border-slate-200 text-slate-700">
-                                                        {roleLabel(u.role)}
-                                                    </span>
+                                    <div
+                                        key={u.id}
+                                        className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition"
+                                    >
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                                    {fullName(u)}
                                                 </div>
 
-                                                <div className="text-xs text-slate-500 break-words">
-                                                    @{u.userName} • {u.email}
-                                                </div>
+                                                <span
+                                                    className={[
+                                                        "text-[11px] px-2 py-0.5 rounded-full border",
+                                                        u.status === 2
+                                                            ? "bg-rose-50 border-rose-200 text-rose-700"
+                                                            : "bg-emerald-50 border-emerald-200 text-emerald-700",
+                                                    ].join(" ")}
+                                                >
+                                                    {statusLabel(u.status)}
+                                                </span>
+
+                                                <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-50 border-slate-200 text-slate-700">
+                                                    {roleLabel(u.role)}
+                                                </span>
                                             </div>
 
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() => openEdit(u)}
-                                                iconLeft={<Pencil size={16} />}
-                                                className="w-full sm:w-auto"
-                                            >
-                                                Editar
-                                            </Button>
+                                            <div className="text-xs text-slate-500 truncate">
+                                                @{u.userName} • {u.email}
+                                            </div>
                                         </div>
+
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => openEdit(u)}
+                                            iconLeft={<Pencil size={16} />}
+                                        >
+                                            Editar
+                                        </Button>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        {/* Pagination - responsive */}
-                        <div className="px-4 py-3 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="px-4 py-3 border-t flex items-center justify-between">
                             <div className="text-xs text-slate-500">
                                 Mostrando {(result?.items?.length ?? 0)} de {result?.total ?? 0}
                             </div>
 
-                            <div className="grid grid-cols-2 sm:flex gap-2">
+                            <div className="flex items-center gap-2">
                                 <Button
                                     variant="secondary"
                                     disabled={(result?.page ?? page) <= 1 || loading}
                                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                                     iconLeft={<ChevronLeft size={16} />}
-                                    className="w-full sm:w-auto"
                                 >
                                     Anterior
                                 </Button>
@@ -791,7 +798,6 @@ export default function AdminUsersPage() {
                                     disabled={(result?.page ?? page) >= totalPages || loading}
                                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                     iconLeft={<ChevronRight size={16} />}
-                                    className="w-full sm:w-auto"
                                 >
                                     Próxima
                                 </Button>
@@ -808,6 +814,9 @@ export default function AdminUsersPage() {
                     />
                 </div>
             ) : (
+                // =========================
+                // USER
+                // =========================
                 <div className="space-y-3">
                     {myLoading ? (
                         <div className="rounded-2xl border bg-white p-6 flex items-center gap-2 text-sm text-slate-600">
@@ -824,56 +833,82 @@ export default function AdminUsersPage() {
                         </div>
                     ) : (
                         <div className="rounded-2xl border bg-white overflow-hidden">
-                            <div className="px-4 md:px-5 py-4 border-b">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <div className="text-base font-semibold text-slate-900 truncate">
-                                            {fullName(myUser)}
-                                        </div>
-                                        <div className="text-xs text-slate-500 break-words">
-                                            @{myUser.userName} • {myUser.email}
-                                        </div>
+                            <div className="px-5 py-4 border-b flex items-center justify-between">
+                                <div>
+                                    <div className="text-base font-semibold text-slate-900">
+                                        {fullName(myUser)}
                                     </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:flex md:gap-2">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => {
-                                                setEditUser(myUser);
-                                                setEditOpen(true);
-                                            }}
-                                            iconLeft={<Pencil size={16} />}
-                                            className="w-full md:w-auto"
-                                        >
-                                            Alterar dados
-                                        </Button>
-
-                                        <Button
-                                            variant="primary"
-                                            onClick={() => setPassOpen(true)}
-                                            iconLeft={<KeyRound size={16} />}
-                                            className="w-full md:w-auto"
-                                        >
-                                            Alterar senha
-                                        </Button>
+                                    <div className="text-xs text-slate-500">
+                                        @{myUser.userName} • {myUser.email}
                                     </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => {
+                                            setEditUser(myUser);
+                                            setEditOpen(true);
+                                        }}
+                                        iconLeft={<Pencil size={16} />}
+                                    >
+                                        Alterar dados
+                                    </Button>
+
+                                    <Button
+                                        variant="primary"
+                                        onClick={() => setPassOpen(true)}
+                                        iconLeft={<KeyRound size={16} />}
+                                    >
+                                        Alterar senha
+                                    </Button>
                                 </div>
                             </div>
 
-                            <div className="p-4 md:p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <Field label="Primeiro nome"><Input value={myUser.firstName ?? ""} disabled /></Field>
-                                <Field label="Sobrenome"><Input value={myUser.lastName ?? ""} disabled /></Field>
-                                <Field label="Usuário"><Input value={myUser.userName ?? ""} disabled /></Field>
-                                <Field label="Email"><Input value={myUser.email ?? ""} disabled /></Field>
-                                <Field label="Telefone"><Input value={(myUser.phone ?? "") as string} disabled /></Field>
-                                <Field label="Nascimento"><Input value={myUser.birthDate ? fmtDate(myUser.birthDate) : "-"} disabled /></Field>
+                            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Primeiro nome">
+                                    <Input value={myUser.firstName ?? ""} disabled />
+                                </Field>
 
-                                <Field label="Role"><Input value={roleLabel(myUser.role)} disabled /></Field>
-                                <Field label="Status"><Input value={statusLabel(myUser.status)} disabled /></Field>
+                                <Field label="Sobrenome">
+                                    <Input value={myUser.lastName ?? ""} disabled />
+                                </Field>
 
-                                <Field label="Criado em"><Input value={myUser.createDate ? fmtDate(myUser.createDate) : "-"} disabled /></Field>
-                                <Field label="Atualizado em"><Input value={myUser.updateDate ? fmtDate(myUser.updateDate) : "-"} disabled /></Field>
-                                <Field label="Inativado em"><Input value={myUser.inactivatedAt ? fmtDate(myUser.inactivatedAt) : "-"} disabled /></Field>
+                                <Field label="Usuário">
+                                    <Input value={myUser.userName ?? ""} disabled />
+                                </Field>
+
+                                <Field label="Email">
+                                    <Input value={myUser.email ?? ""} disabled />
+                                </Field>
+
+                                <Field label="Telefone">
+                                    <Input value={(myUser.phone ?? "") as string} disabled />
+                                </Field>
+
+                                <Field label="Nascimento">
+                                    <Input value={myUser.birthDate ? fmtDate(myUser.birthDate) : "-"} disabled />
+                                </Field>
+
+                                <Field label="Role">
+                                    <Input value={roleLabel(myUser.role)} disabled />
+                                </Field>
+
+                                <Field label="Status">
+                                    <Input value={statusLabel(myUser.status)} disabled />
+                                </Field>
+
+                                <Field label="Criado em">
+                                    <Input value={myUser.createDate ? fmtDate(myUser.createDate) : "-"} disabled />
+                                </Field>
+
+                                <Field label="Atualizado em">
+                                    <Input value={myUser.updateDate ? fmtDate(myUser.updateDate) : "-"} disabled />
+                                </Field>
+
+                                <Field label="Inativado em">
+                                    <Input value={myUser.inactivatedAt ? fmtDate(myUser.inactivatedAt) : "-"} disabled />
+                                </Field>
                             </div>
                         </div>
                     )}
