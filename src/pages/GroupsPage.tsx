@@ -636,7 +636,9 @@ export default function GroupsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeGroupId]);
 
-    const activePlayers = group?.players?.filter((p) => p.status === 1) ?? [];
+    const isAdminOfGroup  = isGroupAdmin(activeGroupId);
+    const visiblePlayers  = group?.players?.filter((p) => isAdminOfGroup || p.status === 1) ?? [];
+    const activePlayers   = group?.players?.filter((p) => p.status === 1) ?? [];
     const existingUserIds = new Set(
         (group?.players ?? []).map((p) => p.userId).filter((id): id is string => !!id)
     );
@@ -682,13 +684,14 @@ export default function GroupsPage() {
                     <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
                 ) : loading ? (
                     <div className="muted flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Carregando...</div>
-                ) : activePlayers.length === 0 ? (
+                ) : visiblePlayers.length === 0 ? (
                     <div className="muted">Nenhum jogador ativo nesta patota.</div>
                 ) : (
                     <div className="grid md:grid-cols-2 gap-3">
-                        {activePlayers.map((p) => {
-                            const isMe    = p.id === activePlayerId;
-                            const canEdit = isGroupAdmin(activeGroupId) || isMe;
+                        {visiblePlayers.map((p) => {
+                            const isMe      = p.id === activePlayerId;
+                            const isInativo = p.status !== 1;
+                            const canEdit   = isAdminOfGroup || isMe;
                             return (
                                 <div
                                     key={p.id}
@@ -696,7 +699,7 @@ export default function GroupsPage() {
                                     className={[
                                         "rounded-xl border px-4 py-3 bg-white flex items-center justify-between gap-3 transition-colors",
                                         canEdit ? "cursor-pointer hover:bg-slate-50" : "cursor-default",
-                                        isMe ? "border-emerald-400" : "border-slate-200",
+                                        isInativo ? "border-slate-200 opacity-50" : isMe ? "border-emerald-400" : "border-slate-200",
                                     ].join(" ")}
                                 >
                                     <div className="min-w-0">
@@ -709,7 +712,12 @@ export default function GroupsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
-                                        {p.isGuest && (
+                                        {isInativo && (
+                                            <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-100 border-slate-300 text-slate-500">
+                                                Inativo
+                                            </span>
+                                        )}
+                                        {p.isGuest && !isInativo && (
                                             <span className="text-[11px] px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700">
                                                 Convidado
                                             </span>
