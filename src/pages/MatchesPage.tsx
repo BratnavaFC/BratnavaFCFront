@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Section } from "../components/Section";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
@@ -19,18 +19,25 @@ import type {
 import { InviteResponse } from "../domains/matches/matchTypes";
 import {
     buildAllPlayers,
-    cls,
     getMaxPlayers,
-    getMatchId,
     isValidHHmm,
     normalizeTeamGenOptions,
-    pickActiveMatch,
     toDateInputValue,
     toUtcIso,
     uniqById,
 } from "../domains/matches/matchUtils";
 
-import { STRATEGIES } from "../domains/matches/matchTypes";
+function mergeCurrent(prev: MatchDetailsDto | null, patch: Partial<MatchDetailsDto>): MatchDetailsDto {
+    const base: any = prev ? { ...prev } : {};
+    for (const [k, v] of Object.entries(patch)) {
+        (base as any)[k] = v;
+    }
+    return base as MatchDetailsDto;
+}
+
+function getIdFromDto(dto: any): string {
+    return String(dto?.matchId ?? dto?.id ?? dto?.MatchId ?? dto?.Id ?? "");
+}
 
 export default function MatchesPage() {
     const store = useAccountStore();
@@ -41,7 +48,6 @@ export default function MatchesPage() {
     const admin = isAdmin() || isGroupAdmin(groupId ?? "");
     const readOnlyUser = !admin;
 
-    const [matches, setMatches] = useState<any[]>([]);
     const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
     const [current, setCurrent] = useState<MatchDetailsDto | null>(null);
 
@@ -104,70 +110,10 @@ export default function MatchesPage() {
     const timeOk = isValidHHmm(playedAtTime);
     const canCreateMatch = admin && !!groupId && placeNameOk && dateOk && timeOk && !creating;
 
-    async function loadDetails(matchId: string) {
-        if (!groupId || !matchId) return;
-        const res = await MatchesApi.details(groupId, matchId);
-        setCurrent(res.data as MatchDetailsDto);
-    }
-
-    async function loadList() {
-        if (!groupId) return;
-        setLoading(true);
-        try {
-            const [matchesRes, colorsRes, settingsRes] = await Promise.all([
-                MatchesApi.list(groupId),
-                TeamColorApi.list(groupId),
-                GroupSettingsApi.get(groupId),
-            ]);
-
-            const list = matchesRes.data ?? [];
-            setMatches(list);
-
-            const colors = (colorsRes.data ?? []) as TeamColorDto[];
-            setTeamColors(colors);
-
-            const gs = (settingsRes.data ?? null) as GroupSettingsDto | null;
-            setGroupSettings(gs);
-
-            if (gs) {
-                const suggestedPlace = gs.defaultPlaceName ?? gs.placeName;
-                const suggestedTime = gs.defaultMatchTime ?? gs.matchTime;
-                setPlaceName((prev) => (prev.trim().length ? prev : suggestedPlace ?? ""));
-                setPlayedAtTime((prev) => (prev.trim().length ? prev : suggestedTime ?? ""));
-            }
-
-            const activeMatch = pickActiveMatch(list);
-            const id = getMatchId(activeMatch);
-
-            setCurrentMatchId(id);
-            if (!id) setCurrent(null);
-            else await loadDetails(id);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function refreshCurrent() {
-        if (!currentMatchId) return;
-        await loadDetails(currentMatchId);
-    }
-
-    async function createMatch() {
-        if (!canCreateMatch) return;
-        setCreating(true);
-        try {
-            const playedAt = toUtcIso(playedAtDate, playedAtTime);
-            await MatchesApi.create(groupId!, { placeName: placeName.trim(), playedAt } as any);
-            await loadList();
-        } finally {
-            setCreating(false);
-        }
-    }
-
-    // step key
+    // ============ STEP ============
     const stepKey: StepKey = useMemo(() => {
         if (!current) return "create";
-        const s = Number(current?.status);
+        const s = Number((current as any)?.status);
 
         if (s === 0) return "create";
         if (s === 1) return "accept";
@@ -177,7 +123,7 @@ export default function MatchesPage() {
         if (s === 5) return "post";
         if (s === 6) return "done";
         return "create";
-    }, [current?.status, current?.matchId]);
+    }, [current?.status, (current as any)?.matchId]);
 
     function stepsOrderDone(k: StepKey, activeK: StepKey) {
         const order: StepKey[] = ["create", "accept", "teams", "playing", "ended", "post", "done"];
@@ -198,38 +144,223 @@ export default function MatchesPage() {
         return s;
     }, [stepKey]);
 
-    // derived lists
-    const allPlayers = useMemo<PlayerInMatchDto[]>(() => buildAllPlayers(current), [current]);
+    // ============ LOADERS (LEVE) ============
+    async function loadHeader(matchId: string) {
+        if (!groupId || !matchId) return;
 
-    const invitePool = useMemo<PlayerInMatchDto[]>(() => {
-        const list = current?.unassignedPlayers ?? [];
-        return Array.isArray(list) ? list : [];
-    }, [current]);
+        const res = await MatchesApi.header(groupId, matchId);
+        const dto = res.data as any;
 
-    const accepted = useMemo(() => invitePool.filter((p) => Number(p.inviteResponse) === InviteResponse.Accepted), [invitePool]);
-    const rejected = useMemo(() => invitePool.filter((p) => Number(p.inviteResponse) === InviteResponse.Rejected), [invitePool]);
-    const pending = useMemo(() => invitePool.filter((p) => Number(p.inviteResponse) === InviteResponse.None), [invitePool]);
+        // normaliza para o shape do MatchDetailsDto que você já usa
+        const patch: Partial<MatchDetailsDto> = {
+            matchId: getIdFromDto(dto) || matchId,
+            groupId: String(dto?.groupId ?? groupId) as any,
+            playedAt: dto?.playedAt ?? dto?.PlayedAt ?? undefined,
+            placeName: dto?.placeName ?? dto?.PlaceName ?? "",
+            status: Number(dto?.status ?? dto?.Status ?? 0) as any,
+            teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
+            teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
+        } as any;
 
-    const acceptedOverLimit = accepted.length > maxPlayers;
+        setCurrent((prev) => mergeCurrent(prev, patch));
+    }
 
-    const participants = useMemo<PlayerInMatchDto[]>(() => {
-        if (!current) return [];
+    async function loadAcceptation(matchId: string) {
+        if (!groupId || !matchId) return;
 
-        const a = Array.isArray(current?.teamAPlayers) ? current?.teamAPlayers : [];
-        const b = Array.isArray(current?.teamBPlayers) ? current?.teamBPlayers : [];
-        const base = [...a, ...b];
+        const res = await MatchesApi.acceptation(groupId, matchId);
+        const dto = res.data as any;
 
-        const fallback = allPlayers.filter((p) => Number(p.team) === 1 || Number(p.team) === 2);
-        const list = base.length ? base : fallback;
+        const players = (dto?.players ?? dto?.Players ?? []) as PlayerInMatchDto[];
 
-        const map = new Map<string, PlayerInMatchDto>();
-        for (const p of list) if (p?.playerId) map.set(String(p.playerId), p);
-        return Array.from(map.values());
-    }, [current, allPlayers]);
+        // aqui você usa unassignedPlayers como pool pra accepted/pending/rejected
+        const patch: Partial<MatchDetailsDto> = {
+            matchId,
+            status: Number(dto?.status ?? dto?.Status ?? 1) as any,
+            unassignedPlayers: players as any,
+            // pra evitar fallback estranho em outros pontos:
+            teamAPlayers: (current?.teamAPlayers ?? []) as any,
+            teamBPlayers: (current?.teamBPlayers ?? []) as any,
+        } as any;
+
+        setCurrent((prev) => mergeCurrent(prev, patch));
+    }
+
+    async function loadMatchMaking(matchId: string) {
+        if (!groupId || !matchId) return;
+
+        const res = await MatchesApi.matchmaking(groupId, matchId);
+        const dto = res.data as any;
+
+        const patch: Partial<MatchDetailsDto> = {
+            matchId,
+            status: Number(dto?.status ?? dto?.Status ?? 2) as any,
+            teamAColor: dto?.teamAColor ?? dto?.TeamAColor ?? null,
+            teamBColor: dto?.teamBColor ?? dto?.TeamBColor ?? null,
+            teamAPlayers: (dto?.teamAPlayers ?? dto?.TeamAPlayers ?? []) as any,
+            teamBPlayers: (dto?.teamBPlayers ?? dto?.TeamBPlayers ?? []) as any,
+            unassignedPlayers: (dto?.unassignedPlayers ?? dto?.UnassignedPlayers ?? []) as any,
+        } as any;
+
+        setCurrent((prev) => mergeCurrent(prev, patch));
+    }
+
+    async function loadPostGame(matchId: string) {
+        if (!groupId || !matchId) return;
+
+        const res = await MatchesApi.postgame(groupId, matchId);
+        const dto = res.data as any;
+
+        const patch: Partial<MatchDetailsDto> = {
+            matchId,
+            status: Number(dto?.status ?? dto?.Status ?? 5) as any,
+            teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
+            teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
+            computedMvp: dto?.computedMvp ?? dto?.ComputedMvp ?? null,
+            voteCounts: dto?.voteCounts ?? dto?.VoteCounts ?? [],
+            goals: dto?.goals ?? dto?.Goals ?? [],
+        } as any;
+
+        setCurrent((prev) => mergeCurrent(prev, patch));
+    }
+
+    async function loadStepPayload(matchId: string, step: StepKey) {
+        // sempre carrega header (status e dados básicos)
+        await loadHeader(matchId);
+
+        // depois carrega apenas o step atual
+        if (step === "accept") {
+            await loadAcceptation(matchId);
+            return;
+        }
+
+        if (step === "teams") {
+            await loadMatchMaking(matchId);
+            return;
+        }
+
+        if (step === "post" || step === "done") {
+            await loadPostGame(matchId);
+            return;
+        }
+
+        // playing/ended: por enquanto header basta (se quiser, pode criar endpoints próprios depois)
+    }
+
+    async function loadCurrent() {
+        if (!groupId) return;
+
+        setLoading(true);
+        try {
+            const [colorsRes, settingsRes] = await Promise.all([
+                TeamColorApi.list(groupId),
+                GroupSettingsApi.get(groupId),
+            ]);
+
+            const colors = (colorsRes.data ?? []) as TeamColorDto[];
+            setTeamColors(colors);
+
+            const gs = (settingsRes.data ?? null) as GroupSettingsDto | null;
+            setGroupSettings(gs);
+
+            if (gs) {
+                const suggestedPlace = gs.defaultPlaceName ?? gs.placeName;
+                const suggestedTime = gs.defaultMatchTime ?? gs.matchTime;
+                setPlaceName((prev) => (prev.trim().length ? prev : suggestedPlace ?? ""));
+                setPlayedAtTime((prev) => (prev.trim().length ? prev : suggestedTime ?? ""));
+            }
+
+            // ✅ pega a partida em andamento
+            try {
+                const cur = await MatchesApi.getCurrent(groupId);
+                const dto = cur.data as any;
+
+                const id = getIdFromDto(dto);
+                if (!id) {
+                    setCurrentMatchId(null);
+                    setCurrent(null);
+                    return;
+                }
+
+                setCurrentMatchId(id);
+
+                // inicializa um "current" mínimo logo (pra stepper renderizar rápido)
+                setCurrent((prev) =>
+                    mergeCurrent(prev, {
+                        matchId: id,
+                        groupId: groupId as any,
+                        status: Number(dto?.status ?? dto?.Status ?? 0) as any,
+                        placeName: dto?.placeName ?? dto?.PlaceName ?? prev?.placeName ?? "",
+                        playedAt: dto?.playedAt ?? dto?.PlayedAt ?? prev?.playedAt,
+                    } as any)
+                );
+
+                // carrega payload do step atual (ou create se ainda não tiver status)
+                const st = Number(dto?.status ?? dto?.Status ?? 0);
+                const sk: StepKey =
+                    st === 1 ? "accept" :
+                        st === 2 ? "teams" :
+                            st === 5 ? "post" :
+                                st === 6 ? "done" :
+                                    st === 0 ? "create" :
+                                        st === 3 ? "playing" :
+                                            st === 4 ? "ended" : "create";
+
+                await loadStepPayload(id, sk);
+            } catch (e: any) {
+                // 404 => sem partida em andamento
+                setCurrentMatchId(null);
+                setCurrent(null);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function refreshCurrent() {
+        if (!currentMatchId) return;
+        // só recarrega o step atual (não puxa tudo)
+        await loadStepPayload(currentMatchId, stepKey);
+    }
+
+    async function createMatch() {
+        if (!canCreateMatch) return;
+        setCreating(true);
+        try {
+            const playedAt = toUtcIso(playedAtDate, playedAtTime);
+            await MatchesApi.create(groupId!, { placeName: placeName.trim(), playedAt } as any);
+            await loadCurrent();
+        } finally {
+            setCreating(false);
+        }
+    }
+
+    async function rewindOneStep() {
+        if (!admin || !groupId || !currentMatchId) return;
+
+        try {
+            await MatchesApi.rewind(groupId, currentMatchId);
+        } finally {
+            await refreshCurrent();
+        }
+    }
+
+    // ✅ quando o step muda, carregue apenas o payload daquele step
+    const lastLoadedStepRef = useRef<StepKey | null>(null);
+    useEffect(() => {
+        if (!currentMatchId) return;
+        if (stepKey === "create") return;
+
+        if (lastLoadedStepRef.current === stepKey) return;
+        lastLoadedStepRef.current = stepKey;
+
+        loadStepPayload(currentMatchId, stepKey);
+        // eslint-disable-next-line
+    }, [currentMatchId, stepKey]);
 
     // auto load
     useEffect(() => {
-        loadList();
+        loadCurrent();
         // eslint-disable-next-line
     }, [groupId]);
 
@@ -239,7 +370,7 @@ export default function MatchesPage() {
         if (!groupId) return;
 
         const t = window.setInterval(() => {
-            loadList();
+            loadCurrent();
         }, 15000);
 
         return () => window.clearInterval(t);
@@ -250,16 +381,17 @@ export default function MatchesPage() {
     useEffect(() => {
         if (!current) return;
 
-        const aId = current?.teamAColor?.id ?? "";
-        const bId = current?.teamBColor?.id ?? "";
+        const aId = (current as any)?.teamAColor?.id ?? "";
+        const bId = (current as any)?.teamBColor?.id ?? "";
         const alreadySet = !!aId || !!bId;
 
-        if (aId) setTeamAColorId(aId);
-        if (bId) setTeamBColorId(bId);
+        if (aId) setTeamAColorId(String(aId));
+        if (bId) setTeamBColorId(String(bId));
 
         setColorsLocked(alreadySet);
         setAllowEditColors(false);
-    }, [current?.matchId, current?.teamAColor?.id, current?.teamBColor?.id]); // eslint-disable-line
+        // eslint-disable-next-line
+    }, [(current as any)?.matchId, (current as any)?.teamAColor?.id, (current as any)?.teamBColor?.id]);
 
     useEffect(() => {
         if (!teamColors?.length) return;
@@ -273,24 +405,68 @@ export default function MatchesPage() {
         return !allowEditColors;
     }, [admin, colorsLocked, allowEditColors]);
 
-    const teamAColor = useMemo(() => teamColors.find((c) => String(c.id) === String(teamAColorId)) ?? null, [teamColors, teamAColorId]);
-    const teamBColor = useMemo(() => teamColors.find((c) => String(c.id) === String(teamBColorId)) ?? null, [teamColors, teamBColorId]);
+    const teamAColor = useMemo(
+        () => teamColors.find((c) => String(c.id) === String(teamAColorId)) ?? null,
+        [teamColors, teamAColorId]
+    );
+    const teamBColor = useMemo(
+        () => teamColors.find((c) => String(c.id) === String(teamBColorId)) ?? null,
+        [teamColors, teamBColorId]
+    );
+
+    // derived lists
+    const allPlayers = useMemo<PlayerInMatchDto[]>(() => buildAllPlayers(current), [current]);
+
+    const invitePool = useMemo<PlayerInMatchDto[]>(() => {
+        const list = (current as any)?.unassignedPlayers ?? [];
+        return Array.isArray(list) ? list : [];
+    }, [current]);
+
+    const accepted = useMemo(
+        () => invitePool.filter((p) => Number((p as any).inviteResponse) === InviteResponse.Accepted),
+        [invitePool]
+    );
+    const rejected = useMemo(
+        () => invitePool.filter((p) => Number((p as any).inviteResponse) === InviteResponse.Rejected),
+        [invitePool]
+    );
+    const pending = useMemo(
+        () => invitePool.filter((p) => Number((p as any).inviteResponse) === InviteResponse.None),
+        [invitePool]
+    );
+
+    const acceptedOverLimit = accepted.length > maxPlayers;
+
+    const participants = useMemo<PlayerInMatchDto[]>(() => {
+        if (!current) return [];
+
+        const a = Array.isArray((current as any)?.teamAPlayers) ? (current as any).teamAPlayers : [];
+        const b = Array.isArray((current as any)?.teamBPlayers) ? (current as any).teamBPlayers : [];
+        const base = [...a, ...b];
+
+        const fallback = allPlayers.filter((p) => Number((p as any).team) === 1 || Number((p as any).team) === 2);
+        const list = base.length ? base : fallback;
+
+        const map = new Map<string, PlayerInMatchDto>();
+        for (const p of list) if ((p as any)?.playerId) map.set(String((p as any).playerId), p);
+        return Array.from(map.values());
+    }, [current, allPlayers]);
 
     const teamsAlreadyAssigned = useMemo(() => {
-        const a = current?.teamAPlayers?.length ?? 0;
-        const b = current?.teamBPlayers?.length ?? 0;
+        const a = (current as any)?.teamAPlayers?.length ?? 0;
+        const b = (current as any)?.teamBPlayers?.length ?? 0;
         return a > 0 && b > 0;
-    }, [current?.teamAPlayers, current?.teamBPlayers]);
+    }, [(current as any)?.teamAPlayers, (current as any)?.teamBPlayers]);
 
     const sortedTeamAPlayers = useMemo(() => {
-        const a = Array.isArray(current?.teamAPlayers) ? current!.teamAPlayers : [];
-        return [...a].sort((x, y) => Number(y.isGoalkeeper) - Number(x.isGoalkeeper));
-    }, [current?.teamAPlayers]);
+        const a = Array.isArray((current as any)?.teamAPlayers) ? (current as any).teamAPlayers : [];
+        return [...a].sort((x: any, y: any) => Number(y.isGoalkeeper) - Number(x.isGoalkeeper));
+    }, [(current as any)?.teamAPlayers]);
 
     const sortedTeamBPlayers = useMemo(() => {
-        const b = Array.isArray(current?.teamBPlayers) ? current!.teamBPlayers : [];
-        return [...b].sort((x, y) => Number(y.isGoalkeeper) - Number(x.isGoalkeeper));
-    }, [current?.teamBPlayers]);
+        const b = Array.isArray((current as any)?.teamBPlayers) ? (current as any).teamBPlayers : [];
+        return [...b].sort((x: any, y: any) => Number(y.isGoalkeeper) - Number(x.isGoalkeeper));
+    }, [(current as any)?.teamBPlayers]);
 
     // actions
     async function acceptInvite(playerId: string) {
@@ -346,7 +522,7 @@ export default function MatchesPage() {
         setFinalizing(true);
         try {
             await MatchesApi.finalize(groupId, currentMatchId);
-            await loadList();
+            await loadCurrent();
         } finally {
             setFinalizing(false);
         }
@@ -356,15 +532,15 @@ export default function MatchesPage() {
     async function generateTeams() {
         if (!groupId || !current) return;
 
-        const acceptedAll = allPlayers.filter((p) => Number(p.inviteResponse) === InviteResponse.Accepted);
+        const acceptedAll = allPlayers.filter((p) => Number((p as any).inviteResponse) === InviteResponse.Accepted);
 
         const players: TeamGenPlayerDto[] = uniqById(
             acceptedAll
-                .filter((p) => typeof p.playerId === "string" && p.playerId.trim().length > 0)
+                .filter((p) => typeof (p as any).playerId === "string" && String((p as any).playerId).trim().length > 0)
                 .map((p) => ({
-                    id: p.playerId,
-                    name: p.playerName ?? "—",
-                    isGoalkeeper: !!p.isGoalkeeper,
+                    id: String((p as any).playerId),
+                    name: (p as any).playerName ?? "—",
+                    isGoalkeeper: !!(p as any).isGoalkeeper,
                 }))
         );
 
@@ -406,9 +582,9 @@ export default function MatchesPage() {
         if (!admin || !groupId || !currentMatchId) return;
         if (!teamGenOptions || teamGenOptions.length === 0) return;
 
-        const opt = teamGenOptions[Math.max(0, Math.min(selectedTeamGenIdx, teamGenOptions.length - 1))];
-        const teamAPlayerIds = Array.isArray(opt.teamA) ? opt.teamA.map((x) => x.playerId) : [];
-        const teamBPlayerIds = Array.isArray(opt.teamB) ? opt.teamB.map((x) => x.playerId) : [];
+        const opt = teamGenOptions[Math.max(0, Math.min(selectedTeamGenIdx, teamGenOptions.length - 1))] as any;
+        const teamAPlayerIds = Array.isArray(opt.teamA) ? opt.teamA.map((x: any) => x.playerId) : [];
+        const teamBPlayerIds = Array.isArray(opt.teamB) ? opt.teamB.map((x: any) => x.playerId) : [];
         if (teamAPlayerIds.length === 0 || teamBPlayerIds.length === 0) return;
 
         setAssigningTeams(true);
@@ -439,7 +615,10 @@ export default function MatchesPage() {
         }
     }
 
-    const canStartNow = useMemo(() => admin && stepKey === "teams" && teamsAlreadyAssigned, [admin, stepKey, teamsAlreadyAssigned]);
+    const canStartNow = useMemo(
+        () => admin && stepKey === "teams" && teamsAlreadyAssigned,
+        [admin, stepKey, teamsAlreadyAssigned]
+    );
 
     // postgame
     async function setScore() {
@@ -506,7 +685,6 @@ export default function MatchesPage() {
         }
     }
 
-    // props for steps
     const teamsProps = useMemo(() => {
         return {
             admin,
@@ -535,10 +713,10 @@ export default function MatchesPage() {
             setTeamBColorId,
             teamAColor,
             teamBColor,
-            currentTeamAColorHex: current?.teamAColor?.hexValue ?? "#e2e8f0",
-            currentTeamAColorName: current?.teamAColor?.name ?? "—",
-            currentTeamBColorHex: current?.teamBColor?.hexValue ?? "#e2e8f0",
-            currentTeamBColorName: current?.teamBColor?.name ?? "—",
+            currentTeamAColorHex: (current as any)?.teamAColor?.hexValue ?? "#e2e8f0",
+            currentTeamAColorName: (current as any)?.teamAColor?.name ?? "—",
+            currentTeamBColorHex: (current as any)?.teamBColor?.hexValue ?? "#e2e8f0",
+            currentTeamBColorName: (current as any)?.teamBColor?.name ?? "—",
             onApplyManualColors: applyManualColors,
             onSetColorsRandomDistinct: setColorsRandomDistinct,
 
@@ -577,10 +755,10 @@ export default function MatchesPage() {
         teamBColorId,
         teamAColor,
         teamBColor,
-        current?.teamAColor?.hexValue,
-        current?.teamAColor?.name,
-        current?.teamBColor?.hexValue,
-        current?.teamBColor?.name,
+        (current as any)?.teamAColor?.hexValue,
+        (current as any)?.teamAColor?.name,
+        (current as any)?.teamBColor?.hexValue,
+        (current as any)?.teamBColor?.name,
         teamGenOptions,
         selectedTeamGenIdx,
         allPlayers,
@@ -595,8 +773,8 @@ export default function MatchesPage() {
 
     const postProps = useMemo(() => {
         return {
-            currentMvpName: current?.computedMvp?.playerName ?? "",
-            voteCounts: current?.voteCounts ?? [],
+            currentMvpName: (current as any)?.computedMvp?.playerName ?? "",
+            voteCounts: (current as any)?.voteCounts ?? [],
             participants,
             scoreA,
             setScoreA,
@@ -604,8 +782,8 @@ export default function MatchesPage() {
             setScoreB,
             settingScore,
             onSetScore: setScore,
-            currentScoreA: current?.teamAGoals,
-            currentScoreB: current?.teamBGoals,
+            currentScoreA: (current as any)?.teamAGoals,
+            currentScoreB: (current as any)?.teamBGoals,
 
             voting,
             voteVoterMpId,
@@ -622,16 +800,16 @@ export default function MatchesPage() {
             setGoalTime,
             addingGoal,
             onAddGoal: addGoal,
-            goals: current?.goals ?? [],
+            goals: (current as any)?.goals ?? [],
             removingGoal,
             onRemoveGoal: removeGoal,
         };
     }, [
-        current?.computedMvp?.playerName,
-        current?.voteCounts,
-        current?.teamAGoals,
-        current?.teamBGoals,
-        current?.goals,
+        (current as any)?.computedMvp?.playerName,
+        (current as any)?.voteCounts,
+        (current as any)?.teamAGoals,
+        (current as any)?.teamBGoals,
+        (current as any)?.goals,
         participants,
         scoreA,
         scoreB,
@@ -648,48 +826,80 @@ export default function MatchesPage() {
 
     const currentExistsInCreate = !!current && stepKey === "create";
 
+    const canRewind = useMemo(() => {
+        if (!admin) return false;
+        if (!current) return false;
+        const s = Number((current as any).status);
+        return Number.isFinite(s) && s > 0; // > Created
+    }, [admin, (current as any)?.status]);
+
     return (
         <div className="space-y-6">
             <Section title="Partida">
                 {!groupId ? (
                     <div className="muted">Selecione um Group no Dashboard.</div>
                 ) : (
-                    <MatchWizard
-                        admin={admin}
-                        stepKey={stepKey}
-                        steps={steps}
-                        current={current}
-                        loading={loading}
-                        maxPlayers={maxPlayers}
-                        acceptedCount={accepted.length}
-                        pendingCount={pending.length}
-                        acceptedOverLimit={acceptedOverLimit}
-                        placeName={placeName}
-                        setPlaceName={setPlaceName}
-                        playedAtDate={playedAtDate}
-                        setPlayedAtDate={setPlayedAtDate}
-                        playedAtTime={playedAtTime}
-                        setPlayedAtTime={setPlayedAtTime}
-                        canCreateMatch={canCreateMatch}
-                        creating={creating}
-                        onCreateMatch={createMatch}
-                        currentExistsInCreate={currentExistsInCreate}
-                        accepted={accepted}
-                        rejected={rejected}
-                        pending={pending}
-                        mutatingInvite={mutatingInvite}
-                        activePlayerId={activePlayerId}
-                        onAcceptInvite={acceptInvite}
-                        onRejectInvite={rejectInvite}
-                        onRefresh={refreshCurrent}
-                        onGoToMatchMaking={goToMatchMaking}
-                        teamsProps={teamsProps}
-                        onEndMatch={endMatch}
-                        onGoToPostGame={goToPostGame}
-                        postProps={postProps}
-                        onFinalize={finalizeMatch}
-                        onReloadDone={loadList}
-                    />
+                    <div className="space-y-3">
+                        {admin && currentMatchId && (
+                            <div className="flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    className={[
+                                        "px-3 py-2 rounded-xl border text-sm",
+                                        canRewind
+                                            ? "bg-white hover:bg-slate-50 border-slate-200"
+                                            : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed",
+                                    ].join(" ")}
+                                    onClick={() => {
+                                        if (!canRewind) return;
+                                        rewindOneStep();
+                                    }}
+                                    disabled={!canRewind}
+                                    title={canRewind ? "Voltar uma etapa" : "Não é possível voltar neste status"}
+                                >
+                                    Voltar etapa
+                                </button>
+                            </div>
+                        )}
+
+                        <MatchWizard
+                            admin={admin}
+                            stepKey={stepKey}
+                            steps={steps}
+                            current={current}
+                            loading={loading}
+                            maxPlayers={maxPlayers}
+                            acceptedCount={accepted.length}
+                            pendingCount={pending.length}
+                            acceptedOverLimit={acceptedOverLimit}
+                            placeName={placeName}
+                            setPlaceName={setPlaceName}
+                            playedAtDate={playedAtDate}
+                            setPlayedAtDate={setPlayedAtDate}
+                            playedAtTime={playedAtTime}
+                            setPlayedAtTime={setPlayedAtTime}
+                            canCreateMatch={canCreateMatch}
+                            creating={creating}
+                            onCreateMatch={createMatch}
+                            currentExistsInCreate={currentExistsInCreate}
+                            accepted={accepted}
+                            rejected={rejected}
+                            pending={pending}
+                            mutatingInvite={mutatingInvite}
+                            activePlayerId={activePlayerId}
+                            onAcceptInvite={acceptInvite}
+                            onRejectInvite={rejectInvite}
+                            onRefresh={refreshCurrent}
+                            onGoToMatchMaking={goToMatchMaking}
+                            teamsProps={teamsProps}
+                            onEndMatch={endMatch}
+                            onGoToPostGame={goToPostGame}
+                            postProps={postProps}
+                            onFinalize={finalizeMatch}
+                            onReloadDone={loadCurrent}
+                            finalizing={finalizing as any}
+                        />
+                    </div>
                 )}
             </Section>
         </div>
