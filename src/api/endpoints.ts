@@ -97,7 +97,13 @@ export const MatchesApi = {
   goToMatchMaking: (groupId: string, matchId: string) => http.post(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   goToPostGame: (groupId: string, matchId: string) => http.post(`/api/matches/group/${groupId}/${matchId}/postgame`),
   removeGoal: (groupId: string, matchId: string, goalId: string) => http.delete(`/matches/group/${groupId}/${matchId}/goals/${goalId}`),
-  getCurrent: (groupId: string) => http.get(`/matches/group/${groupId}/current`),
+  getCurrent: (groupId: string) => http.get(`/api/matches/group/${groupId}/current`),
+  rewind: (groupId: string, matchId: string) => http.post(`/api/matches/group/${groupId}/${matchId}/rewind`),
+  header: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/header`),
+  acceptation: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/acceptation`),
+  matchmaking: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
+  postgame: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/postgame`),
+  history: (groupId: string, take: number) => http.get(`/api/Matches/group/${groupId}/history`, { params: { take } })
 };
 
 export const TeamGenApi = {
