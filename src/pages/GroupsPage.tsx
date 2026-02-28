@@ -439,6 +439,7 @@ function InviteModal({
 
 export default function GroupsPage() {
     const active         = useAccountStore((s) => s.getActive());
+    const isGroupAdmin   = useAccountStore((s) => s.isGroupAdmin);
     const activeGroupId  = active?.activeGroupId ?? "";
     const activePlayerId = active?.activePlayerId ?? "";
 
@@ -479,22 +480,26 @@ export default function GroupsPage() {
                     ) : group ? (
                         <div className="flex items-center gap-2">
                             <span className="pill">{activePlayers.length} jogadores</span>
-                            <button
-                                type="button"
-                                className="btn btn-secondary flex items-center gap-1.5 text-sm"
-                                onClick={() => setAddGuestOpen(true)}
-                            >
-                                <Plus size={15} />
-                                <span className="hidden sm:inline">Convidado</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn btn-primary flex items-center gap-1.5 text-sm"
-                                onClick={() => setInviteOpen(true)}
-                            >
-                                <UserPlus size={15} />
-                                <span className="hidden sm:inline">Convidar</span>
-                            </button>
+                            {isGroupAdmin(activeGroupId) && (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary flex items-center gap-1.5 text-sm"
+                                        onClick={() => setAddGuestOpen(true)}
+                                    >
+                                        <Plus size={15} />
+                                        <span className="hidden sm:inline">Convidado</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary flex items-center gap-1.5 text-sm"
+                                        onClick={() => setInviteOpen(true)}
+                                    >
+                                        <UserPlus size={15} />
+                                        <span className="hidden sm:inline">Convidar</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     ) : null
                 }

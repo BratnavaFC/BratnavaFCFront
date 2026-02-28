@@ -7,13 +7,12 @@ import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
 import { GroupInvitesApi } from "../api/endpoints";
 
-const ACTIVE_GROUP_ID = "3f401edf-d309-4bae-97d8-28eae0da7a8a";
-
 type Item = { to: string; label: string; icon: any; badge?: number };
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const active = useAccountStore((s) => s.getActive());
     const isAdminOrGod = !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode"));
+    const activeGroupId = active?.activeGroupId ?? "";
     const pendingCount = useInviteStore((s) => s.pendingCount);
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
 
@@ -26,20 +25,20 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     }, [active?.userId, setPendingCount]);
 
     const items: Item[] = useMemo(() => [
-        { to: "/app",                                        label: "Dashboard",     icon: LayoutDashboard },
-        { to: "/app/groups",                                 label: "Grupos",        icon: Users },
-        { to: "/app/team-colors",                            label: "Cores",         icon: Palette },
-        { to: "/app/matches",                                label: "Partidas",      icon: CalendarDays },
-        { to: "/app/history",                                label: "Histórico",     icon: History },
-        { to: `/app/groups/${ACTIVE_GROUP_ID}/visual-stats`, label: "Visual Stats",  icon: BarChart3 },
-        { to: "/app/settings",                               label: "Configurações", icon: Settings },
+        { to: "/app",                                                                    label: "Dashboard",     icon: LayoutDashboard },
+        { to: "/app/groups",                                                             label: "Grupos",        icon: Users },
+        { to: "/app/team-colors",                                                        label: "Cores",         icon: Palette },
+        { to: "/app/matches",                                                            label: "Partidas",      icon: CalendarDays },
+        { to: "/app/history",                                                            label: "Histórico",     icon: History },
+        { to: activeGroupId ? `/app/groups/${activeGroupId}/visual-stats` : "/app",     label: "Visual Stats",  icon: BarChart3 },
+        { to: "/app/settings",                                                           label: "Configurações", icon: Settings },
         {
             to: "/app/admin/users",
             label: isAdminOrGod ? "Usuários" : "Minha conta",
             icon: Shield,
             badge: isAdminOrGod ? 0 : pendingCount,
         },
-    ], [isAdminOrGod, pendingCount]);
+    ], [isAdminOrGod, pendingCount, activeGroupId]);
 
     return (
         <aside className={`bg-white border-r transition-all duration-300 ${open ? "w-64" : "w-16"}`}>

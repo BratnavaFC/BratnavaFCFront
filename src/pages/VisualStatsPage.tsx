@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { TeamGenApi } from "../api/endpoints";
+import { useAccountStore } from "../auth/accountStore";
 import {
     Activity,
     BarChart3,
@@ -212,6 +213,17 @@ type PlayerSubTab = "resumo" | "sinergias";
  * ========================= */
 export default function VisualStatsPage() {
     const { groupId } = useParams();
+    const navigate = useNavigate();
+    const activeGroupId = useAccountStore((s) => s.getActive()?.activeGroupId);
+
+    // Quando o grupo ativo mudar enquanto o usuário já está nesta página,
+    // redireciona para as stats do novo grupo
+    useEffect(() => {
+        if (activeGroupId && activeGroupId !== groupId) {
+            navigate(`/app/groups/${activeGroupId}/visual-stats`, { replace: true });
+        }
+    }, [activeGroupId, groupId, navigate]);
+
     const [data, setData] = useState<PlayerVisualStatsReport | null>(null);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
