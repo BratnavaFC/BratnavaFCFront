@@ -99,6 +99,15 @@ export const MatchesApi = {
   removeGoal: (groupId: string, matchId: string, goalId: string) => http.delete(`/matches/group/${groupId}/${matchId}/goals/${goalId}`),
 };
 
+export const GroupInvitesApi = {
+  create: (groupId: string, dto: { targetUserId: string; guestPlayerId?: string | null }) =>
+    http.post(`/api/Groups/${groupId}/invites`, dto),
+  mine: () => http.get('/api/Groups/invites/mine'),
+  mineCount: () => http.get('/api/Groups/invites/mine/count'),
+  accept: (inviteId: string) => http.patch(`/api/Groups/invites/${inviteId}/accept`),
+  reject: (inviteId: string) => http.patch(`/api/Groups/invites/${inviteId}/reject`),
+};
+
 export const TeamGenApi = {
   generate: (dto: TeamGenerationRequestDto) => http.post(`/api/TeamGeneration/generate`, dto),
   visualStats: (groupId: string) => http.get(`/api/TeamGeneration/visual-stats/${groupId}`),

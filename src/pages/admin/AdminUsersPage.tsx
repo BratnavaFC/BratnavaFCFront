@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Section } from "../../components/Section";
 import useAccountStore from "../../auth/accountStore";
-import { UsersApi } from "../../api/endpoints";
+import { GroupInvitesApi, UsersApi } from "../../api/endpoints";
+import { useInviteStore } from "../../stores/inviteStore";
 import {
     Shield,
     User,
@@ -13,6 +14,9 @@ import {
     X,
     Check,
     Loader2,
+    Bell,
+    UserCheck,
+    UserX,
 } from "lucide-react";
 
 type Status = 1 | 2; // 1 Active, 2 Inactive
@@ -545,12 +549,74 @@ function ChangePasswordModal({
     );
 }
 
+/** ========= Tipos de convite ========= */
+
+type GroupInviteDto = {
+    id: string;
+    groupId: string;
+    groupName: string;
+    targetUserId: string;
+    guestPlayerId?: string | null;
+    guestPlayerName?: string | null;
+    status: number;
+    createDate: string;
+};
+
 /** ========= Página ========= */
 
 export default function AdminUsersPage() {
     const active = useAccountStore((s) => s.getActive());
     const isAdminOrGod = useMemo(() => !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode")), [active]);
     const myUserId = active?.userId ?? null;
+
+    const setPendingCount = useInviteStore((s) => s.setPendingCount);
+
+    // Convites pendentes (só para user comum)
+    const [invites, setInvites] = useState<GroupInviteDto[]>([]);
+    const [invitesLoading, setInvitesLoading] = useState(false);
+    const [acceptingId, setAcceptingId] = useState<string | null>(null);
+    const [rejectingId, setRejectingId] = useState<string | null>(null);
+    const [inviteActionErr, setInviteActionErr] = useState<string | null>(null);
+
+    async function loadInvites() {
+        setInvitesLoading(true);
+        try {
+            const res = await GroupInvitesApi.mine();
+            const list: GroupInviteDto[] = res.data ?? [];
+            setInvites(list);
+            setPendingCount(list.length);
+        } catch {
+            // silencioso
+        } finally {
+            setInvitesLoading(false);
+        }
+    }
+
+    async function handleAccept(inviteId: string) {
+        setAcceptingId(inviteId);
+        setInviteActionErr(null);
+        try {
+            await GroupInvitesApi.accept(inviteId);
+            await loadInvites();
+        } catch (e: any) {
+            setInviteActionErr(e?.response?.data?.error ?? e?.response?.data?.message ?? "Erro ao aceitar convite.");
+        } finally {
+            setAcceptingId(null);
+        }
+    }
+
+    async function handleReject(inviteId: string) {
+        setRejectingId(inviteId);
+        setInviteActionErr(null);
+        try {
+            await GroupInvitesApi.reject(inviteId);
+            await loadInvites();
+        } catch (e: any) {
+            setInviteActionErr(e?.response?.data?.error ?? e?.response?.data?.message ?? "Erro ao recusar convite.");
+        } finally {
+            setRejectingId(null);
+        }
+    }
 
     // Admin list
     const [loading, setLoading] = useState(false);
@@ -638,7 +704,10 @@ export default function AdminUsersPage() {
 
     useEffect(() => {
         if (isAdminOrGod) loadAdminList();
-        else loadMyProfile();
+        else {
+            loadMyProfile();
+            loadInvites();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAdminOrGod, page, pageSize, includeInactive, debouncedSearch, myUserId]);
 
@@ -912,6 +981,83 @@ export default function AdminUsersPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* ── Convites pendentes ── */}
+                    <div className="rounded-2xl border bg-white overflow-hidden">
+                        <div className="px-5 py-4 border-b flex items-center gap-3">
+                            <Bell size={16} className="text-slate-500" />
+                            <span className="text-sm font-semibold text-slate-900">
+                                Convites de patota
+                            </span>
+                            {invites.length > 0 && (
+                                <span className="ml-auto inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold">
+                                    {invites.length}
+                                </span>
+                            )}
+                        </div>
+
+                        {inviteActionErr && (
+                            <div className="mx-5 mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                                {inviteActionErr}
+                            </div>
+                        )}
+
+                        {invitesLoading ? (
+                            <div className="p-5 flex items-center gap-2 text-sm text-slate-600">
+                                <Loader2 size={15} className="animate-spin" /> Carregando convites...
+                            </div>
+                        ) : invites.length === 0 ? (
+                            <div className="p-5 text-sm text-slate-400">
+                                Nenhum convite pendente.
+                            </div>
+                        ) : (
+                            <div className="divide-y">
+                                {invites.map((inv) => {
+                                    const isAccepting = acceptingId === inv.id;
+                                    const isRejecting = rejectingId === inv.id;
+                                    const busy = isAccepting || isRejecting;
+                                    return (
+                                        <div key={inv.id} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                                    {inv.groupName}
+                                                </div>
+                                                {inv.guestPlayerName && (
+                                                    <div className="text-xs text-slate-500 mt-0.5">
+                                                        Perfil existente: <span className="font-medium text-slate-700">{inv.guestPlayerName}</span>
+                                                    </div>
+                                                )}
+                                                <div className="text-xs text-slate-400 mt-0.5">
+                                                    {new Date(inv.createDate).toLocaleDateString("pt-BR")}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <Button
+                                                    variant="primary"
+                                                    onClick={() => handleAccept(inv.id)}
+                                                    loading={isAccepting}
+                                                    disabled={busy}
+                                                    iconLeft={<UserCheck size={15} />}
+                                                >
+                                                    Aceitar
+                                                </Button>
+                                                <Button
+                                                    variant="danger"
+                                                    onClick={() => handleReject(inv.id)}
+                                                    loading={isRejecting}
+                                                    disabled={busy}
+                                                    iconLeft={<UserX size={15} />}
+                                                >
+                                                    Recusar
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
 
                     <EditUserModal
                         open={editOpen}

@@ -19,3 +19,7 @@ export function isAdmin(): boolean {
 export function isGodMode(): boolean {
     return getRole() === "GodMode";
 }
+
+export function isGroupAdmin(groupId: string): boolean {
+    return useAccountStore.getState().isGroupAdmin(groupId);
+}

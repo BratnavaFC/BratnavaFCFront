@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Field } from "../components/Field";
-import { AuthApi } from "../api/endpoints";
+import { AuthApi, GroupsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import type { LoginDto } from "../api/generated/types";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
@@ -119,6 +119,13 @@ export default function LoginPage() {
             accessToken,
             refreshToken,
         });
+
+        // Fetch groups where this user is admin and persist in store
+        try {
+            const groupsRes = await GroupsApi.listByAdmin(userId);
+            const groupAdminIds = (groupsRes.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
+            useAccountStore.getState().updateActive({ groupAdminIds });
+        } catch { /* non-critical */ }
 
         nav("/app");
     };

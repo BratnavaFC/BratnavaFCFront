@@ -14,6 +14,7 @@ export type Account = {
 
     activeGroupId?: string | null;  // group selecionado no app
     activePlayerId?: string | null; // jogador/perfil selecionado
+    groupAdminIds?: string[];       // IDs das patotas onde o usuário é admin
 };
 
 type AccountState = {
@@ -24,6 +25,7 @@ type AccountState = {
     getActive: () => Account | null;
     hasRole: (role: string) => boolean;
     isAdmin: () => boolean;
+    isGroupAdmin: (groupId: string) => boolean;
 
     // mutations
     upsertAccount: (acc: Account) => void;
@@ -63,6 +65,14 @@ export const useAccountStore = create<AccountState>()(
                     acc.roles.includes("Admin") ||
                     acc.roles.includes("GodMode")
                 );
+            },
+
+            isGroupAdmin: (groupId: string) => {
+                if (!groupId) return false;
+                const acc = get().getActive();
+                if (!acc) return false;
+                if (acc.roles.includes("Admin") || acc.roles.includes("GodMode")) return true;
+                return acc.groupAdminIds?.includes(groupId) ?? false;
             },
 
             // ========================

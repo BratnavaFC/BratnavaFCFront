@@ -6,16 +6,9 @@ import { TeamColorCarousel } from "../domains/teamcolors/TeamColorCarousel";
 import { PreviewModal } from "../components/PreviewModal";
 import { TeamColorEditModal } from "../components/TeamColorEditModal";
 import { useIsMobile } from "../hooks/UseIsMobile";
-import { isAdmin } from "../auth/guards"; // você já tem
-// Se você tiver isGodMode, use também. Se não tiver, deixei fallback por role string/number abaixo.
+import { isAdmin, isGroupAdmin } from "../auth/guards";
 
 type Item = any;
-
-function isGodModeFallback(active: any) {
-    const role = active?.role ?? active?.Role ?? active?.userRole;
-    // ajuste conforme seu shape/enum:
-    return role === "GodMode" || role === 2;
-}
 
 export default function TeamColorsPage() {
     const active = useAccountStore((s) => s.getActive());
@@ -23,7 +16,7 @@ export default function TeamColorsPage() {
 
     const isMobile = useIsMobile(768);
 
-    const canManage = !!active && (isAdmin() || isGodModeFallback(active));
+    const canManage = !!active && (isAdmin() || isGroupAdmin(groupId ?? ""));
 
     const [items, setItems] = useState<Item[]>([]);
     const [loading, setLoading] = useState(false);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Section } from "../components/Section";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { isAdmin } from "../auth/guards";
+import { isAdmin, isGroupAdmin } from "../auth/guards";
 
 import { MatchWizard } from "../domains/matches/steps/MatchWizard";
 import type {
@@ -38,7 +38,7 @@ export default function MatchesPage() {
     const groupId = active?.activeGroupId;
 
     const activePlayerId: string | null = (active as any)?.activePlayerId ?? null;
-    const admin = isAdmin();
+    const admin = isAdmin() || isGroupAdmin(groupId ?? "");
     const readOnlyUser = !admin;
 
     const [matches, setMatches] = useState<any[]>([]);

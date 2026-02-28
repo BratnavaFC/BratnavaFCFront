@@ -34,10 +34,12 @@ function roleLabel(role: string | null) {
 function CreateGroupModal({
     open,
     onClose,
+    onCreated,
     userId,
 }: {
     open: boolean;
     onClose: () => void;
+    onCreated?: (groupId: string) => void;
     userId: string;
 }) {
     const [name, setName] = useState("Bratnava FC");
@@ -55,13 +57,15 @@ function CreateGroupModal({
         setSaving(true);
         setError(null);
         try {
-            await GroupsApi.create({
+            const res = await GroupsApi.create({
                 name,
                 userAdminIds: [userId],
                 defaultPlaceName: place,
                 defaultDayOfWeek: dayOfWeek,
                 defaultTime: time,
             } as any);
+            const newGroupId: string = res.data?.id ?? res.data?.groupId ?? "";
+            if (newGroupId) onCreated?.(newGroupId);
             onClose();
         } catch (e: any) {
             const data = e?.response?.data;
@@ -174,6 +178,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
             setMyPlayers([]);
             return;
         }
+        const userId = active.userId;
         PlayersApi.mine()
             .then((res) => {
                 const list = (res.data ?? []) as MyPlayerDto[];
@@ -183,6 +188,12 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                 }
             })
             .catch(() => setMyPlayers([]));
+        GroupsApi.listByAdmin(userId)
+            .then((res) => {
+                const ids = (res.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                updateActive({ groupAdminIds: ids });
+            })
+            .catch(() => {});
     }, [active?.userId]);
 
     function handlePlayerChange(playerId: string) {
@@ -353,6 +364,10 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                 <CreateGroupModal
                     open={createGroupOpen}
                     onClose={() => setCreateGroupOpen(false)}
+                    onCreated={(newGroupId) => {
+                        const current = useAccountStore.getState().getActive()?.groupAdminIds ?? [];
+                        updateActive({ groupAdminIds: [...current, newGroupId] });
+                    }}
                     userId={active.userId}
                 />
             ) : null}
