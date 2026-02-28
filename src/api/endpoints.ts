@@ -97,6 +97,7 @@ export const MatchesApi = {
   goToMatchMaking: (groupId: string, matchId: string) => http.post(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   goToPostGame: (groupId: string, matchId: string) => http.post(`/api/matches/group/${groupId}/${matchId}/postgame`),
   removeGoal: (groupId: string, matchId: string, goalId: string) => http.delete(`/matches/group/${groupId}/${matchId}/goals/${goalId}`),
+  getCurrent: (groupId: string) => http.get(`/matches/group/${groupId}/current`),
 };
 
 export const TeamGenApi = {

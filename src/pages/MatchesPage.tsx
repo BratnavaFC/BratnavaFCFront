@@ -19,12 +19,10 @@ import type {
 import { InviteResponse } from "../domains/matches/matchTypes";
 import {
     buildAllPlayers,
-    cls,
     getMaxPlayers,
     getMatchId,
     isValidHHmm,
     normalizeTeamGenOptions,
-    pickActiveMatch,
     toDateInputValue,
     toUtcIso,
     uniqById,
@@ -41,7 +39,6 @@ export default function MatchesPage() {
     const admin = isAdmin();
     const readOnlyUser = !admin;
 
-    const [matches, setMatches] = useState<any[]>([]);
     const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
     const [current, setCurrent] = useState<MatchDetailsDto | null>(null);
 
@@ -110,18 +107,40 @@ export default function MatchesPage() {
         setCurrent(res.data as MatchDetailsDto);
     }
 
+    async function loadCurrentMatch() {
+        if (!groupId) return;
+
+        try {
+            const res = await MatchesApi.getCurrent(groupId);
+            const dto = res.data as any;
+
+            const id = getMatchId(dto);
+            setCurrentMatchId(id);
+
+            if (!id) {
+                setCurrent(null);
+                return;
+            }
+
+            await loadDetails(id);
+        } catch (err: any) {
+            if (err?.response?.status === 404) {
+                setCurrentMatchId(null);
+                setCurrent(null);
+                return;
+            }
+            throw err;
+        }
+    }
+
     async function loadList() {
         if (!groupId) return;
         setLoading(true);
         try {
-            const [matchesRes, colorsRes, settingsRes] = await Promise.all([
-                MatchesApi.list(groupId),
+            const [colorsRes, settingsRes] = await Promise.all([
                 TeamColorApi.list(groupId),
                 GroupSettingsApi.get(groupId),
             ]);
-
-            const list = matchesRes.data ?? [];
-            setMatches(list);
 
             const colors = (colorsRes.data ?? []) as TeamColorDto[];
             setTeamColors(colors);
@@ -136,20 +155,18 @@ export default function MatchesPage() {
                 setPlayedAtTime((prev) => (prev.trim().length ? prev : suggestedTime ?? ""));
             }
 
-            const activeMatch = pickActiveMatch(list);
-            const id = getMatchId(activeMatch);
-
-            setCurrentMatchId(id);
-            if (!id) setCurrent(null);
-            else await loadDetails(id);
+            await loadCurrentMatch();
         } finally {
             setLoading(false);
         }
     }
 
     async function refreshCurrent() {
-        if (!currentMatchId) return;
-        await loadDetails(currentMatchId);
+        if (currentMatchId) {
+            await loadDetails(currentMatchId);
+            return;
+        }
+        await loadCurrentMatch();
     }
 
     async function createMatch() {
