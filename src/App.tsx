@@ -8,7 +8,6 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import GroupsPage from './pages/GroupsPage';
 import GroupSettingsPage from './pages/GroupSettingsPage';
-import PlayersPage from './pages/PlayersPage';
 import TeamColorsPage from './pages/TeamColorsPage';
 import MatchesPage from './pages/MatchesPage';
 import HistoryPage from './pages/HistoryPage';
@@ -33,7 +32,6 @@ export default function App() {
             >
                 <Route index element={<DashboardPage />} />
                 <Route path="groups" element={<GroupsPage />} />
-                <Route path="players" element={<PlayersPage />} />
                 <Route path="team-colors" element={<TeamColorsPage />} />
                 <Route path="matches" element={<MatchesPage />} />
                 <Route path="history" element={<HistoryPage />} />

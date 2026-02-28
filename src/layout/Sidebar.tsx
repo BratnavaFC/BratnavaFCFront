@@ -28,7 +28,6 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const items: Item[] = useMemo(() => [
         { to: "/app",                                        label: "Dashboard",     icon: LayoutDashboard },
         { to: "/app/groups",                                 label: "Grupos",        icon: Users },
-        { to: "/app/players",                                label: "Jogadores",     icon: Users },
         { to: "/app/team-colors",                            label: "Cores",         icon: Palette },
         { to: "/app/matches",                                label: "Partidas",      icon: CalendarDays },
         { to: "/app/history",                                label: "Histórico",     icon: History },

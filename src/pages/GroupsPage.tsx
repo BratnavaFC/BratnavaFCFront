@@ -1,9 +1,9 @@
 // src/pages/GroupsPage.tsx
 import { useEffect, useRef, useState } from "react";
 import { Section } from "../components/Section";
-import { GroupInvitesApi, GroupsApi, UsersApi } from "../api/endpoints";
+import { GroupInvitesApi, GroupsApi, PlayersApi, UsersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { Check, Loader2, Search, UserPlus, X } from "lucide-react";
+import { Check, Loader2, Plus, Search, UserPlus, X } from "lucide-react";
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +40,148 @@ function initials(u: UserResult) {
         .filter(Boolean)
         .join("")
         .toUpperCase();
+}
+
+// ─── AddGuestModal ────────────────────────────────────────────────────────────
+
+function AddGuestModal({
+    open,
+    onClose,
+    groupId,
+    onCreated,
+}: {
+    open: boolean;
+    onClose: () => void;
+    groupId: string;
+    onCreated: () => void;
+}) {
+    const [name, setName]                 = useState("");
+    const [isGoalkeeper, setIsGoalkeeper] = useState(false);
+    const [loading, setLoading]           = useState(false);
+    const [err, setErr]                   = useState<string | null>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (open) {
+            setName("");
+            setIsGoalkeeper(false);
+            setLoading(false);
+            setErr(null);
+            setTimeout(() => nameRef.current?.focus(), 60);
+        }
+    }, [open]);
+
+    async function handleSubmit() {
+        if (!name.trim()) { setErr("Nome é obrigatório."); return; }
+        setLoading(true);
+        setErr(null);
+        try {
+            await PlayersApi.create({
+                name: name.trim(),
+                groupId,
+                skillPoints: 0,
+                isGoalkeeper,
+                isGuest: true,
+                status: 1,
+            } as any);
+            onCreated();
+            onClose();
+        } catch (e: any) {
+            const msg =
+                e?.response?.data?.error ??
+                e?.response?.data?.message ??
+                "Erro ao adicionar convidado.";
+            setErr(msg);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleKey(e: React.KeyboardEvent) {
+        if (e.key === "Enter" && !loading) handleSubmit();
+        if (e.key === "Escape") onClose();
+    }
+
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 z-50" onKeyDown={handleKey}>
+            {/* backdrop */}
+            <div
+                className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+                onClick={onClose}
+            />
+
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl border flex flex-col overflow-hidden">
+
+                    {/* header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                                <Plus size={17} />
+                            </div>
+                            <div>
+                                <div className="text-base font-semibold text-slate-900">Adicionar convidado</div>
+                                <div className="text-xs text-slate-500">Sem conta no sistema</div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            aria-label="Fechar"
+                            type="button"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* body */}
+                    <div className="px-5 py-5 space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-slate-700">Nome do convidado</label>
+                            <input
+                                ref={nameRef}
+                                className="input w-full"
+                                placeholder="Ex: Zé da Pelada"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={isGoalkeeper}
+                                onChange={(e) => setIsGoalkeeper(e.target.checked)}
+                                disabled={loading}
+                                className="h-4 w-4 rounded border-slate-300 accent-slate-900"
+                            />
+                            <span className="text-sm font-medium text-slate-700">Goleiro 🧤</span>
+                        </label>
+
+                        {err && <p className="text-sm text-rose-500">{err}</p>}
+                    </div>
+
+                    {/* footer */}
+                    <div className="px-5 pb-5 shrink-0">
+                        <button
+                            type="button"
+                            className="btn btn-primary w-full flex items-center justify-center gap-2"
+                            onClick={handleSubmit}
+                            disabled={loading}
+                        >
+                            {loading
+                                ? <><Loader2 size={15} className="animate-spin" /> Adicionando...</>
+                                : "Adicionar à patota"
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 // ─── InviteModal ─────────────────────────────────────────────────────────────
@@ -107,7 +249,7 @@ function InviteModal({
             }
         }, 400);
 
-        return () => clearTimeout(timer);   // cancela se o usuario digitar antes dos 400ms
+        return () => clearTimeout(timer);
     }, [query]);
 
     async function handleInvite(user: UserResult) {
@@ -296,16 +438,17 @@ function InviteModal({
 // ─── GroupsPage ──────────────────────────────────────────────────────────────
 
 export default function GroupsPage() {
-    const active       = useAccountStore((s) => s.getActive());
+    const active         = useAccountStore((s) => s.getActive());
     const activeGroupId  = active?.activeGroupId ?? "";
     const activePlayerId = active?.activePlayerId ?? "";
 
-    const [group, setGroup]     = useState<GroupDto | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError]     = useState<string | null>(null);
-    const [inviteOpen, setInviteOpen] = useState(false);
+    const [group, setGroup]           = useState<GroupDto | null>(null);
+    const [loading, setLoading]       = useState(false);
+    const [error, setError]           = useState<string | null>(null);
+    const [inviteOpen, setInviteOpen]   = useState(false);
+    const [addGuestOpen, setAddGuestOpen] = useState(false);
 
-    useEffect(() => {
+    function loadGroup() {
         if (!activeGroupId) { setGroup(null); return; }
         setLoading(true);
         setError(null);
@@ -313,6 +456,11 @@ export default function GroupsPage() {
             .then((res) => setGroup(res.data as GroupDto))
             .catch(() => setError("Nao foi possivel carregar os dados da patota."))
             .finally(() => setLoading(false));
+    }
+
+    useEffect(() => {
+        loadGroup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeGroupId]);
 
     const activePlayers = group?.players?.filter((p) => p.status === 1) ?? [];
@@ -333,11 +481,19 @@ export default function GroupsPage() {
                             <span className="pill">{activePlayers.length} jogadores</span>
                             <button
                                 type="button"
+                                className="btn btn-secondary flex items-center gap-1.5 text-sm"
+                                onClick={() => setAddGuestOpen(true)}
+                            >
+                                <Plus size={15} />
+                                <span className="hidden sm:inline">Convidado</span>
+                            </button>
+                            <button
+                                type="button"
                                 className="btn btn-primary flex items-center gap-1.5 text-sm"
                                 onClick={() => setInviteOpen(true)}
                             >
                                 <UserPlus size={15} />
-                                Convidar
+                                <span className="hidden sm:inline">Convidar</span>
                             </button>
                         </div>
                     ) : null
@@ -386,6 +542,13 @@ export default function GroupsPage() {
                     </div>
                 )}
             </Section>
+
+            <AddGuestModal
+                open={addGuestOpen}
+                onClose={() => setAddGuestOpen(false)}
+                groupId={activeGroupId}
+                onCreated={loadGroup}
+            />
 
             <InviteModal
                 open={inviteOpen}
