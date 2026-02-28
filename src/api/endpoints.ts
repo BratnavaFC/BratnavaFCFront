@@ -103,7 +103,9 @@ export const MatchesApi = {
   acceptation: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/acceptation`),
   matchmaking: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   postgame: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/postgame`),
-  history: (groupId: string, take: number) => http.get(`/api/Matches/group/${groupId}/history`, { params: { take } })
+  history: (groupId: string, take: number) => http.get(`/api/Matches/group/${groupId}/history`, { params: { take } }),
+  addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean }) =>
+    http.post(`/api/Matches/group/${groupId}/${matchId}/guests`, dto),
 };
 
 export const GroupInvitesApi = {

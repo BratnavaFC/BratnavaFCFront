@@ -499,6 +499,12 @@ export default function MatchesPage() {
         await refreshCurrent();
     }
 
+    async function addGuestToMatch(name: string, isGoalkeeper: boolean) {
+        if (!admin || !groupId || !currentMatchId) return;
+        await MatchesApi.addGuest(groupId, currentMatchId, { name, isGoalkeeper });
+        await loadAcceptation(currentMatchId);
+    }
+
     async function startMatch() {
         if (!admin || !groupId || !currentMatchId) return;
         await MatchesApi.start(groupId, currentMatchId);
@@ -891,6 +897,7 @@ export default function MatchesPage() {
                             onRejectInvite={rejectInvite}
                             onRefresh={refreshCurrent}
                             onGoToMatchMaking={goToMatchMaking}
+                            onAddGuest={addGuestToMatch}
                             teamsProps={teamsProps}
                             onEndMatch={endMatch}
                             onGoToPostGame={goToPostGame}

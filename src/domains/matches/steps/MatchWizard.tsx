@@ -44,6 +44,7 @@ export function MatchWizard({
     onRejectInvite,
     onRefresh,
     onGoToMatchMaking,
+    onAddGuest,
 
     // teams
     teamsProps,
@@ -63,7 +64,7 @@ export function MatchWizard({
                     <div className="min-w-0">
                         <div className="font-semibold">Partida Atual</div>
                         <div className="muted mt-1 truncate">
-                            {current?.playedAt ? new Date(current?.playedAt).toLocaleString() : "—"} • {current?.placeName ?? "—"}
+                            {current?.playedAt ? new Date(current?.playedAt).toLocaleString() : "ï¿½"} ï¿½ {current?.placeName ?? "ï¿½"}
                         </div>
                         <div className="muted">Status: {String(current?.statusName ?? current?.status)}</div>
                     </div>
@@ -76,13 +77,13 @@ export function MatchWizard({
 
                 {acceptedOverLimit ? (
                     <div className="mt-3 text-sm text-red-700">
-                        Passou do limite de aceitos: <b>{acceptedCount}</b> / <b>{maxPlayers}</b>. {admin ? "Recuse alguns para poder avançar." : "Aguarde o admin ajustar."}
+                        Passou do limite de aceitos: <b>{acceptedCount}</b> / <b>{maxPlayers}</b>. {admin ? "Recuse alguns para poder avanï¿½ar." : "Aguarde o admin ajustar."}
                     </div>
                 ) : null}
 
                 {!admin ? (
                     <div className="mt-3 text-xs text-slate-500">
-                        Modo usuário: você só consegue <b>aceitar/recusar o seu próprio convite</b> quando estiver em “Aceitação”. O restante é controlado pelo admin.
+                        Modo usuï¿½rio: vocï¿½ sï¿½ consegue <b>aceitar/recusar o seu prï¿½prio convite</b> quando estiver em ï¿½Aceitaï¿½ï¿½oï¿½. O restante ï¿½ controlado pelo admin.
                     </div>
                 ) : null}
             </div>
@@ -130,6 +131,7 @@ export function MatchWizard({
                     onReject={onRejectInvite}
                     onRefresh={onRefresh}
                     onGoToMatchMaking={onGoToMatchMaking}
+                    onAddGuest={onAddGuest}
                 />
             ) : null}
 
