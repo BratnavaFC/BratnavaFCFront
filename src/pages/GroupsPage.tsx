@@ -3,13 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { Section } from "../components/Section";
 import { GroupInvitesApi, GroupsApi, PlayersApi, UsersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { Check, Loader2, Plus, Search, UserPlus, X } from "lucide-react";
+import { Check, Loader2, Pencil, Plus, Search, UserPlus, X } from "lucide-react";
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
 type PlayerDto = {
     id: string;
     userId?: string | null;
+    userName?: string | null;
     name: string;
     skillPoints: number;
     isGoalkeeper: boolean;
@@ -435,10 +436,181 @@ function InviteModal({
     );
 }
 
+// ─── EditPlayerModal ──────────────────────────────────────────────────────────
+
+function EditPlayerModal({
+    open,
+    player,
+    isAdmin,
+    onClose,
+    onSaved,
+}: {
+    open: boolean;
+    player: PlayerDto | null;
+    isAdmin: boolean;
+    onClose: () => void;
+    onSaved: () => void;
+}) {
+    const [name, setName]             = useState("");
+    const [skillPoints, setSkillPoints] = useState(0);
+    const [active, setActive]         = useState(true);
+    const [loading, setLoading]       = useState(false);
+    const [err, setErr]               = useState<string | null>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (open && player) {
+            setName(player.name);
+            setSkillPoints(player.skillPoints);
+            setActive(player.status === 1);
+            setLoading(false);
+            setErr(null);
+            setTimeout(() => nameRef.current?.focus(), 60);
+        }
+    }, [open, player]);
+
+    async function handleSave() {
+        if (!player) return;
+        if (!name.trim()) { setErr("Nome é obrigatório."); return; }
+        setLoading(true);
+        setErr(null);
+        try {
+            const dto: any = { name: name.trim() };
+            if (isAdmin) {
+                dto.skillPoints = skillPoints;
+                dto.status = active ? 1 : 2;
+            }
+            await PlayersApi.update(player.id, dto);
+            onSaved();
+            onClose();
+        } catch (e: any) {
+            setErr(
+                e?.response?.data?.error ??
+                e?.response?.data?.message ??
+                "Erro ao salvar alterações."
+            );
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleKey(e: React.KeyboardEvent) {
+        if (e.key === "Enter" && !loading) handleSave();
+        if (e.key === "Escape") onClose();
+    }
+
+    if (!open || !player) return null;
+
+    return (
+        <div className="fixed inset-0 z-50" onKeyDown={handleKey}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl border flex flex-col overflow-hidden">
+
+                    {/* header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+                                <Pencil size={16} />
+                            </div>
+                            <div>
+                                <div className="text-base font-semibold text-slate-900">Editar jogador</div>
+                                <div className="text-xs text-slate-500 truncate max-w-[200px]">{player.name}</div>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            aria-label="Fechar"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* body */}
+                    <div className="px-5 py-5 space-y-4">
+                        {/* Nome — disponível para todos */}
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-slate-700">Nome</label>
+                            <input
+                                ref={nameRef}
+                                className="input w-full"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
+
+                        {/* Campos exclusivos para admin */}
+                        {isAdmin && (
+                            <>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-700">Habilidade</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        className="input w-full"
+                                        value={skillPoints}
+                                        onChange={(e) => setSkillPoints(Number(e.target.value))}
+                                        disabled={loading}
+                                    />
+                                </div>
+
+                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                    <div
+                                        role="switch"
+                                        aria-checked={active}
+                                        onClick={() => !loading && setActive((v) => !v)}
+                                        className={[
+                                            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                                            active ? "bg-emerald-500" : "bg-slate-300",
+                                            loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
+                                        ].join(" ")}
+                                    >
+                                        <span
+                                            className={[
+                                                "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                                                active ? "translate-x-6" : "translate-x-1",
+                                            ].join(" ")}
+                                        />
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-700">
+                                        {active ? "Ativo" : "Inativo"}
+                                    </span>
+                                </label>
+                            </>
+                        )}
+
+                        {err && <p className="text-sm text-rose-500">{err}</p>}
+                    </div>
+
+                    {/* footer */}
+                    <div className="px-5 pb-5 shrink-0">
+                        <button
+                            type="button"
+                            className="btn btn-primary w-full flex items-center justify-center gap-2"
+                            onClick={handleSave}
+                            disabled={loading}
+                        >
+                            {loading
+                                ? <><Loader2 size={15} className="animate-spin" /> Salvando...</>
+                                : "Salvar"
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── GroupsPage ──────────────────────────────────────────────────────────────
 
 export default function GroupsPage() {
     const active         = useAccountStore((s) => s.getActive());
+    const isGroupAdmin   = useAccountStore((s) => s.isGroupAdmin);
     const activeGroupId  = active?.activeGroupId ?? "";
     const activePlayerId = active?.activePlayerId ?? "";
 
@@ -447,6 +619,7 @@ export default function GroupsPage() {
     const [error, setError]           = useState<string | null>(null);
     const [inviteOpen, setInviteOpen]   = useState(false);
     const [addGuestOpen, setAddGuestOpen] = useState(false);
+    const [editPlayer, setEditPlayer] = useState<PlayerDto | null>(null);
 
     function loadGroup() {
         if (!activeGroupId) { setGroup(null); return; }
@@ -463,7 +636,9 @@ export default function GroupsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeGroupId]);
 
-    const activePlayers = group?.players?.filter((p) => p.status === 1) ?? [];
+    const isAdminOfGroup  = isGroupAdmin(activeGroupId);
+    const visiblePlayers  = group?.players?.filter((p) => isAdminOfGroup || p.status === 1) ?? [];
+    const activePlayers   = group?.players?.filter((p) => p.status === 1) ?? [];
     const existingUserIds = new Set(
         (group?.players ?? []).map((p) => p.userId).filter((id): id is string => !!id)
     );
@@ -479,22 +654,26 @@ export default function GroupsPage() {
                     ) : group ? (
                         <div className="flex items-center gap-2">
                             <span className="pill">{activePlayers.length} jogadores</span>
-                            <button
-                                type="button"
-                                className="btn btn-secondary flex items-center gap-1.5 text-sm"
-                                onClick={() => setAddGuestOpen(true)}
-                            >
-                                <Plus size={15} />
-                                <span className="hidden sm:inline">Convidado</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn btn-primary flex items-center gap-1.5 text-sm"
-                                onClick={() => setInviteOpen(true)}
-                            >
-                                <UserPlus size={15} />
-                                <span className="hidden sm:inline">Convidar</span>
-                            </button>
+                            {isGroupAdmin(activeGroupId) && (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary flex items-center gap-1.5 text-sm"
+                                        onClick={() => setAddGuestOpen(true)}
+                                    >
+                                        <Plus size={15} />
+                                        <span className="hidden sm:inline">Convidado</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary flex items-center gap-1.5 text-sm"
+                                        onClick={() => setInviteOpen(true)}
+                                    >
+                                        <UserPlus size={15} />
+                                        <span className="hidden sm:inline">Convidar</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     ) : null
                 }
@@ -505,18 +684,22 @@ export default function GroupsPage() {
                     <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
                 ) : loading ? (
                     <div className="muted flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Carregando...</div>
-                ) : activePlayers.length === 0 ? (
+                ) : visiblePlayers.length === 0 ? (
                     <div className="muted">Nenhum jogador ativo nesta patota.</div>
                 ) : (
                     <div className="grid md:grid-cols-2 gap-3">
-                        {activePlayers.map((p) => {
-                            const isMe = p.id === activePlayerId;
+                        {visiblePlayers.map((p) => {
+                            const isMe      = p.id === activePlayerId;
+                            const isInativo = p.status !== 1;
+                            const canEdit   = isAdminOfGroup || isMe;
                             return (
                                 <div
                                     key={p.id}
+                                    onClick={canEdit ? () => setEditPlayer(p) : undefined}
                                     className={[
-                                        "rounded-xl border px-4 py-3 bg-white flex items-center justify-between gap-3",
-                                        isMe ? "border-emerald-400" : "border-slate-200",
+                                        "rounded-xl border px-4 py-3 bg-white flex items-center justify-between gap-3 transition-colors",
+                                        canEdit ? "cursor-pointer hover:bg-slate-50" : "cursor-default",
+                                        isInativo ? "border-slate-200 opacity-50" : isMe ? "border-emerald-400" : "border-slate-200",
                                     ].join(" ")}
                                 >
                                     <div className="min-w-0">
@@ -525,11 +708,16 @@ export default function GroupsPage() {
                                             {p.isGoalkeeper && <span className="text-xs">🧤</span>}
                                         </div>
                                         <div className="text-xs text-slate-500">
-                                            Habilidade: {p.skillPoints}
+                                            {p.userName ? `@${p.userName}` : `Habilidade: ${p.skillPoints}`}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
-                                        {p.isGuest && (
+                                        {isInativo && (
+                                            <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-100 border-slate-300 text-slate-500">
+                                                Inativo
+                                            </span>
+                                        )}
+                                        {p.isGuest && !isInativo && (
                                             <span className="text-[11px] px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700">
                                                 Convidado
                                             </span>
@@ -542,6 +730,14 @@ export default function GroupsPage() {
                     </div>
                 )}
             </Section>
+
+            <EditPlayerModal
+                open={!!editPlayer}
+                player={editPlayer}
+                isAdmin={isGroupAdmin(activeGroupId)}
+                onClose={() => setEditPlayer(null)}
+                onSaved={loadGroup}
+            />
 
             <AddGuestModal
                 open={addGuestOpen}
