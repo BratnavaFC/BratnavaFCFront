@@ -13,6 +13,8 @@ import MatchesPage from './pages/MatchesPage';
 import HistoryPage from './pages/HistoryPage';
 import MatchDetailsPage from './pages/MatchDetailsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
+import GodModeAdminPage from './pages/admin/GodModeAdminPage';
+import GodModeRoute from './routes/GodModeRoute';
 import VisualStatsPage from "./pages/VisualStatsPage";
 
 export default function App() {
@@ -49,6 +51,15 @@ export default function App() {
 
                 {/* ✅ AGORA USER TAMBÉM ACESSA (Minha conta) */}
                 <Route path="admin/users" element={<AdminUsersPage />} />
+
+                <Route
+                    path="admin/godmode"
+                    element={
+                        <GodModeRoute>
+                            <GodModeAdminPage />
+                        </GodModeRoute>
+                    }
+                />
             </Route>
 
             <Route path="*" element={<Navigate to="/app" replace />} />

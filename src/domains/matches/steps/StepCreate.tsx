@@ -1,4 +1,4 @@
-import { cls } from "../matchUtils";
+Ôªøimport { cls } from "../matchUtils";
 
 export function StepCreate({
     admin,
@@ -29,7 +29,7 @@ export function StepCreate({
         return (
             <div className="card p-4">
                 <div className="font-semibold">Aguardando o admin criar/selecionar uma partida</div>
-                <div className="muted mt-1">Assim que houver uma partida ativa, ela aparecer· aqui automaticamente.</div>
+                <div className="muted mt-1">Assim que houver uma partida ativa, ela aparecer√° aqui automaticamente.</div>
             </div>
         );
     }
@@ -37,7 +37,7 @@ export function StepCreate({
     return (
         <div className="card p-4 space-y-4">
             <div className="font-semibold">Criar nova partida</div>
-            <div className="muted">N„o pode criar sem <b>Local</b> e <b>Hor·rio</b>.</div>
+            <div className="muted">N√£o pode criar sem <b>Local</b> e <b>Hor√°rio</b>.</div>
 
             <label className="block">
                 <div className="label">Local (PlaceName) *</div>
@@ -51,7 +51,7 @@ export function StepCreate({
                 </label>
 
                 <label className="block">
-                    <div className="label">Hor·rio *</div>
+                    <div className="label">Hor√°rio *</div>
                     <input className="input" type="time" value={playedAtTime} onChange={(e) => setPlayedAtTime(e.target.value)} />
                 </label>
             </div>
@@ -66,7 +66,7 @@ export function StepCreate({
 
             {currentExistsInCreate ? (
                 <div className="text-xs text-slate-500">
-                    Existe uma partida em <b>status Created</b> carregada (draft). Por isso esta tela continua visÌvel.
+                    Existe uma partida em <b>status Created</b> carregada (draft). Por isso esta tela continua vis√≠vel.
                 </div>
             ) : null}
         </div>

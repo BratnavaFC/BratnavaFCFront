@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
-    LayoutDashboard, Users, Palette, CalendarDays, History, Settings, BarChart3, Shield
+    LayoutDashboard, Users, Palette, CalendarDays, History, Settings, BarChart3, Shield, ShieldAlert
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
 import { GroupInvitesApi } from "../api/endpoints";
+import { isGodMode } from "../auth/guards";
 
 const ACTIVE_GROUP_ID = "3f401edf-d309-4bae-97d8-28eae0da7a8a";
 
@@ -14,6 +15,7 @@ type Item = { to: string; label: string; icon: any; badge?: number };
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const active = useAccountStore((s) => s.getActive());
     const isAdminOrGod = !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode"));
+    const isGod = isGodMode();
     const pendingCount = useInviteStore((s) => s.pendingCount);
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
 
@@ -39,7 +41,8 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             icon: Shield,
             badge: isAdminOrGod ? 0 : pendingCount,
         },
-    ], [isAdminOrGod, pendingCount]);
+        ...(isGod ? [{ to: "/app/admin/godmode", label: "GodMode", icon: ShieldAlert }] : []),
+    ], [isAdminOrGod, isGod, pendingCount]);
 
     return (
         <aside className={`bg-white border-r transition-all duration-300 ${open ? "w-64" : "w-16"}`}>

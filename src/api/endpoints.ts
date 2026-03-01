@@ -40,6 +40,7 @@ export const UsersApi = {
 
 export const GroupsApi = {
   create: (dto: CreateGroupDto) => http.post('/api/Groups', dto),
+  listAll: () => http.get('/api/Groups'),
   listByAdmin: (adminId: string) => http.get(`/api/Groups/admin/${adminId}`),
   get: (groupId: string) => http.get(`/api/Groups/${groupId}`),
   update: (groupId: string, dto: UpdateGroupDto) => http.put(`/api/Groups/${groupId}`, dto),
@@ -78,6 +79,7 @@ export const MatchesApi = {
   get: (groupId: string, matchId: string) => http.get(`/api/Matches/group/${groupId}/${matchId}`),
   create: (groupId: string, dto: CreateMatchDto) => http.post(`/api/Matches/group/${groupId}`, dto),
   update: (groupId: string, matchId: string, dto: UpdateMatchDto) => http.put(`/api/Matches/group/${groupId}/${matchId}`, dto),
+  remove: (groupId: string, matchId: string) => http.delete(`/api/Matches/group/${groupId}/${matchId}`),
   syncPlayers: (groupId: string, matchId: string) => http.post(`/api/Matches/group/${groupId}/${matchId}/players/sync`),
   accept: (groupId: string, matchId: string, dto: InviteActionDto) => http.patch(`/api/Matches/group/${groupId}/${matchId}/invite/accept`, dto),
   reject: (groupId: string, matchId: string, dto: InviteActionDto) => http.patch(`/api/Matches/group/${groupId}/${matchId}/invite/reject`, dto),
