@@ -16,7 +16,41 @@ type PlayerDto = {
     isGoalkeeper: boolean;
     isGuest: boolean;
     status: number;
+    guestStarRating?: number | null;
 };
+
+// ─── StarRating ───────────────────────────────────────────────────────────────
+
+function StarRating({
+    value,
+    onChange,
+    disabled,
+}: {
+    value: number | null;
+    onChange: (v: number | null) => void;
+    disabled?: boolean;
+}) {
+    return (
+        <div className="flex gap-0.5">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onChange(value === star ? null : star)}
+                    className={[
+                        "text-2xl leading-none transition-colors focus:outline-none",
+                        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                        star <= (value ?? 0) ? "text-amber-400" : "text-slate-300 hover:text-amber-300",
+                    ].join(" ")}
+                    aria-label={`${star} estrela${star > 1 ? "s" : ""}`}
+                >
+                    ★
+                </button>
+            ))}
+        </div>
+    );
+}
 
 type GroupDto = {
     id: string;
@@ -58,6 +92,7 @@ function AddGuestModal({
 }) {
     const [name, setName]                 = useState("");
     const [isGoalkeeper, setIsGoalkeeper] = useState(false);
+    const [starRating, setStarRating]     = useState<number | null>(null);
     const [loading, setLoading]           = useState(false);
     const [err, setErr]                   = useState<string | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
@@ -66,6 +101,7 @@ function AddGuestModal({
         if (open) {
             setName("");
             setIsGoalkeeper(false);
+            setStarRating(null);
             setLoading(false);
             setErr(null);
             setTimeout(() => nameRef.current?.focus(), 60);
@@ -84,6 +120,7 @@ function AddGuestModal({
                 isGoalkeeper,
                 isGuest: true,
                 status: 1,
+                guestStarRating: starRating ?? undefined,
             } as any);
             onCreated();
             onClose();
@@ -161,6 +198,29 @@ function AddGuestModal({
                             />
                             <span className="text-sm font-medium text-slate-700">Goleiro 🧤</span>
                         </label>
+
+                        <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium text-slate-700">
+                                    Nível estimado
+                                    <span className="ml-1 text-xs font-normal text-slate-400">(opcional)</span>
+                                </label>
+                                {starRating !== null && (
+                                    <button
+                                        type="button"
+                                        className="text-xs text-slate-400 hover:text-slate-600"
+                                        onClick={() => setStarRating(null)}
+                                        disabled={loading}
+                                    >
+                                        limpar
+                                    </button>
+                                )}
+                            </div>
+                            <StarRating value={starRating} onChange={setStarRating} disabled={loading} />
+                            <p className="text-xs text-slate-400">
+                                Usado pelo algoritmo de times até o convidado ter 3 partidas.
+                            </p>
+                        </div>
 
                         {err && <p className="text-sm text-rose-500">{err}</p>}
                     </div>
@@ -454,6 +514,7 @@ function EditPlayerModal({
     const [name, setName]             = useState("");
     const [skillPoints, setSkillPoints] = useState(0);
     const [active, setActive]         = useState(true);
+    const [starRating, setStarRating] = useState<number | null>(null);
     const [loading, setLoading]       = useState(false);
     const [err, setErr]               = useState<string | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
@@ -463,6 +524,7 @@ function EditPlayerModal({
             setName(player.name);
             setSkillPoints(player.skillPoints);
             setActive(player.status === 1);
+            setStarRating(player.guestStarRating ?? null);
             setLoading(false);
             setErr(null);
             setTimeout(() => nameRef.current?.focus(), 60);
@@ -479,6 +541,7 @@ function EditPlayerModal({
             if (isAdmin) {
                 dto.skillPoints = skillPoints;
                 dto.status = active ? 1 : 2;
+                if (player.isGuest) dto.guestStarRating = starRating ?? null;
             }
             await PlayersApi.update(player.id, dto);
             onSaved();
@@ -557,6 +620,31 @@ function EditPlayerModal({
                                         disabled={loading}
                                     />
                                 </div>
+
+                                {player.isGuest && (
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-sm font-medium text-slate-700">
+                                                Nível estimado
+                                                <span className="ml-1 text-xs font-normal text-slate-400">(opcional)</span>
+                                            </label>
+                                            {starRating !== null && (
+                                                <button
+                                                    type="button"
+                                                    className="text-xs text-slate-400 hover:text-slate-600"
+                                                    onClick={() => setStarRating(null)}
+                                                    disabled={loading}
+                                                >
+                                                    limpar
+                                                </button>
+                                            )}
+                                        </div>
+                                        <StarRating value={starRating} onChange={setStarRating} disabled={loading} />
+                                        <p className="text-xs text-slate-400">
+                                            Usado pelo algoritmo de times até o convidado ter 3 partidas.
+                                        </p>
+                                    </div>
+                                )}
 
                                 <label className="flex items-center gap-3 cursor-pointer select-none">
                                     <div

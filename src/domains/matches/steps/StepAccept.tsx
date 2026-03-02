@@ -6,6 +6,37 @@ import { cls } from "../matchUtils";
 
 // ── Modal de adicionar convidado ─────────────────────────────────────────────
 
+function StarRating({
+    value,
+    onChange,
+    disabled,
+}: {
+    value: number | null;
+    onChange: (v: number | null) => void;
+    disabled?: boolean;
+}) {
+    return (
+        <div className="flex gap-0.5">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onChange(value === star ? null : star)}
+                    className={[
+                        "text-2xl leading-none transition-colors focus:outline-none",
+                        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                        star <= (value ?? 0) ? "text-amber-400" : "text-slate-300 hover:text-amber-300",
+                    ].join(" ")}
+                    aria-label={`${star} estrela${star > 1 ? "s" : ""}`}
+                >
+                    ★
+                </button>
+            ))}
+        </div>
+    );
+}
+
 function AddGuestModal({
     open,
     onClose,
@@ -13,10 +44,11 @@ function AddGuestModal({
 }: {
     open: boolean;
     onClose: () => void;
-    onSubmit: (name: string, isGoalkeeper: boolean) => Promise<void>;
+    onSubmit: (name: string, isGoalkeeper: boolean, starRating: number | null) => Promise<void>;
 }) {
     const [name, setName] = useState("");
     const [isGoalkeeper, setIsGoalkeeper] = useState(false);
+    const [starRating, setStarRating] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,9 +59,10 @@ function AddGuestModal({
         setLoading(true);
         setError(null);
         try {
-            await onSubmit(name.trim(), isGoalkeeper);
+            await onSubmit(name.trim(), isGoalkeeper, starRating);
             setName("");
             setIsGoalkeeper(false);
+            setStarRating(null);
             onClose();
         } catch (e: any) {
             setError(e?.response?.data?.error ?? e?.message ?? "Erro ao adicionar convidado.");
@@ -88,6 +121,29 @@ function AddGuestModal({
                         <span className="text-sm text-slate-700">Goleiro</span>
                     </label>
 
+                    <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-slate-700">
+                                Nível estimado
+                                <span className="ml-1 text-xs font-normal text-slate-400">(opcional)</span>
+                            </label>
+                            {starRating !== null && (
+                                <button
+                                    type="button"
+                                    className="text-xs text-slate-400 hover:text-slate-600"
+                                    onClick={() => setStarRating(null)}
+                                    disabled={loading}
+                                >
+                                    limpar
+                                </button>
+                            )}
+                        </div>
+                        <StarRating value={starRating} onChange={setStarRating} disabled={loading} />
+                        <p className="text-xs text-slate-400">
+                            Usado pelo algoritmo até o convidado ter 3 partidas.
+                        </p>
+                    </div>
+
                     {error && <p className="text-sm text-red-600">{error}</p>}
                 </div>
 
@@ -134,12 +190,12 @@ export function StepAccept({
     onReject: (playerId: string) => void;
     onRefresh: () => void;
     onGoToMatchMaking: () => void;
-    onAddGuest?: (name: string, isGoalkeeper: boolean) => Promise<void>;
+    onAddGuest?: (name: string, isGoalkeeper: boolean, starRating: number | null) => Promise<void>;
 }) {
     const [addGuestOpen, setAddGuestOpen] = useState(false);
 
-    async function handleGuestSubmit(name: string, isGoalkeeper: boolean) {
-        if (onAddGuest) await onAddGuest(name, isGoalkeeper);
+    async function handleGuestSubmit(name: string, isGoalkeeper: boolean, starRating: number | null) {
+        if (onAddGuest) await onAddGuest(name, isGoalkeeper, starRating);
         onRefresh();
     }
 

@@ -31,7 +31,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/team-colors",                                                        label: "Cores",         icon: Palette },
         { to: "/app/matches",                                                            label: "Partidas",      icon: CalendarDays },
         { to: "/app/history",                                                            label: "Histórico",     icon: History },
-        { to: activeGroupId ? `/app/groups/${activeGroupId}/visual-stats` : "/app",     label: "Visual Stats",  icon: BarChart3 },
+        { to: active?.activeGroupId ? `/app/groups/${active.activeGroupId}/visual-stats` : "/app",     label: "Visual Stats",  icon: BarChart3 },
         { to: "/app/settings",                                                           label: "Configurações", icon: Settings },
         {
             to: "/app/admin/users",

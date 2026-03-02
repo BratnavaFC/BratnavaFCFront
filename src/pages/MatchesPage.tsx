@@ -499,9 +499,13 @@ export default function MatchesPage() {
         await refreshCurrent();
     }
 
-    async function addGuestToMatch(name: string, isGoalkeeper: boolean) {
+    async function addGuestToMatch(name: string, isGoalkeeper: boolean, starRating: number | null) {
         if (!admin || !groupId || !currentMatchId) return;
-        await MatchesApi.addGuest(groupId, currentMatchId, { name, isGoalkeeper });
+        await MatchesApi.addGuest(groupId, currentMatchId, {
+            name,
+            isGoalkeeper,
+            guestStarRating: starRating ?? undefined,
+        });
         await loadAcceptation(currentMatchId);
     }
 
