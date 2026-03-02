@@ -252,22 +252,29 @@ export default function MatchesPage() {
 
         setLoading(true);
         try {
-            const [colorsRes, settingsRes] = await Promise.all([
-                TeamColorApi.list(groupId),
-                GroupSettingsApi.get(groupId),
-            ]);
-
+            // Load colors — critical
+            const colorsRes = await TeamColorApi.list(groupId).catch(() => ({ data: [] }));
             const colors = (colorsRes.data ?? []) as TeamColorDto[];
             setTeamColors(colors);
 
-            const gs = (settingsRes.data ?? null) as GroupSettingsDto | null;
-            setGroupSettings(gs);
+            // Load group settings — non-critical, never breaks the rest of the flow
+            try {
+                const settingsRes = await GroupSettingsApi.get(groupId);
+                const gs = (settingsRes.data ?? null) as GroupSettingsDto | null;
+                setGroupSettings(gs);
 
-            if (gs) {
-                const suggestedPlace = gs.defaultPlaceName ?? gs.placeName;
-                const suggestedTime = gs.defaultMatchTime ?? gs.matchTime;
-                setPlaceName((prev) => (prev.trim().length ? prev : suggestedPlace ?? ""));
-                setPlayedAtTime((prev) => (prev.trim().length ? prev : suggestedTime ?? ""));
+                if (gs) {
+                    const suggestedPlace = gs.defaultPlaceName ?? gs.placeName;
+                    // backend returns TimeSpan as "HH:mm:ss" — take the first 5 chars → "HH:mm"
+                    const suggestedTime =
+                        gs.defaultKickoffTime?.slice(0, 5) ||
+                        gs.defaultMatchTime ||
+                        gs.matchTime;
+                    setPlaceName((prev) => (prev.trim().length ? prev : suggestedPlace ?? ""));
+                    setPlayedAtTime((prev) => (prev.trim().length ? prev : suggestedTime ?? ""));
+                }
+            } catch {
+                // GroupSettings not configured — form fields remain editable, user fills manually
             }
 
             // ✅ pega a partida em andamento

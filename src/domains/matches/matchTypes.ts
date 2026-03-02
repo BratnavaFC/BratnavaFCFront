@@ -1,12 +1,17 @@
 
 export type GroupSettingsDto = {
-    maxPlayersPerMatch?: number;
+    // ── backend fields (camelCase from ASP.NET Core JSON serializer) ──
+    groupId?: string;
+    minPlayers?: number;
     maxPlayers?: number;
+    defaultPlaceName?: string | null;
+    defaultDayOfWeek?: number | null;    // 0=Dom 1=Seg 2=Ter 3=Qua 4=Qui 5=Sex 6=Sáb
+    defaultKickoffTime?: string | null;  // "HH:mm:ss" — TimeSpan from backend
+    isPersisted?: boolean;
+    // ── legacy aliases so getMaxPlayers() keeps working ──
+    maxPlayersPerMatch?: number;
     maxPlayersInMatch?: number;
-    defaultPlaceName?: string;
     placeName?: string;
-    defaultMatchTime?: string; // "20:00"
-    matchTime?: string; // "20:00"
 };
 
 export type TeamColorDto = {

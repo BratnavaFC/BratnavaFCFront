@@ -24,7 +24,8 @@ export function cls(...xs: Array<string | false | null | undefined>) {
 }
 
 export function getMaxPlayers(gs: GroupSettingsDto | null) {
-    const n = gs?.maxPlayersPerMatch ?? gs?.maxPlayersInMatch ?? gs?.maxPlayers ?? 12;
+    // maxPlayers is the real backend field; fallbacks keep old behaviour for cached data
+    const n = gs?.maxPlayers ?? gs?.maxPlayersPerMatch ?? gs?.maxPlayersInMatch ?? 12;
     return Math.max(2, Number(n) || 12);
 }
 
@@ -51,7 +52,7 @@ export function uniqById<T extends { id: string }>(items: T[]): T[] {
 }
 
 export function fmtWeight(n: number) {
-    if (!Number.isFinite(n)) return "—";
+    if (!Number.isFinite(n)) return "ï¿½";
     return n.toFixed(3);
 }
 

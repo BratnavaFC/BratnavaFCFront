@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useAccountStore } from "../auth/accountStore";
 import { getRole, isAdmin } from "../auth/guards";
-import { PlayersApi, GroupsApi } from "../api/endpoints";
+import { PlayersApi, GroupsApi, GroupSettingsApi } from "../api/endpoints";
 import { Field } from "../components/Field";
 
 type MyPlayerDto = {
@@ -65,7 +65,21 @@ function CreateGroupModal({
                 defaultTime: time,
             } as any);
             const newGroupId: string = res.data?.id ?? res.data?.groupId ?? "";
-            if (newGroupId) onCreated?.(newGroupId);
+            if (newGroupId) {
+                // Persist the default place and kickoff time in GroupSettings
+                // so MatchesPage can pre-fill the "Criar partida" form automatically.
+                // "HH:mm" → "HH:mm:ss" for TimeSpan deserialization on the backend.
+                try {
+                    await GroupSettingsApi.upsert(newGroupId, {
+                        minPlayers: 5,
+                        maxPlayers: 6,
+                        defaultPlaceName: place || null,
+                        defaultDayOfWeek: dayOfWeek,
+                        defaultKickoffTime: time ? `${time}:00` : null,
+                    } as any);
+                } catch { /* non-critical */ }
+                onCreated?.(newGroupId);
+            }
             onClose();
         } catch (e: any) {
             const data = e?.response?.data;
