@@ -266,10 +266,7 @@ export default function MatchesPage() {
                 if (gs) {
                     const suggestedPlace = gs.defaultPlaceName ?? gs.placeName;
                     // backend returns TimeSpan as "HH:mm:ss" — take the first 5 chars → "HH:mm"
-                    const suggestedTime =
-                        gs.defaultKickoffTime?.slice(0, 5) ||
-                        gs.defaultMatchTime ||
-                        gs.matchTime;
+                    const suggestedTime = gs.defaultKickoffTime?.slice(0, 5);
                     setPlaceName((prev) => (prev.trim().length ? prev : suggestedPlace ?? ""));
                     setPlayedAtTime((prev) => (prev.trim().length ? prev : suggestedTime ?? ""));
                 }
