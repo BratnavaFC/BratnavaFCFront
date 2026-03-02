@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { UniformPreview } from "./UniformPreview";
 
 type Item = any;
@@ -8,7 +9,7 @@ type Props = {
     selectedId: string | null;
     onSelectedIdChange: (id: string) => void;
 
-    /** se true, não mostra pills/selecionado e CTA de “clique” vira “visualizar” */
+    /** se true, não mostra pills/selecionado e CTA de "clique" vira "visualizar" */
     readOnly?: boolean;
 
     /** compacta medidas para smartphone */
@@ -30,12 +31,10 @@ export function TeamColorCarousel({
 
     const initialIndex = useMemo(() => {
         if (!count) return 0;
-
         const selectedIdx = selectedId
             ? items.findIndex((i: any) => i.id === selectedId)
             : -1;
         if (selectedIdx >= 0) return selectedIdx;
-
         const activeIdx = items.findIndex((i: any) => i.isActive);
         return activeIdx >= 0 ? activeIdx : 0;
     }, [items, selectedId, count]);
@@ -47,7 +46,6 @@ export function TeamColorCarousel({
         setIndex(initialIndex);
     }, [count, initialIndex]);
 
-    // quando index muda, sincroniza selectedId
     useEffect(() => {
         if (!count) return;
         const id = items[index]?.id;
@@ -75,26 +73,26 @@ export function TeamColorCarousel({
 
     if (!count) return <div className="muted">Nenhuma cor cadastrada.</div>;
 
-    // mobile vs desktop
-    const frameH = isMobile ? 210 : 260;
-    const cardW = isMobile ? 210 : 240;
-    const xStep = isMobile ? 180 : 220;
+    // layout dimensions — tall enough so nothing clips
+    const frameH = isMobile ? 268 : 302;
+    const cardW  = isMobile ? 220 : 250;
+    const xStep  = isMobile ? 192 : 228;
 
     return (
-        <div className="relative">
+        <div className="relative select-none">
+            {/* ── carousel track ─────────────────────────────────────── */}
             <div className="overflow-hidden">
                 <div className="relative" style={{ height: frameH }}>
                     {items.map((c: any, i: number) => {
-                        const pos = relPos(i);
+                        const pos      = relPos(i);
                         const isCenter = pos === 0;
-
-                        const clamped = Math.max(-2, Math.min(2, pos));
-                        const x = clamped * xStep;
-                        const scale = isCenter ? 1 : Math.abs(clamped) === 1 ? 0.9 : 0.78;
-                        const opacity = Math.abs(clamped) <= 1 ? 1 : 0;
-                        const z = isCenter ? 30 : Math.abs(clamped) === 1 ? 20 : 0;
-
+                        const clamped  = Math.max(-2, Math.min(2, pos));
+                        const x        = clamped * xStep;
+                        const scale    = isCenter ? 1 : Math.abs(clamped) === 1 ? 0.88 : 0.74;
+                        const opacity  = Math.abs(clamped) <= 1 ? 1 : 0;
+                        const z        = isCenter ? 30 : Math.abs(clamped) === 1 ? 20 : 0;
                         const isSelected = selectedId === c.id;
+                        const hex = c.hexValue ?? "#e2e8f0";
 
                         return (
                             <div
@@ -114,44 +112,86 @@ export function TeamColorCarousel({
                                         setIndex(i);
                                         if (onPreview) onPreview(c);
                                     }}
-                                    className={[
-                                        "w-full text-left border rounded-2xl p-3 bg-white shadow-sm transition",
-                                        isCenter ? "shadow-md" : "",
-                                        isSelected
-                                            ? "ring-2 ring-slate-200 border-slate-400"
-                                            : "border-slate-200",
-                                        "focus:outline-none focus:ring-2 focus:ring-slate-300",
-                                    ].join(" ")}
+                                    className="w-full text-left focus:outline-none"
+                                    style={{
+                                        borderRadius: 14,
+                                        overflow: "hidden",
+                                        boxShadow: isCenter
+                                            ? `0 8px 32px -4px ${hex}66, 0 2px 10px rgba(0,0,0,0.18)`
+                                            : "0 2px 8px rgba(0,0,0,0.08)",
+                                        border: isSelected
+                                            ? `2px solid ${hex}`
+                                            : "2px solid #e2e8f0",
+                                        transition: "box-shadow 0.3s, border-color 0.3s",
+                                    }}
                                 >
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="font-semibold truncate">{c.name}</div>
+                                    {/* ── top color strip ─────────────── */}
+                                    <div
+                                        className="h-1.5 w-full"
+                                        style={{ background: hex }}
+                                    />
 
-                                        {!readOnly ? (
-                                            <div className="flex items-center gap-2">
-                                                {c.isActive ? <span className="pill">Ativo</span> : null}
-                                                {isSelected ? (
-                                                    <span className="pill">Selecionado</span>
-                                                ) : null}
-                                            </div>
-                                        ) : null}
-                                    </div>
-
-                                    <div className="mt-2">
-                                        <UniformPreview hex={c.hexValue ?? "#e2e8f0"} />
-                                    </div>
-
-                                    <div className="mt-2 flex items-center gap-3">
-                                        <div
-                                            className="h-8 w-8 rounded-lg border"
-                                            style={{ background: c.hexValue }}
-                                        />
-                                        <div className="text-sm text-slate-600 truncate">
-                                            {c.hexValue}
+                                    {/* ── dark jersey stage ───────────── */}
+                                    <div
+                                        className="flex items-center justify-center"
+                                        style={{
+                                            background: "linear-gradient(160deg, #ffffff 0%, #000000 100%)",
+                                            height: isMobile ? 136 : 152,
+                                        }}
+                                    >
+                                        <div style={{ width: "62%" }}>
+                                            <UniformPreview hex={hex} />
                                         </div>
                                     </div>
 
-                                    <div className="mt-3 text-xs text-slate-500">
-                                        {readOnly ? "Toque para visualizar" : "Clique para selecionar"}
+                                    {/* ── info section ────────────────── */}
+                                    <div className="bg-white px-3 pt-2.5 pb-3">
+                                        {/* name + status */}
+                                        <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                            <div className="text-sm font-semibold text-slate-900 truncate">
+                                                {c.name}
+                                            </div>
+                                            {!readOnly && (
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    {c.isActive && (
+                                                        <span
+                                                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
+                                                            style={{
+                                                                background: `${hex}1a`,
+                                                                color: hex,
+                                                                border: `1px solid ${hex}55`,
+                                                            }}
+                                                        >
+                                                            Ativo
+                                                        </span>
+                                                    )}
+                                                    {isSelected && (
+                                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none bg-slate-900 text-white">
+                                                            Sel.
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* hex row */}
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <div
+                                                className="h-5 w-5 rounded shrink-0"
+                                                style={{
+                                                    background: hex,
+                                                    boxShadow: "0 0 0 1px rgba(0,0,0,0.12)",
+                                                }}
+                                            />
+                                            <span className="text-xs font-mono text-slate-500 tracking-wide">
+                                                {hex.toUpperCase()}
+                                            </span>
+                                        </div>
+
+                                        {/* cta hint */}
+                                        <div className="mt-2 text-[10px] text-slate-400 tracking-widest uppercase">
+                                            {readOnly ? "Toque para visualizar" : "Clique para selecionar"}
+                                        </div>
                                     </div>
                                 </button>
                             </div>
@@ -160,17 +200,46 @@ export function TeamColorCarousel({
                 </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between">
-                <button className="btn" onClick={prev} disabled={!canNav}>
-                    ◀
+            {/* ── nav + dot indicators ─────────────────────────────── */}
+            <div className="mt-3 flex items-center justify-between gap-4">
+                <button
+                    type="button"
+                    onClick={prev}
+                    disabled={!canNav}
+                    className="h-9 w-9 rounded-xl border border-slate-200 bg-white shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Anterior"
+                >
+                    <ChevronLeft size={18} />
                 </button>
 
-                <div className="text-sm text-slate-600">
-                    {index + 1} / {count}
+                {/* animated dot indicators */}
+                <div className="flex items-center gap-1.5">
+                    {items.map((_: any, i: number) => (
+                        <button
+                            key={i}
+                            type="button"
+                            onClick={() => setIndex(i)}
+                            className="rounded-full transition-all duration-300"
+                            style={{
+                                width: i === index ? 20 : 7,
+                                height: 7,
+                                background: i === index
+                                    ? (items[index]?.hexValue ?? "#0f172a")
+                                    : "#cbd5e1",
+                            }}
+                            aria-label={`Cor ${i + 1}`}
+                        />
+                    ))}
                 </div>
 
-                <button className="btn" onClick={next} disabled={!canNav}>
-                    ▶
+                <button
+                    type="button"
+                    onClick={next}
+                    disabled={!canNav}
+                    className="h-9 w-9 rounded-xl border border-slate-200 bg-white shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Próximo"
+                >
+                    <ChevronRight size={18} />
                 </button>
             </div>
         </div>

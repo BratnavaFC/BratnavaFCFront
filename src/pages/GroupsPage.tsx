@@ -775,7 +775,7 @@ export default function GroupsPage() {
                 ) : visiblePlayers.length === 0 ? (
                     <div className="muted">Nenhum jogador ativo nesta patota.</div>
                 ) : (
-                    <div className="grid md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                         {visiblePlayers.map((p) => {
                             const isMe      = p.id === activePlayerId;
                             const isInativo = p.status !== 1;
@@ -785,33 +785,53 @@ export default function GroupsPage() {
                                     key={p.id}
                                     onClick={canEdit ? () => setEditPlayer(p) : undefined}
                                     className={[
-                                        "rounded-xl border px-4 py-3 bg-white flex items-center justify-between gap-3 transition-colors",
+                                        "rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
                                         canEdit ? "cursor-pointer hover:bg-slate-50" : "cursor-default",
                                         isInativo ? "border-slate-200 opacity-50" : isMe ? "border-emerald-400" : "border-slate-200",
                                     ].join(" ")}
                                 >
-                                    <div className="min-w-0">
-                                        <div className="font-semibold truncate flex items-center gap-2">
-                                            {p.name}
-                                            {p.isGoalkeeper && <span className="text-xs">🧤</span>}
+                                    {/* name + badges row */}
+                                    <div className="flex items-center justify-between gap-1 min-w-0">
+                                        <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
+                                            <span className="truncate">{p.name}</span>
+                                            {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
                                         </div>
-                                        <div className="text-xs text-slate-500">
-                                            {p.userName ? `@${p.userName}` : `Habilidade: ${p.skillPoints}`}
+                                        <div className="flex items-center gap-0.5 shrink-0">
+                                            {isInativo && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-slate-100 border-slate-300 text-slate-500 leading-none">
+                                                    Inativo
+                                                </span>
+                                            )}
+                                            {isMe && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">
+                                                    Você
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        {isInativo && (
-                                            <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-100 border-slate-300 text-slate-500">
-                                                Inativo
-                                            </span>
-                                        )}
+
+                                    {/* secondary info row */}
+                                    <div className="flex items-center justify-between gap-1">
+                                        <span className="text-[11px] text-slate-400 truncate">
+                                            {[
+                                                p.userName && `@${p.userName}`,
+                                                `skill ${p.skillPoints}`,
+                                            ].filter(Boolean).join(" · ")}
+                                        </span>
                                         {p.isGuest && !isInativo && (
-                                            <span className="text-[11px] px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700">
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
                                                 Convidado
                                             </span>
                                         )}
-                                        {isMe && <span className="pill">Voce</span>}
                                     </div>
+
+                                    {/* star rating for guests */}
+                                    {p.isGuest && p.guestStarRating != null && (
+                                        <div className="text-[11px] leading-none text-amber-400 mt-0.5">
+                                            {"★".repeat(p.guestStarRating)}
+                                            <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
