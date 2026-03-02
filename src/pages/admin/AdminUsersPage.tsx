@@ -276,12 +276,16 @@ function EditUserModal({
     onClose,
     user,
     canEditAdminFields,
+    isSelf,
+    onChangePassword,
     onSaved,
 }: {
     open: boolean;
     onClose: () => void;
     user: UserListItemDto | null;
     canEditAdminFields: boolean;
+    isSelf?: boolean;
+    onChangePassword?: () => void;
     onSaved: () => Promise<void> | void;
 }) {
     const [saving, setSaving] = useState(false);
@@ -310,7 +314,7 @@ function EditUserModal({
             email: user.email ?? "",
             phone: user.phone ?? "",
             birthDate: user.birthDate ? String(user.birthDate).slice(0, 10) : "",
-            role: canEditAdminFields ? user.role : null,
+            role: null,
             status: canEditAdminFields ? user.status : null,
         });
     }, [user, canEditAdminFields]);
@@ -333,7 +337,6 @@ function EditUserModal({
             };
 
             if (canEditAdminFields) {
-                payload.role = form.role ?? null;
                 payload.status = form.status ?? null; // backend vai aplicar Inactivate/Reactivate
             }
 
@@ -414,22 +417,12 @@ function EditUserModal({
                         </Field>
 
                         {canEditAdminFields && (
-                            <>
-                                <Field label="Role">
-                                    <Select value={String(form.role ?? user.role ?? 1)} onChange={(v) => setForm((s) => ({ ...s, role: Number(v) }))}>
-                                        <option value="1">User</option>
-                                        <option value="2">Admin</option>
-                                        <option value="3">GodMode</option>
-                                    </Select>
-                                </Field>
-
-                                <Field label="Status">
-                                    <Select value={String(form.status ?? user.status ?? 1)} onChange={(v) => setForm((s) => ({ ...s, status: Number(v) }))}>
-                                        <option value="1">Active</option>
-                                        <option value="2">Inactive</option>
-                                    </Select>
-                                </Field>
-                            </>
+                            <Field label="Status">
+                                <Select value={String(form.status ?? user.status ?? 1)} onChange={(v) => setForm((s) => ({ ...s, status: Number(v) }))}>
+                                    <option value="1">Active</option>
+                                    <option value="2">Inactive</option>
+                                </Select>
+                            </Field>
                         )}
                     </div>
 
@@ -442,6 +435,16 @@ function EditUserModal({
                         </div>
 
                         <div className="flex gap-2">
+                            {isSelf && onChangePassword && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => { onClose(); setTimeout(() => onChangePassword(), 200); }}
+                                    iconLeft={<KeyRound size={16} />}
+                                >
+                                    Alterar senha
+                                </Button>
+                            )}
+
                             {canEditAdminFields && (
                                 <Button
                                     variant={isInactive ? "secondary" : "danger"}
@@ -879,6 +882,8 @@ export default function AdminUsersPage() {
                         onClose={() => setEditOpen(false)}
                         user={editUser}
                         canEditAdminFields={true}
+                        isSelf={!!myUserId && editUser?.id === myUserId}
+                        onChangePassword={() => setPassOpen(true)}
                         onSaved={refreshAfterSave}
                     />
                 </div>
@@ -1067,14 +1072,15 @@ export default function AdminUsersPage() {
                         onSaved={refreshAfterSave}
                     />
 
-                    {myUserId && (
-                        <ChangePasswordModal
-                            open={passOpen}
-                            onClose={() => setPassOpen(false)}
-                            userId={myUserId}
-                        />
-                    )}
                 </div>
+            )}
+
+            {myUserId && (
+                <ChangePasswordModal
+                    open={passOpen}
+                    onClose={() => setPassOpen(false)}
+                    userId={myUserId}
+                />
             )}
         </Section>
     );
