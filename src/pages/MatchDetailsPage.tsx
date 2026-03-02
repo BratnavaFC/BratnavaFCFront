@@ -1,26 +1,30 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { CSSProperties, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
-import { useIsMobile } from "../hooks/UseIsMobile";
+import {
+    Calendar,
+    ChevronLeft,
+    MapPin,
+    Pause,
+    Play,
+    RefreshCw,
+    Trophy,
+} from "lucide-react";
 
-/* ===================== helpers gerais ===================== */
+/* ===================== helpers ===================== */
 
-function formatDate(date: string) {
-    return new Date(date).toLocaleString("pt-BR");
-}
-
-function InviteStatusLabel(value: number) {
-    switch (value) {
-        case 1:
-            return "Pendente";
-        case 2:
-            return "Recusado";
-        case 3:
-            return "Aceito";
-        default:
-            return String(value ?? "");
-    }
+function formatMatchDate(date: string) {
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return date;
+    return d.toLocaleString("pt-BR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
 }
 
 function sortGoalkeepersFirst(players: any[]) {
@@ -58,8 +62,7 @@ function isWhiteHex(hex?: string) {
     return h === "#ffffff";
 }
 
-/** ✅ Contorno mais fino possível, mas só quando o time for branco */
-function teamTextStyle(color: string): React.CSSProperties {
+function teamTextStyle(color: string): CSSProperties {
     const hex = safeHex(color) || color;
     if (isWhiteHex(hex)) {
         return {
@@ -71,7 +74,6 @@ function teamTextStyle(color: string): React.CSSProperties {
     return { color: hex };
 }
 
-/** ✅ Swatch com borda + checker */
 function ColorSwatch({
     color,
     size = 16,
@@ -85,11 +87,13 @@ function ColorSwatch({
 }) {
     const hex = safeHex(color);
     const px = `${size}px`;
-
     return (
         <span
             title={title}
-            className={cn("relative inline-block rounded border border-slate-300 overflow-hidden shadow-sm", className)}
+            className={cn(
+                "relative inline-block rounded border border-slate-300 overflow-hidden shadow-sm shrink-0",
+                className
+            )}
             style={{ width: px, height: px }}
             aria-label={hex ? `Cor ${hex}` : "Sem cor"}
         >
@@ -107,10 +111,7 @@ function ColorSwatch({
             />
             <span
                 className="absolute inset-0"
-                style={{
-                    background: hex ?? "transparent",
-                    opacity: hex ? 1 : 0,
-                }}
+                style={{ background: hex ?? "transparent", opacity: hex ? 1 : 0 }}
             />
         </span>
     );
@@ -120,20 +121,17 @@ function TabButton({
     active,
     onClick,
     children,
-    compact,
 }: {
     active: boolean;
     onClick: () => void;
-    children: any;
-    compact?: boolean;
+    children: React.ReactNode;
 }) {
     return (
         <button
             type="button"
             onClick={onClick}
             className={cn(
-                compact ? "px-2.5 py-1.5 text-[13px]" : "px-3 py-1.5 text-sm",
-                "rounded-lg border transition whitespace-nowrap",
+                "px-3 py-1.5 text-sm rounded-lg border transition whitespace-nowrap",
                 active
                     ? "bg-slate-900 text-white border-slate-900"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -155,27 +153,20 @@ function clamp(n: number, min: number, max: number) {
 
 type Clock = { h: number; m: number; s: number; minOfDay: number };
 
-/** ✅ parseClock robusto */
 function parseClock(raw?: string | null): Clock | null {
     if (raw == null) return null;
-
     const v = String(raw)
         .normalize("NFKC")
         .replace(/[\u200B-\u200D\uFEFF]/g, "")
         .trim();
-
     if (!v) return null;
-
     const m = v.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if (!m) return null;
-
     const h = Number(m[1]);
     const mm = Number(m[2]);
     const s = m[3] != null ? Number(m[3]) : 0;
-
     if (!Number.isFinite(h) || !Number.isFinite(mm) || !Number.isFinite(s)) return null;
     if (h < 0 || h > 23 || mm < 0 || mm > 59 || s < 0 || s > 59) return null;
-
     return { h, m: mm, s, minOfDay: h * 60 + mm };
 }
 
@@ -198,7 +189,6 @@ function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
 
     const hours = Array.from(new Set(clocks.map((c) => c.h))).sort((a, b) => a - b);
     const hourCandidates = new Set<number>();
-
     for (const h of hours) {
         hourCandidates.add(h);
         hourCandidates.add((h + 23) % 24);
@@ -212,7 +202,6 @@ function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
     }
 
     const uniq = Array.from(new Set(candidates)).sort((a, b) => a - b);
-
     const first = clocks.slice().sort((a, b) => a.minOfDay - b.minOfDay)[0];
 
     let best: { start: number; countIn: number; maxDiff: number; firstDiff: number } | null = null;
@@ -220,7 +209,6 @@ function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
     for (const start of uniq) {
         let countIn = 0;
         let maxDiff = 0;
-
         for (const c of clocks) {
             const d = diffSecClock(c, start);
             if (d >= 0 && d <= 3600) {
@@ -228,46 +216,17 @@ function inferStartMinOfDayFromGoals(goals: GoalDto[]): number | null {
                 if (d > maxDiff) maxDiff = d;
             }
         }
-
         const firstDiff = diffSecClock(first, start);
-
         const cand = { start, countIn, maxDiff, firstDiff };
 
-        if (!best) {
-            best = cand;
-            continue;
-        }
-
-        if (cand.countIn > best.countIn) {
-            best = cand;
-            continue;
-        }
-
-        if (cand.countIn === best.countIn && cand.maxDiff < best.maxDiff) {
-            best = cand;
-            continue;
-        }
-
-        if (cand.countIn === best.countIn && cand.maxDiff === best.maxDiff && cand.firstDiff < best.firstDiff) {
-            best = cand;
-            continue;
-        }
-
-        if (
-            cand.countIn === best.countIn &&
-            cand.maxDiff === best.maxDiff &&
-            cand.firstDiff === best.firstDiff &&
-            cand.start < best.start
-        ) {
-            best = cand;
-            continue;
-        }
+        if (!best) { best = cand; continue; }
+        if (cand.countIn > best.countIn) { best = cand; continue; }
+        if (cand.countIn === best.countIn && cand.maxDiff < best.maxDiff) { best = cand; continue; }
+        if (cand.countIn === best.countIn && cand.maxDiff === best.maxDiff && cand.firstDiff < best.firstDiff) { best = cand; continue; }
+        if (cand.countIn === best.countIn && cand.maxDiff === best.maxDiff && cand.firstDiff === best.firstDiff && cand.start < best.start) { best = cand; continue; }
     }
 
-    if (!best || best.countIn === 0) {
-        return first.h * 60;
-    }
-
+    if (!best || best.countIn === 0) return first.h * 60;
     return best.start;
 }
 
@@ -300,6 +259,8 @@ type SimulationProps = {
     teamByPlayerId: Map<string, number>;
     teamAHex?: string;
     teamBHex?: string;
+    teamAName?: string;
+    teamBName?: string;
     totalMinutes?: number;
     durationMs?: number;
     autoPlay?: boolean;
@@ -310,6 +271,8 @@ export function MatchTimeSimulationTimeline({
     teamByPlayerId,
     teamAHex = "#1d4ed8",
     teamBHex = "#f97316",
+    teamAName = "Time A",
+    teamBName = "Time B",
     totalMinutes = 60,
     durationMs = 15000,
     autoPlay = true,
@@ -323,14 +286,11 @@ export function MatchTimeSimulationTimeline({
             .map((g) => {
                 const tSec = goalToGameSeconds(g, inferredStart) ?? totalMinutes * 60;
                 const minute = clamp(Math.floor(tSec / 60), 0, totalMinutes);
-
                 const teamRaw = teamByPlayerId.get(String(g.scorerPlayerId));
                 const team = (teamRaw === 1 ? 1 : teamRaw === 2 ? 2 : 0) as 1 | 2 | 0;
-
                 return { ...g, tSec, minute, team };
             })
             .sort((a, b) => a.tSec - b.tSec);
-
         return list;
     }, [goals, teamByPlayerId, totalMinutes, inferredStart]);
 
@@ -343,31 +303,21 @@ export function MatchTimeSimulationTimeline({
     }, [elapsedMs, SIM_DURATION_MS, totalMinutes]);
 
     const simMinuteInt = clamp(Math.floor(simSec / 60), 0, totalMinutes);
-
     const visibleGoals = useMemo(() => timeline.filter((g) => g.tSec <= simSec), [timeline, simSec]);
-
     const scoreA = useMemo(() => visibleGoals.filter((g) => g.team === 1).length, [visibleGoals]);
     const scoreB = useMemo(() => visibleGoals.filter((g) => g.team === 2).length, [visibleGoals]);
 
     useEffect(() => {
         if (!running) return;
-
         let raf = 0;
         const start = performance.now() - elapsedMs;
-
         const tick = (now: number) => {
             const e = now - start;
             const clamped = clamp(e, 0, SIM_DURATION_MS);
             setElapsedMs(clamped);
-
-            if (clamped >= SIM_DURATION_MS) {
-                setRunning(false);
-                return;
-            }
-
+            if (clamped >= SIM_DURATION_MS) { setRunning(false); return; }
             raf = requestAnimationFrame(tick);
         };
-
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -380,13 +330,13 @@ export function MatchTimeSimulationTimeline({
 
     const progressPct = SIM_DURATION_MS ? Math.min(100, (elapsedMs / SIM_DURATION_MS) * 100) : 0;
 
-    const Btn = ({
+    const SimBtn = ({
         children,
         title,
         onClick,
         disabled,
     }: {
-        children: any;
+        children: React.ReactNode;
         title?: string;
         onClick: () => void;
         disabled?: boolean;
@@ -397,9 +347,9 @@ export function MatchTimeSimulationTimeline({
             onClick={onClick}
             disabled={disabled}
             className={cls(
-                "h-9 px-3 rounded-lg border text-sm font-medium transition",
-                disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50",
-                "border-slate-200 bg-white text-slate-800"
+                "inline-flex items-center justify-center h-8 w-8 rounded-lg border text-sm transition",
+                disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-50",
+                "border-slate-200 bg-white text-slate-700"
             )}
         >
             {children}
@@ -411,54 +361,107 @@ export function MatchTimeSimulationTimeline({
         const totalTeamGoals = teamGoals.length;
         const currentTeamGoals = team === 1 ? scoreA : scoreB;
 
+        // Per-goal horizontal offset so same-tSec goals sit side-by-side
+        const seenTSec = new Map<number, number>();
+        const offsetByGoalId = new Map<string, number>();
+        for (const g of teamGoals) {
+            const idx = seenTSec.get(g.tSec) ?? 0;
+            offsetByGoalId.set(g.goalId, idx);
+            seenTSec.set(g.tSec, idx + 1);
+        }
+
+        const isWhiteColor = isWhiteHex(colorHex);
+        // White teams get a visible slate border so the dot isn't invisible on white BG
+        const safeBorderColor = isWhiteColor ? "#94a3b8" : colorHex;
+        // Score label colour: white teams use slate so it reads against the white card
+        const safeLabelColor = isWhiteColor ? "#334155" : colorHex;
+
         return (
-            <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                    <div className={cls("font-semibold", team === 1 ? "text-blue-700" : "text-orange-700")}>
-                        {teamLabel}
+            <div>
+                {/* Label row */}
+                <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                        <span
+                            className="inline-block h-3 w-3 rounded-full shrink-0"
+                            style={{
+                                backgroundColor: colorHex,
+                                border: `2px solid ${safeBorderColor}`,
+                                boxShadow: isWhiteColor
+                                    ? "inset 0 0 0 1px rgba(148,163,184,0.6)"
+                                    : undefined,
+                            }}
+                        />
+                        <span className="text-xs font-semibold text-slate-600 truncate">
+                            {teamLabel}
+                        </span>
                     </div>
-                    <div className="text-slate-600 font-medium">
-                        {currentTeamGoals}/{totalTeamGoals}
-                    </div>
+                    <span className="text-xs tabular-nums font-semibold shrink-0">
+                        <span style={{ color: safeLabelColor }}>{currentTeamGoals}</span>
+                        <span className="text-slate-300 font-normal"> / {totalTeamGoals}</span>
+                    </span>
                 </div>
 
-                <div className="relative h-10">
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 rounded-full bg-slate-100 border border-slate-200" />
+                {/* Timeline track */}
+                <div className="relative h-12">
+                    {/* Background rail */}
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-100 border border-slate-200" />
 
+                    {/* Progress fill — no CSS transition: rAF drives this at 60fps */}
                     <div
-                        className="absolute top-1/2 -translate-y-1/2 h-3 rounded-full opacity-25"
-                        style={{ width: `${progressPct}%`, backgroundColor: colorHex }}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 h-2 rounded-l-full"
+                        style={{
+                            width: `${progressPct}%`,
+                            backgroundColor: isWhiteColor ? "#94a3b8" : colorHex,
+                            opacity: 0.55,
+                        }}
                     />
 
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-1 pointer-events-none">
-                        {Array.from({ length: 13 }).map((_, i) => (
-                            <div key={i} className="h-5 w-px bg-slate-200" />
+                    {/* Current-time cursor (thin vertical line) — no CSS transition */}
+                    <div
+                        className="absolute top-0.5 bottom-0.5 w-px rounded-full bg-slate-400/60"
+                        style={{ left: `${progressPct}%` }}
+                    />
+
+                    {/* Minute tick marks (every ~10 min out of 60) */}
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none">
+                        {Array.from({ length: 7 }).map((_, i) => (
+                            <div key={i} className="h-4 w-px bg-slate-200" />
                         ))}
                     </div>
 
+                    {/* Goal markers */}
                     {teamGoals.map((g) => {
                         const leftPct = (g.tSec / (totalMinutes * 60)) * 100;
+                        const offsetIdx = offsetByGoalId.get(g.goalId) ?? 0;
                         const isVisible = g.tSec <= simSec;
-
                         return (
                             <div
                                 key={g.goalId}
                                 className={cls(
-                                    "absolute top-1/2 -translate-y-1/2",
-                                    "transition-all duration-300",
-                                    isVisible ? "opacity-100 scale-100" : "opacity-0 scale-75"
+                                    "absolute top-1/2 -translate-y-1/2 transition-all duration-300",
+                                    isVisible ? "opacity-100 scale-100" : "opacity-0 scale-50"
                                 )}
-                                style={{ left: `calc(${leftPct}% - 10px)` }}
-                                title={`${g.minute}' • ${g.scorerName}${g.assistName ? ` (${g.assistName})` : ""} •`}
+                                style={{ left: `calc(${leftPct}% - 12px + ${offsetIdx * 26}px)` }}
+                                title={`${g.minute}' • ${g.scorerName}${g.assistName ? ` (${g.assistName})` : ""}`}
                             >
-                                <div className="relative">
+                                {/* Glow ring — only when visible */}
+                                {isVisible && (
                                     <div
-                                        className={cls("absolute -inset-1 rounded-full blur-[0.2px]", isVisible ? "animate-pulse" : "")}
-                                        style={{ backgroundColor: colorHex, opacity: 0.25 }}
+                                        className="absolute -inset-2 rounded-full blur-sm opacity-30 animate-pulse"
+                                        style={{ backgroundColor: colorHex }}
                                     />
-                                    <div className="h-6 w-6 rounded-full grid place-items-center border bg-white shadow-sm" style={{ borderColor: colorHex }}>
-                                        ⚽
-                                    </div>
+                                )}
+                                {/* Ball icon */}
+                                <div
+                                    className="relative h-7 w-7 rounded-full grid place-items-center text-[15px] border-2 bg-white shadow-md"
+                                    style={{
+                                        borderColor: safeBorderColor,
+                                        boxShadow: isVisible
+                                            ? `0 0 0 2px ${colorHex}22, 0 2px 8px rgba(0,0,0,0.14)`
+                                            : undefined,
+                                    }}
+                                >
+                                    ⚽
                                 </div>
                             </div>
                         );
@@ -468,41 +471,47 @@ export function MatchTimeSimulationTimeline({
         );
     };
 
-    const startLabel = inferredStart == null ? "--:--" : toHHMM(inferredStart);
-    const endLabel = inferredStart == null ? "--:--" : toHHMM(inferredStart + 60);
-
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <div className="flex items-start justify-between gap-3">
-                <div>
-                    <div className="font-semibold text-slate-900">Simulação do jogo</div>
-                    <div className="text-xs text-slate-500">
-                        {totalMinutes} min em <b>{Math.round(SIM_DURATION_MS / 1000)}s</b> • inferido: <b>{startLabel}</b> → <b>{endLabel}</b>
-                    </div>
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+
+            {/* ── Controls bar ────────────────────────────────────── */}
+            <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
+                <span className="font-mono text-xs font-semibold text-slate-600 tabular-nums shrink-0 w-14">
+                    {simMinuteInt}'
+                    <span className="text-slate-400 font-normal">/{totalMinutes}</span>
+                </span>
+
+                <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                        className="h-full rounded-full bg-slate-400"
+                        style={{ width: `${progressPct}%` }}
+                    />
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-mono text-sm text-slate-900">
-                        ⏱ {simMinuteInt}/{totalMinutes}
-                    </div>
-
-                    <Btn onClick={resetAndPlay} title="Reiniciar">
-                        ↻
-                    </Btn>
-
-                    <Btn onClick={() => setRunning(true)} title="Play" disabled={running}>
-                        ▶
-                    </Btn>
-
-                    <Btn onClick={() => setRunning(false)} title="Pause" disabled={!running}>
-                        ❚❚
-                    </Btn>
+                <div className="flex items-center gap-1 shrink-0">
+                    <SimBtn onClick={resetAndPlay} title="Reiniciar">
+                        <RefreshCw size={12} />
+                    </SimBtn>
+                    <SimBtn
+                        onClick={() => {
+                            if (elapsedMs >= SIM_DURATION_MS) setElapsedMs(0);
+                            setRunning(true);
+                        }}
+                        title="Play"
+                        disabled={running}
+                    >
+                        <Play size={12} />
+                    </SimBtn>
+                    <SimBtn onClick={() => setRunning(false)} title="Pausa" disabled={!running}>
+                        <Pause size={12} />
+                    </SimBtn>
                 </div>
             </div>
 
-            <div className="mt-4 space-y-4">
-                {renderBar("Time A", 1, teamAHex)}
-                {renderBar("Time B", 2, teamBHex)}
+            {/* ── Timeline bars ────────────────────────────────────── */}
+            <div className="px-5 py-5 space-y-5">
+                {renderBar(teamAName, 1, teamAHex)}
+                {renderBar(teamBName, 2, teamBHex)}
             </div>
         </div>
     );
@@ -511,16 +520,11 @@ export function MatchTimeSimulationTimeline({
 /* ===================== page ===================== */
 
 export default function MatchDetailsPage() {
+    const nav = useNavigate();
     const { groupId, matchId } = useParams<{ groupId: string; matchId: string }>();
-    const isMobile = useIsMobile(768);
 
     const [data, setData] = useState<any>(null);
-    const [goalsTab, setGoalsTab] = useState<"gols" | "timeline" | "teamA" | "teamB">("gols");
-
-    // mobile: aba da escalação
-    const [lineupTab, setLineupTab] = useState<"A" | "B">("A");
-    // mobile: colapsar detalhes técnicos
-    const [techOpen, setTechOpen] = useState(false);
+    const [goalsTab, setGoalsTab] = useState<"gols" | "teamA" | "teamB" | "timeline">("gols");
 
     useEffect(() => {
         (async () => {
@@ -536,7 +540,6 @@ export default function MatchDetailsPage() {
     const teamIndex = useMemo(() => {
         const byMatchPlayerId = new Map<string, GoalTeam>();
         const byPlayerId = new Map<string, GoalTeam>();
-
         for (const p of data?.teamAPlayers ?? []) {
             if (p?.matchPlayerId) byMatchPlayerId.set(p.matchPlayerId, "A");
             if (p?.playerId) byPlayerId.set(p.playerId, "A");
@@ -545,7 +548,6 @@ export default function MatchDetailsPage() {
             if (p?.matchPlayerId) byMatchPlayerId.set(p.matchPlayerId, "B");
             if (p?.playerId) byPlayerId.set(p.playerId, "B");
         }
-
         return { byMatchPlayerId, byPlayerId };
     }, [data]);
 
@@ -566,25 +568,32 @@ export default function MatchDetailsPage() {
             const vb = cb ? cb.minOfDay * 60 + cb.s : Number.POSITIVE_INFINITY;
             return va - vb;
         });
-
         return goals.map((g) => {
-            const teamFromMatchPlayerId = g?.scorerMatchPlayerId && teamIndex.byMatchPlayerId.get(g.scorerMatchPlayerId);
-            const teamFromPlayerId = g?.scorerPlayerId && teamIndex.byPlayerId.get(g.scorerPlayerId);
+            const teamFromMatchPlayerId =
+                g?.scorerMatchPlayerId && teamIndex.byMatchPlayerId.get(g.scorerMatchPlayerId);
+            const teamFromPlayerId =
+                g?.scorerPlayerId && teamIndex.byPlayerId.get(g.scorerPlayerId);
             const team: GoalTeam = (teamFromMatchPlayerId ?? teamFromPlayerId ?? "?") as GoalTeam;
             return { ...g, team };
         });
     }, [data, teamIndex]);
 
-    const timeline = useMemo(() => {
+    // Must be declared BEFORE timelineGoals useMemo to avoid TDZ in the closure
+    const aColor = safeHex(data?.teamAColor?.hexValue) || "#0f172a";
+    const bColor = safeHex(data?.teamBColor?.hexValue) || "#0f172a";
+    const aName = data?.teamAColor?.name ?? "Time A";
+    const bName = data?.teamBColor?.name ?? "Time B";
+    const aNameRef = aName;
+    const bNameRef = bName;
+
+    const timelineGoals = useMemo(() => {
         let a = 0;
         let b = 0;
-
         return sortedGoals.map((g: any, idx: number) => {
             if (g.team === "A") a += 1;
             else if (g.team === "B") b += 1;
-
-            const leader = a === b ? "Empate" : a > b ? "Time A na frente" : "Time B na frente";
-
+            const leader =
+                a === b ? "Empate" : a > b ? `${aNameRef} na frente` : `${bNameRef} na frente`;
             return {
                 idx: idx + 1,
                 goalId: g.goalId,
@@ -597,332 +606,442 @@ export default function MatchDetailsPage() {
                 leader,
             };
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sortedGoals]);
 
-    const goalsForTab = useMemo(() => {
-        if (goalsTab === "teamA") return sortedGoals.filter((g: any) => g.team === "A");
-        if (goalsTab === "teamB") return sortedGoals.filter((g: any) => g.team === "B");
-        return sortedGoals;
-    }, [sortedGoals, goalsTab]);
-
-    const aColor = safeHex(data?.teamAColor?.hexValue) || "#0f172a";
-    const bColor = safeHex(data?.teamBColor?.hexValue) || "#0f172a";
-
+    // ── Loading skeleton ──────────────────────────────────────────────────────
     if (!data) {
         return (
             <div className="space-y-4">
-                <Section title="Detalhes da partida">
-                    <div className="text-sm text-slate-500">Carregando...</div>
-                </Section>
+                <div className="h-8 w-36 rounded-xl bg-slate-100 animate-pulse" />
+                <div className="h-56 rounded-2xl bg-slate-200 animate-pulse" />
+                <div className="h-36 rounded-2xl bg-slate-100 animate-pulse" />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
+                    <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
+                </div>
+                <div className="h-36 rounded-2xl bg-slate-100 animate-pulse" />
             </div>
         );
     }
 
-    const scoreA = data.teamAGoals ?? "-";
-    const scoreB = data.teamBGoals ?? "-";
+    const scoreA = data.teamAGoals ?? "–";
+    const scoreB = data.teamBGoals ?? "–";
+    const mvp = data.computedMvp;
+    const voteCounts: any[] = [...(data.voteCounts ?? [])].sort(
+        (a, b) => (b.count ?? 0) - (a.count ?? 0)
+    );
+    const maxVotes = voteCounts.length > 0 ? (voteCounts[0].count ?? 0) : 0;
+
+    // Team-colored dot for goal rows
+    const GoalDot = ({ team }: { team: GoalTeam }) => {
+        const color = team === "A" ? aColor : team === "B" ? bColor : "#94a3b8";
+        return (
+            <span
+                className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: color }}
+            />
+        );
+    };
 
     return (
-        <div className={cn("space-y-4", isMobile ? "pb-2" : "space-y-6")}>
-            {/* ===================== PLACAR (mobile-first) ===================== */}
-            <Section title="Placar">
-                <div className={cn("rounded-2xl border border-slate-200 bg-white shadow-sm", isMobile ? "p-4" : "p-6")}>
-                    <div className={cn("flex items-start justify-between gap-4", isMobile ? "flex-col" : "flex-row flex-wrap")}>
-                        <div className="min-w-0">
-                            <div className="text-sm text-slate-500 truncate">{data.groupName}</div>
-                            <div className={cn("font-semibold text-slate-900", isMobile ? "text-lg" : "text-lg")}>
-                                {data.placeName}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                                {data.playedAt ? formatDate(data.playedAt) : "-"} • {data.statusName ?? data.status}
-                            </div>
+        <div className="space-y-4 sm:space-y-6">
 
-                            {/* cores compactas (mobile) */}
-                            {isMobile ? (
-                                <div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
-                                    <div className="flex items-center gap-2">
-                                        <ColorSwatch color={aColor} size={14} />
-                                        <span>Time A</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <ColorSwatch color={bColor} size={14} />
-                                        <span>Time B</span>
-                                    </div>
-                                </div>
-                            ) : null}
+            {/* ── Back button ──────────────────────────────────────── */}
+            <button
+                type="button"
+                onClick={() => nav(-1)}
+                className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition"
+            >
+                <ChevronLeft size={16} />
+                Voltar ao histórico
+            </button>
+
+            {/* ── Hero / Placar ─────────────────────────────────────── */}
+            <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-lg">
+                {/* Top color strips */}
+                <div className="flex h-1.5">
+                    <div className="flex-1" style={{ backgroundColor: aColor }} />
+                    <div className="flex-1" style={{ backgroundColor: bColor }} />
+                </div>
+
+                <div className="bg-slate-900 px-6 py-8 text-center">
+                    {/* Team names */}
+                    <div className="flex items-center justify-between gap-4 mb-5">
+                        <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                            <ColorSwatch color={aColor} size={22} />
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 truncate">
+                                {aName}
+                            </span>
                         </div>
 
-                        <div className={cn("text-center", isMobile ? "w-full" : "min-w-[260px]")}>
-                            <div className={cn("font-bold", isMobile ? "text-5xl" : "text-4xl")}>
-                                <span style={teamTextStyle(aColor)}>{scoreA}</span>{" "}
-                                <span className="text-slate-400">x</span>{" "}
-                                <span style={teamTextStyle(bColor)}>{scoreB}</span>
-                            </div>
+                        <span className="text-slate-600 text-base font-light shrink-0">vs</span>
 
-                            {/* detalhes técnicos colapsáveis (mobile) */}
-                            {isMobile ? (
-                                <div className="mt-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setTechOpen((v) => !v)}
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 transition"
-                                    >
-                                        {techOpen ? "Ocultar detalhes técnicos" : "Mostrar detalhes técnicos"}
-                                    </button>
+                        <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                            <ColorSwatch color={bColor} size={22} />
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 truncate">
+                                {bName}
+                            </span>
+                        </div>
+                    </div>
 
-                                    {techOpen ? (
-                                        <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 space-y-2">
-                                            <div>
-                                                <div className="font-medium text-slate-700">MatchId</div>
-                                                <div className="break-all">{data.matchId}</div>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-slate-700">GroupId</div>
-                                                <div className="break-all">{data.groupId}</div>
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            ) : (
-                                <div className="mt-3 text-xs text-slate-500 text-right max-w-[280px] ml-auto">
-                                    <div className="font-medium text-slate-700">MatchId</div>
-                                    <div className="break-all">{data.matchId}</div>
-                                </div>
+                    {/* Score */}
+                    <div className="flex items-center justify-center gap-4">
+                        <span className="text-6xl sm:text-7xl font-extrabold text-white tabular-nums leading-none">
+                            {scoreA}
+                        </span>
+                        <span className="text-3xl text-slate-600 font-light">×</span>
+                        <span className="text-6xl sm:text-7xl font-extrabold text-white tabular-nums leading-none">
+                            {scoreB}
+                        </span>
+                    </div>
+
+                    {/* Match info */}
+                    <div className="mt-5 flex items-center justify-center gap-2 sm:gap-3 flex-wrap text-sm text-slate-400">
+                        {data.placeName && (
+                            <span className="flex items-center gap-1.5">
+                                <MapPin size={13} className="shrink-0" />
+                                {data.placeName}
+                            </span>
+                        )}
+                        {data.placeName && data.playedAt && (
+                            <span className="text-slate-700">·</span>
+                        )}
+                        {data.playedAt && (
+                            <span className="flex items-center gap-1.5">
+                                <Calendar size={13} className="shrink-0" />
+                                {formatMatchDate(data.playedAt)}
+                            </span>
+                        )}
+                        {(data.statusName || data.status) && (
+                            <>
+                                <span className="text-slate-700">·</span>
+                                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/70 border border-white/10">
+                                    {data.statusName ?? data.status}
+                                </span>
+                            </>
+                        )}
+                    </div>
+
+                    {/* MVP inline in hero */}
+                    {mvp?.playerName && (
+                        <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-400/10 border border-amber-400/20 px-4 py-2.5">
+                            <Trophy size={15} className="text-amber-400 shrink-0" />
+                            <span className="text-sm font-semibold text-amber-300">
+                                MVP: {mvp.playerName}
+                            </span>
+                            {mvp.team && (
+                                <span className="text-xs text-amber-400/60">
+                                    ({mvp.team === 1 ? aName : mvp.team === 2 ? bName : "?"})
+                                </span>
                             )}
                         </div>
-                    </div>
+                    )}
                 </div>
-            </Section>
 
-            {/* ===================== SIMULAÇÃO ===================== */}
+                {/* Bottom color strips */}
+                <div className="flex h-1.5">
+                    <div className="flex-1" style={{ backgroundColor: aColor }} />
+                    <div className="flex-1" style={{ backgroundColor: bColor }} />
+                </div>
+            </div>
+
+            {/* ── Simulação ─────────────────────────────────────────── */}
             <Section title="Simulação">
-                <div className={cn(isMobile ? "" : "")}>
-                    <MatchTimeSimulationTimeline
-                        goals={(data?.goals ?? []) as GoalDto[]}
-                        teamByPlayerId={teamByPlayerIdNum}
-                        teamAHex={aColor}
-                        teamBHex={bColor}
-                        totalMinutes={60}
-                        durationMs={isMobile ? 4500 : 5000}
-                        autoPlay
-                    />
-                </div>
+                <MatchTimeSimulationTimeline
+                    goals={(data?.goals ?? []) as GoalDto[]}
+                    teamByPlayerId={teamByPlayerIdNum}
+                    teamAHex={aColor}
+                    teamBHex={bColor}
+                    teamAName={aName}
+                    teamBName={bName}
+                    totalMinutes={60}
+                    durationMs={5000}
+                    autoPlay
+                />
             </Section>
 
-            {/* ===================== INFO (desktop) ===================== */}
-            {!isMobile ? (
-                <Section title="Informações Gerais">
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="text-slate-700">
-                                <b>GroupId:</b> <span className="text-slate-600 break-all">{data.groupId}</span>
-                            </div>
-                            <div className="text-slate-700 mt-2">
-                                <b>Status:</b> <span className="text-slate-600">{data.statusName}</span>
-                            </div>
-                        </div>
-
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="flex items-center gap-2 text-slate-700">
-                                <b>Cor Time A:</b>
-                                <span className="text-slate-600">{data.teamAColor?.name ?? "-"}</span>
-                                <ColorSwatch color={aColor} size={16} title={`Time A ${aColor}`} />
-                            </div>
-
-                            <div className="flex items-center gap-2 text-slate-700 mt-2">
-                                <b>Cor Time B:</b>
-                                <span className="text-slate-600">{data.teamBColor?.name ?? "-"}</span>
-                                <ColorSwatch color={bColor} size={16} title={`Time B ${bColor}`} />
-                            </div>
-                        </div>
-                    </div>
-                </Section>
-            ) : null}
-
-            {/* ===================== ESCALAÇÃO ===================== */}
+            {/* ── Escalação ─────────────────────────────────────────── */}
             <Section title="Escalação">
-                {isMobile ? (
-                    <div className="rounded-xl border border-slate-200 bg-white p-3">
-                        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-                            <TabButton active={lineupTab === "A"} onClick={() => setLineupTab("A")} compact>
-                                <span className="inline-flex items-center gap-2">
-                                    <ColorSwatch color={aColor} size={12} /> Time A ({teamAPlayers.length})
-                                </span>
-                            </TabButton>
-                            <TabButton active={lineupTab === "B"} onClick={() => setLineupTab("B")} compact>
-                                <span className="inline-flex items-center gap-2">
-                                    <ColorSwatch color={bColor} size={12} /> Time B ({teamBPlayers.length})
-                                </span>
-                            </TabButton>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Team A */}
+                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
+                            <ColorSwatch color={aColor} size={14} />
+                            <span className="font-semibold text-sm" style={teamTextStyle(aColor)}>
+                                {aName}
+                            </span>
+                            <span className="ml-auto text-xs text-slate-400">
+                                {teamAPlayers.length} jog.
+                            </span>
                         </div>
-
-                        <ul className="space-y-2 text-sm mt-2">
-                            {(lineupTab === "A" ? teamAPlayers : teamBPlayers).map((p: any) => (
-                                <li key={p.matchPlayerId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
-                                    <span className="text-slate-800 flex items-center gap-2 min-w-0">
-                                        {p.isGoalkeeper && <span title="Goleiro">🧤</span>}
-                                        <span className="truncate">{p.playerName}</span>
-                                    </span>
-                                    <span className="text-slate-500 text-xs shrink-0">{InviteStatusLabel(p.inviteResponse)}</span>
-                                </li>
-                            ))}
+                        <ul className="divide-y divide-slate-100">
+                            {teamAPlayers.length === 0 ? (
+                                <li className="px-4 py-3 text-sm text-slate-400">Nenhum jogador.</li>
+                            ) : (
+                                teamAPlayers.map((p: any) => (
+                                    <li
+                                        key={p.matchPlayerId}
+                                        className="flex items-center gap-2.5 px-4 py-2.5 border-l-[3px]"
+                                        style={{ borderLeftColor: aColor }}
+                                    >
+                                        {p.isGoalkeeper && (
+                                            <span title="Goleiro" className="text-base leading-none shrink-0">
+                                                🧤
+                                            </span>
+                                        )}
+                                        <span className="text-sm text-slate-800 truncate">
+                                            {p.playerName}
+                                        </span>
+                                    </li>
+                                ))
+                            )}
                         </ul>
                     </div>
-                ) : (
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="font-semibold mb-3 flex items-center gap-2">
-                                <ColorSwatch color={aColor} size={14} title={`Time A ${aColor}`} />
-                                <span style={teamTextStyle(aColor)}>
-                                    Time A <span className="text-slate-400 font-normal">({teamAPlayers.length})</span>
-                                </span>
-                            </div>
 
-                            <ul className="space-y-2 text-sm">
-                                {teamAPlayers.map((p: any) => (
-                                    <li key={p.matchPlayerId} className="flex items-center justify-between gap-3">
-                                        <span className="text-slate-800 flex items-center gap-2">
-                                            <span>{p.playerName}</span>
-                                            {p.isGoalkeeper && <span title="Goleiro">🧤</span>}
-                                        </span>
-                                        <span className="text-slate-500 text-xs">{InviteStatusLabel(p.inviteResponse)}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                    {/* Team B */}
+                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
+                            <ColorSwatch color={bColor} size={14} />
+                            <span className="font-semibold text-sm" style={teamTextStyle(bColor)}>
+                                {bName}
+                            </span>
+                            <span className="ml-auto text-xs text-slate-400">
+                                {teamBPlayers.length} jog.
+                            </span>
                         </div>
-
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="font-semibold mb-3 flex items-center gap-2">
-                                <ColorSwatch color={bColor} size={14} title={`Time B ${bColor}`} />
-                                <span style={teamTextStyle(bColor)}>
-                                    Time B <span className="text-slate-400 font-normal">({teamBPlayers.length})</span>
-                                </span>
-                            </div>
-
-                            <ul className="space-y-2 text-sm">
-                                {teamBPlayers.map((p: any) => (
-                                    <li key={p.matchPlayerId} className="flex items-center justify-between gap-3">
-                                        <span className="text-slate-800 flex items-center gap-2">
-                                            <span>{p.playerName}</span>
-                                            {p.isGoalkeeper && <span title="Goleiro">🧤</span>}
+                        <ul className="divide-y divide-slate-100">
+                            {teamBPlayers.length === 0 ? (
+                                <li className="px-4 py-3 text-sm text-slate-400">Nenhum jogador.</li>
+                            ) : (
+                                teamBPlayers.map((p: any) => (
+                                    <li
+                                        key={p.matchPlayerId}
+                                        className="flex items-center gap-2.5 px-4 py-2.5 border-l-[3px]"
+                                        style={{ borderLeftColor: bColor }}
+                                    >
+                                        {p.isGoalkeeper && (
+                                            <span title="Goleiro" className="text-base leading-none shrink-0">
+                                                🧤
+                                            </span>
+                                        )}
+                                        <span className="text-sm text-slate-800 truncate">
+                                            {p.playerName}
                                         </span>
-                                        <span className="text-slate-500 text-xs">{InviteStatusLabel(p.inviteResponse)}</span>
                                     </li>
-                                ))}
-                            </ul>
-                        </div>
+                                ))
+                            )}
+                        </ul>
                     </div>
-                )}
+                </div>
             </Section>
 
-            {/* ===================== GOLS ===================== */}
-            <Section title="Gols">
-                <div className={cn("rounded-xl border border-slate-200 bg-white", isMobile ? "p-3" : "p-4")}>
-                    {/* tabs: no mobile vira scroll horizontal */}
-                    <div className={cn("flex items-center gap-2 mb-3", isMobile ? "overflow-x-auto pb-1 -mx-1 px-1" : "flex-wrap")}>
-                        <TabButton active={goalsTab === "gols"} onClick={() => setGoalsTab("gols")} compact={isMobile}>
-                            Gols ({sortedGoals.length})
+            {/* ── Gols ──────────────────────────────────────────────── */}
+            <Section title={`Gols (${sortedGoals.length})`}>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    {/* Tabs */}
+                    <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+                        <TabButton active={goalsTab === "gols"} onClick={() => setGoalsTab("gols")}>
+                            Todos
                         </TabButton>
-                        <TabButton active={goalsTab === "timeline"} onClick={() => setGoalsTab("timeline")} compact={isMobile}>
+                        <TabButton active={goalsTab === "teamA"} onClick={() => setGoalsTab("teamA")}>
+                            <span className="flex items-center gap-1.5">
+                                <GoalDot team="A" />
+                                {aName}
+                            </span>
+                        </TabButton>
+                        <TabButton active={goalsTab === "teamB"} onClick={() => setGoalsTab("teamB")}>
+                            <span className="flex items-center gap-1.5">
+                                <GoalDot team="B" />
+                                {bName}
+                            </span>
+                        </TabButton>
+                        <TabButton
+                            active={goalsTab === "timeline"}
+                            onClick={() => setGoalsTab("timeline")}
+                        >
                             Linha do tempo
                         </TabButton>
-                        <TabButton active={goalsTab === "teamA"} onClick={() => setGoalsTab("teamA")} compact={isMobile}>
-                            Time A
-                        </TabButton>
-                        <TabButton active={goalsTab === "teamB"} onClick={() => setGoalsTab("teamB")} compact={isMobile}>
-                            Time B
-                        </TabButton>
                     </div>
 
-                    {goalsTab !== "timeline" ? (
-                        <div className="space-y-2 text-sm">
-                            {goalsForTab.length === 0 ? (
-                                <div className="text-slate-500">Nenhum gol para exibir.</div>
-                            ) : (
-                                goalsForTab.map((g: any) => (
-                                    <div key={g.goalId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
-                                        <div className="text-slate-800 min-w-0">
-                                            <span className="mr-2" aria-hidden>⚽</span>
-                                            <span className="font-medium">{g.scorerName ?? "-"}</span>
-                                            {g.assistName ? (
-                                                <span className="text-slate-600">
-                                                    {" "}
-                                                    <span className="mx-1" aria-hidden>🤝</span>
-                                                    {g.assistName}
-                                                </span>
-                                            ) : null}
-                                            {g.time ? <span className="text-slate-500"> • {g.time}</span> : null}
-                                        </div>
+                    {/* Reusable goal card renderer */}
+                    {(() => {
+                        const goalCard = (g: any) => (
+                            <div
+                                key={g.goalId}
+                                className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+                            >
+                                <GoalDot team={g.team} />
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium text-slate-900 truncate">
+                                        ⚽ {g.scorerName ?? "—"}
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-2 text-sm">
-                            {timeline.length === 0 ? (
-                                <div className="text-slate-500">Nenhum gol registrado.</div>
-                            ) : (
-                                timeline.map((t: any) => (
-                                    <div key={t.goalId} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
-                                        <div className="text-slate-800 min-w-0">
-                                            <span className="text-slate-400 mr-2">#{t.idx}</span>
-                                            <span className="mr-2" aria-hidden>⚽</span>
-                                            <span className="font-medium">{t.scorerName ?? "-"}</span>
-                                            {t.assistName ? (
-                                                <span className="text-slate-600">
-                                                    {" "}
-                                                    <span className="mx-1" aria-hidden>🤝</span>
-                                                    {t.assistName}
-                                                </span>
-                                            ) : null}
-                                            {t.time ? <span className="text-slate-500"> • {t.time}</span> : null}
+                                    {g.assistName && (
+                                        <div className="text-xs text-slate-500 truncate">
+                                            🤝 {g.assistName}
                                         </div>
+                                    )}
+                                </div>
+                                {g.time && (
+                                    <span className="text-xs text-slate-400 font-mono shrink-0">
+                                        {g.time}
+                                    </span>
+                                )}
+                            </div>
+                        );
 
-                                        <div className="text-right shrink-0">
-                                            <div className="font-semibold">
-                                                <span style={teamTextStyle(aColor)}>{t.scoreA}</span>{" "}
-                                                <span className="text-slate-400">x</span>{" "}
-                                                <span style={teamTextStyle(bColor)}>{t.scoreB}</span>
+                        const emptyMsg = (msg: string) => (
+                            <div className="py-4 text-center text-sm text-slate-400">{msg}</div>
+                        );
+
+                        if (goalsTab === "gols") {
+                            const list = sortedGoals as any[];
+                            return (
+                                <div className="space-y-2">
+                                    {list.length === 0
+                                        ? emptyMsg("Nenhum gol registrado.")
+                                        : list.map(goalCard)}
+                                </div>
+                            );
+                        }
+
+                        if (goalsTab === "teamA") {
+                            const list = (sortedGoals as any[]).filter((g) => g.team === "A");
+                            return (
+                                <div className="space-y-2">
+                                    {list.length === 0
+                                        ? emptyMsg(`${aName} não marcou gols.`)
+                                        : list.map(goalCard)}
+                                </div>
+                            );
+                        }
+
+                        if (goalsTab === "teamB") {
+                            const list = (sortedGoals as any[]).filter((g) => g.team === "B");
+                            return (
+                                <div className="space-y-2">
+                                    {list.length === 0
+                                        ? emptyMsg(`${bName} não marcou gols.`)
+                                        : list.map(goalCard)}
+                                </div>
+                            );
+                        }
+
+                        // timeline
+                        return (
+                            <div className="space-y-2">
+                                {(timelineGoals as any[]).length === 0 ? (
+                                    emptyMsg("Nenhum gol registrado.")
+                                ) : (
+                                    (timelineGoals as any[]).map((t) => (
+                                        <div
+                                            key={t.goalId}
+                                            className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+                                        >
+                                            <GoalDot team={t.team} />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-sm font-medium text-slate-900">
+                                                    <span className="text-slate-400 text-xs mr-1">
+                                                        #{t.idx}
+                                                    </span>
+                                                    ⚽ {t.scorerName ?? "—"}
+                                                </div>
+                                                {t.assistName && (
+                                                    <div className="text-xs text-slate-500">
+                                                        🤝 {t.assistName}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {!isMobile ? <div className="text-xs text-slate-500">{t.leader}</div> : null}
+                                            <div className="text-right shrink-0">
+                                                <div className="font-bold text-sm tabular-nums">
+                                                    <span style={teamTextStyle(aColor)}>{t.scoreA}</span>
+                                                    <span className="text-slate-400 mx-1">×</span>
+                                                    <span style={teamTextStyle(bColor)}>{t.scoreB}</span>
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 hidden sm:block">
+                                                    {t.leader}
+                                                </div>
+                                            </div>
                                         </div>
+                                    ))
+                                )}
+                            </div>
+                        );
+                    })()}
+                </div>
+            </Section>
+
+            {/* ── MVP / Votação ─────────────────────────────────────── */}
+            <Section title="MVP">
+                <div className="space-y-3">
+                    {/* Winner card */}
+                    {mvp?.playerName ? (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 border border-amber-200 shrink-0">
+                                    <Trophy size={20} className="text-amber-500" />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">
+                                        Melhor do jogo
                                     </div>
-                                ))
-                            )}
+                                    <div className="font-bold text-slate-900 text-xl leading-none">
+                                        {mvp.playerName}
+                                    </div>
+                                    {mvp.team && (
+                                        <div className="text-xs text-slate-500 mt-1">
+                                            {mvp.team === 1 ? aName : mvp.team === 2 ? bName : ""}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                    )}
-                </div>
-            </Section>
-
-            {/* ===================== VOTAÇÃO ===================== */}
-            <Section title="Votação">
-                <div className={cn("rounded-xl border border-slate-200 bg-white text-sm text-slate-700", isMobile ? "p-3" : "p-4")}>
-                    <div>
-                        <b>MVP:</b>{" "}
-                        {data.computedMvp?.playerName
-                            ? `${data.computedMvp.playerName}${data.computedMvp.team
-                                ? ` (Time ${data.computedMvp.team === 1 ? "A" : data.computedMvp.team === 2 ? "B" : "?"})`
-                                : ""
-                            }`
-                            : "—"}
-                    </div>
-
-                    {!isMobile ? (
-                        <>
-                            <div className="mt-1">
-                                <b>votes:</b> {data.votes?.length ?? 0}
-                            </div>
-
-                            <div className="mt-1">
-                                <b>voteCounts:</b> {data.voteCounts?.length ?? 0}
-                            </div>
-                        </>
                     ) : (
-                        <div className="mt-1 text-slate-600">
-                            <b>Votos:</b> {data.votes?.length ?? 0}
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
+                            <Trophy size={28} className="mx-auto text-slate-300 mb-2" />
+                            <div className="text-sm text-slate-400">MVP não definido</div>
+                        </div>
+                    )}
+
+                    {/* Vote tally */}
+                    {voteCounts.length > 0 && (
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+                                Apuração de votos
+                            </div>
+                            <div className="space-y-2.5">
+                                {voteCounts.map((vc: any) => {
+                                    const pct = maxVotes > 0 ? ((vc.count ?? 0) / maxVotes) * 100 : 0;
+                                    const isWinner = vc.votedForName === mvp?.playerName;
+                                    return (
+                                        <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
+                                            <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 truncate flex items-center gap-1.5 shrink-0">
+                                                {isWinner && (
+                                                    <Trophy size={11} className="text-amber-400 shrink-0" />
+                                                )}
+                                                {vc.votedForName}
+                                            </div>
+                                            <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                <div
+                                                    className={cn(
+                                                        "h-full rounded-full transition-all",
+                                                        isWinner ? "bg-amber-400" : "bg-slate-300"
+                                                    )}
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                            <div className="text-sm font-bold text-slate-700 tabular-nums w-5 text-right shrink-0">
+                                                {vc.count}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
             </Section>
+
         </div>
     );
 }

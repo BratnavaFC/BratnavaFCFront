@@ -1,4 +1,5 @@
-﻿import type { PlayerInMatchDto, PlayerWeightDto, TeamOptionDto } from "../matchTypes";
+﻿import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { PlayerInMatchDto, PlayerWeightDto, TeamOptionDto } from "../matchTypes";
 import { cls, fmtWeight } from "../matchUtils";
 
 export function TeamGenCarousel({
@@ -63,20 +64,20 @@ export function TeamGenCarousel({
 
                 <div className="flex items-center gap-2">
                     <button
-                        className={cls("btn h-9", safeIdx <= 0 && "opacity-50 pointer-events-none")}
+                        className={cls("btn h-9 flex items-center justify-center", safeIdx <= 0 && "opacity-50 pointer-events-none")}
                         disabled={safeIdx <= 0}
                         onClick={() => onSelect(safeIdx - 1)}
                         title="Anterior"
                     >
-                        ◀
+                        <ChevronLeft size={16} />
                     </button>
                     <button
-                        className={cls("btn h-9", safeIdx >= options.length - 1 && "opacity-50 pointer-events-none")}
+                        className={cls("btn h-9 flex items-center justify-center", safeIdx >= options.length - 1 && "opacity-50 pointer-events-none")}
                         disabled={safeIdx >= options.length - 1}
                         onClick={() => onSelect(safeIdx + 1)}
                         title="Próximo"
                     >
-                        ▶
+                        <ChevronRight size={16} />
                     </button>
                 </div>
             </div>

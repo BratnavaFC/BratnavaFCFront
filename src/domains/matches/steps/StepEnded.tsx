@@ -1,3 +1,5 @@
+import { ChevronRight, RefreshCw } from "lucide-react";
+
 export function StepEnded({
     admin,
     onRefresh,
@@ -8,21 +10,41 @@ export function StepEnded({
     onGoToPostGame: () => void;
 }) {
     return (
-        <div className="card p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                    <div className="font-semibold">Encerrar</div>
-                    <div className="text-xs text-slate-500">
-                        {admin ? "Partida encerrada. Avance para o Pós-jogo." : "Partida encerrada. Aguardando admin ir para Pós-jogo."}
-                    </div>
-                </div>
+        <div className="card overflow-hidden p-0">
+            {/* Amber accent strip */}
+            <div className="h-1 w-full bg-amber-400" />
 
-                {admin ? (
-                    <div className="flex items-center gap-2">
-                        <button className="btn" onClick={onRefresh}>Recarregar</button>
-                        <button className="btn btn-primary" onClick={onGoToPostGame}>Ir para Pós-jogo</button>
+            <div className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <div className="font-semibold text-slate-900">Encerrado</div>
+                        <div className="text-xs text-slate-500">
+                            {admin
+                                ? "Partida encerrada. Avance para o PÃ³s-jogo."
+                                : "Partida encerrada. Aguardando admin ir para PÃ³s-jogo."}
+                        </div>
                     </div>
-                ) : null}
+
+                    {admin ? (
+                        <div className="flex items-center gap-2">
+                            <button
+                                className="btn flex items-center gap-1.5"
+                                onClick={onRefresh}
+                            >
+                                <RefreshCw size={14} />
+                                <span className="hidden sm:inline">Recarregar</span>
+                            </button>
+
+                            <button
+                                className="btn btn-primary flex items-center gap-1.5"
+                                onClick={onGoToPostGame}
+                            >
+                                PÃ³s-jogo
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    ) : null}
+                </div>
             </div>
         </div>
     );

@@ -11,7 +11,7 @@ export function MiniShirt({ color, label }: { color: string; label?: string }) {
 
     return (
         <div className="mt-2 flex items-center gap-2">
-            <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden>
+            <svg width="48" height="48" viewBox="0 0 64 64" aria-hidden>
                 <path d="M18 12 L8 18 L14 30 L22 26 L22 14 Z" fill={safe} stroke="#0f172a" strokeOpacity="0.15" strokeWidth="2" />
                 <path d="M46 12 L56 18 L50 30 L42 26 L42 14 Z" fill={safe} stroke="#0f172a" strokeOpacity="0.15" strokeWidth="2" />
                 <path
@@ -25,7 +25,7 @@ export function MiniShirt({ color, label }: { color: string; label?: string }) {
             </svg>
 
             <div className="text-xs text-slate-600">
-                <div className="font-medium text-slate-700">{label ?? "—"}</div>
+                <div className="font-medium text-slate-700">{label ?? "â€”"}</div>
                 <div className="text-[11px] text-slate-500">{safe.toUpperCase()}</div>
             </div>
         </div>

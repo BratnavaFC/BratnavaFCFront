@@ -1,4 +1,5 @@
 ﻿import { useMemo } from "react";
+import { Play, RefreshCw } from "lucide-react";
 import type {
     ColorMode,
     PlayerInMatchDto,
@@ -153,7 +154,10 @@ export function StepTeams({
                 <div className="font-semibold">MatchMaking (Times / cores / swap)</div>
 
                 <div className="flex items-center gap-2">
-                    <button className="btn" onClick={onRefresh}>Recarregar</button>
+                    <button className="btn flex items-center gap-1.5" onClick={onRefresh}>
+                        <RefreshCw size={14} />
+                        <span className="hidden sm:inline">Recarregar</span>
+                    </button>
                     {admin ? <button className="btn btn-primary" onClick={onGenerateTeams}>Gerar times</button> : null}
                 </div>
             </div>
@@ -310,7 +314,10 @@ export function StepTeams({
                             </div>
 
                             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                <div
+                                    className="rounded-xl border border-slate-200 bg-slate-50 p-3 border-l-4"
+                                    style={{ borderLeftColor: currentTeamAColorHex || "#3b82f6" }}
+                                >
                                     <div className="flex items-center justify-between">
                                         <div className="font-semibold text-slate-900">Time A</div>
                                         <span className="pill">{sortedTeamAPlayers.length}</span>
@@ -328,7 +335,10 @@ export function StepTeams({
                                     </ul>
                                 </div>
 
-                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                <div
+                                    className="rounded-xl border border-slate-200 bg-slate-50 p-3 border-l-4"
+                                    style={{ borderLeftColor: currentTeamBColorHex || "#f59e0b" }}
+                                >
                                     <div className="flex items-center justify-between">
                                         <div className="font-semibold text-slate-900">Time B</div>
                                         <span className="pill">{sortedTeamBPlayers.length}</span>
@@ -398,12 +408,13 @@ export function StepTeams({
                     {/* START */}
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <button
-                            className={cls("btn btn-primary", !canStartNow && "opacity-50 pointer-events-none")}
+                            className={cls("btn btn-primary flex items-center gap-1.5", !canStartNow && "opacity-50 pointer-events-none")}
                             disabled={!canStartNow}
                             onClick={onStart}
                             title={!canStartNow ? "Defina os times antes de iniciar" : "Iniciar partida"}
                         >
-                            Start
+                            <Play size={14} />
+                            Iniciar
                         </button>
                     </div>
                 </>

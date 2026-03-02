@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { Section } from "../components/Section";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
@@ -208,17 +209,31 @@ export default function MatchesPage() {
     async function loadPostGame(matchId: string) {
         if (!groupId || !matchId) return;
 
-        const res = await MatchesApi.postgame(groupId, matchId);
-        const dto = res.data as any;
+        // Fetch postgame + full details in parallel so votes are always available
+        // (postgame may not return votes on all backends)
+        const [pgRes, detailsRes] = await Promise.all([
+            MatchesApi.postgame(groupId, matchId),
+            MatchesApi.details(groupId, matchId).catch(() => ({ data: null })),
+        ]);
+
+        const dto = pgRes.data as any;
+        const dDto = (detailsRes as any)?.data as any;
+
+        // Prefer postgame fields; fall back to details for votes/goals/mvp
+        const votes = (dto?.votes ?? dto?.Votes ?? dDto?.votes ?? dDto?.Votes ?? []) as any[];
+        const voteCounts = (dto?.voteCounts ?? dto?.VoteCounts ?? dDto?.voteCounts ?? dDto?.VoteCounts ?? []) as any[];
+        const goals = (dto?.goals ?? dto?.Goals ?? dDto?.goals ?? dDto?.Goals ?? []) as any[];
+        const computedMvp = dto?.computedMvp ?? dto?.ComputedMvp ?? dDto?.computedMvp ?? dDto?.ComputedMvp ?? null;
 
         const patch: Partial<MatchDetailsDto> = {
             matchId,
             status: Number(dto?.status ?? dto?.Status ?? 5) as any,
             teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
             teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
-            computedMvp: dto?.computedMvp ?? dto?.ComputedMvp ?? null,
-            voteCounts: dto?.voteCounts ?? dto?.VoteCounts ?? [],
-            goals: dto?.goals ?? dto?.Goals ?? [],
+            computedMvp,
+            votes: votes as any,
+            voteCounts,
+            goals,
         } as any;
 
         setCurrent((prev) => mergeCurrent(prev, patch));
@@ -239,7 +254,14 @@ export default function MatchesPage() {
             return;
         }
 
-        if (step === "post" || step === "done") {
+        if (step === "post") {
+            // Participants come from matchmaking data — load both in sequence
+            await loadMatchMaking(matchId);
+            await loadPostGame(matchId);
+            return;
+        }
+
+        if (step === "done") {
             await loadPostGame(matchId);
             return;
         }
@@ -471,6 +493,14 @@ export default function MatchesPage() {
         const b = Array.isArray((current as any)?.teamBPlayers) ? (current as any).teamBPlayers : [];
         return [...b].sort((x: any, y: any) => Number(y.isGoalkeeper) - Number(x.isGoalkeeper));
     }, [(current as any)?.teamBPlayers]);
+
+    // Non-admin: automatically use own matchPlayerId as the voter
+    useEffect(() => {
+        if (admin || !participants.length || !activePlayerId) return;
+        const myMpId = participants.find((p) => p.playerId === activePlayerId)?.matchPlayerId;
+        if (myMpId) setVoteVoterMpId(myMpId);
+        // eslint-disable-next-line
+    }, [admin, participants, activePlayerId]);
 
     // actions
     async function acceptInvite(playerId: string) {
@@ -788,6 +818,7 @@ export default function MatchesPage() {
     const postProps = useMemo(() => {
         return {
             currentMvpName: (current as any)?.computedMvp?.playerName ?? "",
+            votes: (current as any)?.votes ?? [],
             voteCounts: (current as any)?.voteCounts ?? [],
             participants,
             scoreA,
@@ -817,9 +848,12 @@ export default function MatchesPage() {
             goals: (current as any)?.goals ?? [],
             removingGoal,
             onRemoveGoal: removeGoal,
+            activeMatchPlayerId:
+                participants.find((p) => p.playerId === activePlayerId)?.matchPlayerId ?? "",
         };
     }, [
         (current as any)?.computedMvp?.playerName,
+        (current as any)?.votes,
         (current as any)?.voteCounts,
         (current as any)?.teamAGoals,
         (current as any)?.teamBGoals,
@@ -836,6 +870,8 @@ export default function MatchesPage() {
         goalTime,
         addingGoal,
         removingGoal,
+        activePlayerId,
+        participants,
     ]);
 
     const currentExistsInCreate = !!current && stepKey === "create";
@@ -859,10 +895,10 @@ export default function MatchesPage() {
                                 <button
                                     type="button"
                                     className={[
-                                        "px-3 py-2 rounded-xl border text-sm",
+                                        "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-colors",
                                         canRewind
-                                            ? "bg-white hover:bg-slate-50 border-slate-200"
-                                            : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed",
+                                            ? "bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700"
+                                            : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60",
                                     ].join(" ")}
                                     onClick={() => {
                                         if (!canRewind) return;
@@ -871,6 +907,7 @@ export default function MatchesPage() {
                                     disabled={!canRewind}
                                     title={canRewind ? "Voltar uma etapa" : "Não é possível voltar neste status"}
                                 >
+                                    <RotateCcw size={14} />
                                     Voltar etapa
                                 </button>
                             </div>
