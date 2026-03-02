@@ -1,5 +1,5 @@
-﻿import { useMemo } from "react";
-import { Play, RefreshCw } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowLeftRight, Check, Play, RefreshCw, Shuffle } from "lucide-react";
 import type {
     ColorMode,
     PlayerInMatchDto,
@@ -9,8 +9,114 @@ import type {
 } from "../matchTypes";
 import { STRATEGIES } from "../matchTypes";
 import { cls } from "../matchUtils";
-import { MiniShirt } from "../ui/MiniShirt";
 import { TeamGenCarousel } from "../ui/TeamGenCarousel";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function normalizeHex(v: string): string {
+    const s = (v ?? "").trim();
+    if (!s) return "#e2e8f0";
+    return s.startsWith("#") ? s : `#${s}`;
+}
+
+function isWhiteHex(hex: string): boolean {
+    const h = normalizeHex(hex).replace("#", "").toLowerCase();
+    return h === "ffffff" || h === "fff";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ColorSwatchPicker — visual swatch grid replacing plain <select>
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ColorSwatchPicker({
+    colors,
+    selectedId,
+    disabledId,
+    readOnly,
+    onSelect,
+}: {
+    colors: TeamColorDto[];
+    selectedId: string;
+    disabledId?: string;
+    readOnly: boolean;
+    onSelect: (id: string) => void;
+}) {
+    return (
+        <div className="flex flex-wrap gap-2">
+            {colors.map((c) => {
+                const hex = normalizeHex(c.hexValue);
+                const isSelected = selectedId === c.id;
+                const isOther = disabledId === c.id;
+                const isDisabled = readOnly || (isOther && !isSelected);
+                const white = isWhiteHex(hex);
+
+                return (
+                    <button
+                        key={c.id}
+                        title={c.name}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => onSelect(c.id)}
+                        className={cls(
+                            "relative w-9 h-9 rounded-full border-2 transition-all duration-150",
+                            isSelected
+                                ? "scale-110 shadow-md ring-2 ring-offset-2 ring-slate-700 border-slate-700"
+                                : white
+                                ? "border-slate-300"
+                                : "border-transparent",
+                            !isDisabled && !isSelected && "hover:scale-105 hover:border-slate-400",
+                            isDisabled && !isSelected
+                                ? "opacity-25 cursor-not-allowed"
+                                : "cursor-pointer"
+                        )}
+                        style={{ backgroundColor: hex }}
+                    >
+                        {isSelected && (
+                            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <Check
+                                    size={14}
+                                    strokeWidth={3}
+                                    className={white ? "text-slate-700" : "text-white"}
+                                />
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ColorPreviewChip — small colored dot + name + hex
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ColorPreviewChip({ hex, name }: { hex: string; name: string }) {
+    const safe = normalizeHex(hex);
+    const white = isWhiteHex(safe);
+    return (
+        <div className="mt-2.5 flex items-center gap-2">
+            <span
+                className="w-5 h-5 rounded-full border-2 shrink-0"
+                style={{
+                    backgroundColor: safe,
+                    borderColor: white ? "#cbd5e1" : safe,
+                    boxShadow: white ? "none" : `0 0 0 2px white, 0 0 0 3.5px ${safe}55`,
+                }}
+            />
+            <div>
+                <div className="text-xs font-semibold text-slate-700 leading-tight">{name}</div>
+                <div className="text-[11px] text-slate-400 font-mono">{safe.toUpperCase()}</div>
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StepTeams
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function StepTeams({
     admin,
@@ -18,7 +124,6 @@ export function StepTeams({
     onStart,
     canStartNow,
 
-    // teamgen config
     strategyType,
     setStrategyType,
     includeGoalkeepers,
@@ -27,7 +132,6 @@ export function StepTeams({
     setPlayersPerTeam,
     onGenerateTeams,
 
-    // colors
     teamColors,
     colorMode,
     setColorMode,
@@ -48,7 +152,6 @@ export function StepTeams({
     onApplyManualColors,
     onSetColorsRandomDistinct,
 
-    // teams
     generatedOptions,
     selectedTeamGenIdx,
     setSelectedTeamGenIdx,
@@ -57,7 +160,6 @@ export function StepTeams({
     assigningTeams,
     onAssignTeamsFromGenerated,
 
-    // swap
     canSwap,
     swapA,
     setSwapA,
@@ -125,300 +227,546 @@ export function StepTeams({
         return m;
     }, [allPlayers]);
 
-    const generatedTeamsView = useMemo(() => {
-        if (!generatedOptions || generatedOptions.length === 0) return null;
-
-        return (
-            <TeamGenCarousel
-                options={generatedOptions}
-                selectedIndex={selectedTeamGenIdx}
-                onSelect={setSelectedTeamGenIdx}
-                adminView={admin}
-                byPlayerId={byPlayerId}
-            />
-        );
-    }, [generatedOptions, selectedTeamGenIdx, admin, byPlayerId, setSelectedTeamGenIdx]);
-
     const canAssignTeams = useMemo(() => {
         if (!admin) return false;
         if (teamsAlreadyAssigned) return false;
-        const opt = generatedOptions?.[Math.max(0, Math.min(selectedTeamGenIdx, (generatedOptions?.length ?? 1) - 1))];
-        const a = opt?.teamA?.length ?? 0;
-        const b = opt?.teamB?.length ?? 0;
-        return a > 0 && b > 0;
+        const opt =
+            generatedOptions?.[
+                Math.max(0, Math.min(selectedTeamGenIdx, (generatedOptions?.length ?? 1) - 1))
+            ];
+        return (opt?.teamA?.length ?? 0) > 0 && (opt?.teamB?.length ?? 0) > 0;
     }, [admin, teamsAlreadyAssigned, generatedOptions, selectedTeamGenIdx]);
 
-    return (
-        <div className="card p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="font-semibold">MatchMaking (Times / cores / swap)</div>
+    const aHex = normalizeHex(currentTeamAColorHex);
+    const bHex = normalizeHex(currentTeamBColorHex);
+    const aName = currentTeamAColorName || "Time A";
+    const bName = currentTeamBColorName || "Time B";
+    const hasAColor = currentTeamAColorHex.trim().length > 0;
+    const hasBColor = currentTeamBColorHex.trim().length > 0;
 
+    // ── Assigned-teams panel (shared between admin and non-admin) ────────────
+    const teamsSetPanel = teamsAlreadyAssigned ? (
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+            {/* Panel header with action buttons */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+                <div>
+                    <div className="text-sm font-semibold text-slate-900">Times definidos</div>
+                    {admin && canSwap && (
+                        <div className="text-xs text-slate-500 mt-0.5">
+                            Clique em 1 jogador de cada time para selecionar o swap
+                        </div>
+                    )}
+                </div>
                 <div className="flex items-center gap-2">
-                    <button className="btn flex items-center gap-1.5" onClick={onRefresh}>
-                        <RefreshCw size={14} />
-                        <span className="hidden sm:inline">Recarregar</span>
-                    </button>
-                    {admin ? <button className="btn btn-primary" onClick={onGenerateTeams}>Gerar times</button> : null}
+                    {admin && canSwap && (
+                        <button
+                            disabled={!swapA || !swapB || swapping}
+                            onClick={onSwap}
+                            className={cls(
+                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all",
+                                swapA && swapB
+                                    ? "bg-amber-500 border-amber-500 text-white hover:bg-amber-600 shadow-sm"
+                                    : "bg-white border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
+                            )}
+                        >
+                            <ArrowLeftRight size={12} />
+                            {swapping ? "Trocando..." : "Trocar"}
+                        </button>
+                    )}
+                    {admin && (
+                        <button
+                            disabled={!canStartNow}
+                            onClick={onStart}
+                            className={cls(
+                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                canStartNow
+                                    ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+                                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                            )}
+                        >
+                            <Play size={12} />
+                            Iniciar
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {!admin ? (
-                <div className="mt-4 text-sm text-slate-600">
-                    Somente visualização (admin controla).
-                </div>
-            ) : (
-                <>
-                    {/* Config TeamGen */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                        <label className="block">
-                            <div className="label">Algoritmo</div>
-                            <select
-                                className="input h-9 text-sm"
-                                value={strategyType}
-                                onChange={(e) => setStrategyType(Number(e.target.value) as StrategyId)}
+            {/* Two team columns */}
+            <div className="grid grid-cols-2 divide-x divide-slate-100">
+                {/* ── Team A ── */}
+                <div>
+                    <div
+                        className="flex items-center justify-between px-4 py-2.5"
+                        style={{
+                            backgroundColor: hasAColor ? aHex + "18" : "#f8fafc",
+                            borderBottom: `2px solid ${hasAColor ? aHex : "#e2e8f0"}`,
+                        }}
+                    >
+                        <div className="flex items-center gap-2">
+                            {hasAColor && (
+                                <span
+                                    className="w-3 h-3 rounded-full shrink-0"
+                                    style={{
+                                        backgroundColor: aHex,
+                                        outline: isWhiteHex(aHex) ? "1.5px solid #cbd5e1" : "none",
+                                        outlineOffset: "1px",
+                                    }}
+                                />
+                            )}
+                            <span
+                                className="text-sm font-bold"
+                                style={{ color: hasAColor && !isWhiteHex(aHex) ? aHex : "#0f172a" }}
                             >
-                                {STRATEGIES.map((s) => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <label className="block">
-                            <div className="label">Players/Team</div>
-                            <input
-                                className="input h-9 text-sm"
-                                type="number"
-                                value={playersPerTeam}
-                                onChange={(e) => setPlayersPerTeam(Number(e.target.value))}
-                            />
-                        </label>
-
-                        <label className="flex items-center gap-2 mt-1 sm:mt-6">
-                            <input type="checkbox" checked={includeGoalkeepers} onChange={(e) => setIncludeGoalkeepers(e.target.checked)} />
-                            <span className="text-sm font-medium text-slate-700">Incluir goleiros</span>
-                        </label>
-                    </div>
-
-                    {/* CORES */}
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                            <div>
-                                <div className="font-semibold text-slate-900">Cores dos times</div>
-                                <div className="text-xs text-slate-500">
-                                    Se já estiver setado, fica travado. Marque “alterar cores” para liberar.
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-3">
-                                <select
-                                    className="input h-9 text-sm w-40"
-                                    value={colorMode}
-                                    onChange={(e) => setColorMode(e.target.value as any)}
-                                    disabled={colorsReadOnly}
-                                >
-                                    <option value="manual">Manual</option>
-                                    <option value="random">Aleatório</option>
-                                </select>
-
-                                {colorsLocked ? (
-                                    <label className="flex items-center gap-2 text-sm text-slate-700">
-                                        <input
-                                            type="checkbox"
-                                            checked={allowEditColors}
-                                            onChange={(e) => setAllowEditColors(e.target.checked)}
-                                        />
-                                        <span>Alterar cores</span>
-                                    </label>
-                                ) : null}
-
-                                {colorMode === "random" ? (
-                                    <button
-                                        className={cls("btn h-9", colorsReadOnly && "opacity-50 pointer-events-none")}
-                                        disabled={colorsReadOnly}
-                                        onClick={onSetColorsRandomDistinct}
-                                    >
-                                        Sortear e aplicar
-                                    </button>
-                                ) : (
-                                    <button
-                                        className={cls("btn h-9", (colorsReadOnly || !teamAColorId || !teamBColorId) && "opacity-50 pointer-events-none")}
-                                        disabled={colorsReadOnly || !teamAColorId || !teamBColorId}
-                                        onClick={onApplyManualColors}
-                                    >
-                                        Aplicar cores
-                                    </button>
-                                )}
-                            </div>
+                                {aName}
+                            </span>
                         </div>
+                        <span className="text-xs text-slate-400">{sortedTeamAPlayers.length}j</span>
+                    </div>
+                    <ul className="divide-y divide-slate-50">
+                        {sortedTeamAPlayers.map((p) => {
+                            const isSelected = swapA === p.playerId;
+                            const clickable = admin && canSwap;
+                            return (
+                                <li
+                                    key={p.playerId}
+                                    onClick={
+                                        clickable
+                                            ? () => setSwapA(swapA === p.playerId ? "" : p.playerId)
+                                            : undefined
+                                    }
+                                    className={cls(
+                                        "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
+                                        clickable && "cursor-pointer",
+                                        isSelected
+                                            ? "bg-amber-50 border-l-[3px] border-amber-400"
+                                            : clickable
+                                            ? "hover:bg-slate-50"
+                                            : ""
+                                    )}
+                                >
+                                    <span
+                                        className={cls(
+                                            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+                                            isSelected
+                                                ? "bg-amber-400 text-white"
+                                                : "bg-slate-100 text-slate-500"
+                                        )}
+                                    >
+                                        {p.playerName.charAt(0).toUpperCase()}
+                                    </span>
+                                    <span
+                                        className={cls(
+                                            "truncate flex-1 font-medium",
+                                            isSelected ? "text-amber-700" : "text-slate-900"
+                                        )}
+                                    >
+                                        {p.playerName}
+                                    </span>
+                                    {p.isGoalkeeper && (
+                                        <span title="Goleiro" className="shrink-0 text-xs">
+                                            🧤
+                                        </span>
+                                    )}
+                                </li>
+                            );
+                        })}
+                        {sortedTeamAPlayers.length === 0 && (
+                            <li className="px-4 py-3 text-xs text-slate-400">Nenhum jogador</li>
+                        )}
+                    </ul>
+                </div>
 
-                        {colorMode === "manual" ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                <div className="min-w-0">
-                                    <div className="label">Time A</div>
-                                    <select className="input h-9 text-sm w-full md:max-w-[320px]" value={teamAColorId} onChange={(e) => setTeamAColorId(e.target.value)} disabled={colorsReadOnly}>
-                                        {teamColors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                    <MiniShirt color={teamAColor?.hexValue ?? currentTeamAColorHex ?? "#e2e8f0"} label={teamAColor?.name ?? currentTeamAColorName ?? "—"} />
-                                </div>
+                {/* ── Team B ── */}
+                <div>
+                    <div
+                        className="flex items-center justify-between px-4 py-2.5"
+                        style={{
+                            backgroundColor: hasBColor ? bHex + "18" : "#f8fafc",
+                            borderBottom: `2px solid ${hasBColor ? bHex : "#e2e8f0"}`,
+                        }}
+                    >
+                        <div className="flex items-center gap-2">
+                            {hasBColor && (
+                                <span
+                                    className="w-3 h-3 rounded-full shrink-0"
+                                    style={{
+                                        backgroundColor: bHex,
+                                        outline: isWhiteHex(bHex) ? "1.5px solid #cbd5e1" : "none",
+                                        outlineOffset: "1px",
+                                    }}
+                                />
+                            )}
+                            <span
+                                className="text-sm font-bold"
+                                style={{ color: hasBColor && !isWhiteHex(bHex) ? bHex : "#0f172a" }}
+                            >
+                                {bName}
+                            </span>
+                        </div>
+                        <span className="text-xs text-slate-400">{sortedTeamBPlayers.length}j</span>
+                    </div>
+                    <ul className="divide-y divide-slate-50">
+                        {sortedTeamBPlayers.map((p) => {
+                            const isSelected = swapB === p.playerId;
+                            const clickable = admin && canSwap;
+                            return (
+                                <li
+                                    key={p.playerId}
+                                    onClick={
+                                        clickable
+                                            ? () => setSwapB(swapB === p.playerId ? "" : p.playerId)
+                                            : undefined
+                                    }
+                                    className={cls(
+                                        "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
+                                        clickable && "cursor-pointer",
+                                        isSelected
+                                            ? "bg-amber-50 border-r-[3px] border-amber-400"
+                                            : clickable
+                                            ? "hover:bg-slate-50"
+                                            : ""
+                                    )}
+                                >
+                                    <span
+                                        className={cls(
+                                            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+                                            isSelected
+                                                ? "bg-amber-400 text-white"
+                                                : "bg-slate-100 text-slate-500"
+                                        )}
+                                    >
+                                        {p.playerName.charAt(0).toUpperCase()}
+                                    </span>
+                                    <span
+                                        className={cls(
+                                            "truncate flex-1 font-medium",
+                                            isSelected ? "text-amber-700" : "text-slate-900"
+                                        )}
+                                    >
+                                        {p.playerName}
+                                    </span>
+                                    {p.isGoalkeeper && (
+                                        <span title="Goleiro" className="shrink-0 text-xs">
+                                            🧤
+                                        </span>
+                                    )}
+                                </li>
+                            );
+                        })}
+                        {sortedTeamBPlayers.length === 0 && (
+                            <li className="px-4 py-3 text-xs text-slate-400">Nenhum jogador</li>
+                        )}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    ) : null;
 
-                                <div className="min-w-0">
-                                    <div className="label">Time B</div>
-                                    <select className="input h-9 text-sm w-full md:max-w-[320px]" value={teamBColorId} onChange={(e) => setTeamBColorId(e.target.value)} disabled={colorsReadOnly}>
-                                        {teamColors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                    <MiniShirt color={teamBColor?.hexValue ?? currentTeamBColorHex ?? "#e2e8f0"} label={teamBColor?.name ?? currentTeamBColorName ?? "—"} />
-                                </div>
+    // ── Non-admin view ────────────────────────────────────────────────────────
+    if (!admin) {
+        const hasColors = hasAColor || hasBColor;
+        return (
+            <div className="card p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                    <div className="font-semibold text-slate-900">Times</div>
+                    <button className="btn flex items-center gap-1.5 text-sm" onClick={onRefresh}>
+                        <RefreshCw size={13} />
+                        <span className="hidden sm:inline">Recarregar</span>
+                    </button>
+                </div>
 
-                                {teamAColorId && teamBColorId && teamAColorId === teamBColorId ? (
-                                    <div className="md:col-span-2 text-xs text-amber-700">
-                                        As duas cores estão iguais. Se quiser, selecione cores diferentes.
-                                    </div>
-                                ) : null}
-                            </div>
-                        ) : (
-                            <div className="mt-3 text-sm text-slate-600">
-                                No modo <b>Aleatório</b>, escolhe 2 cores do banco <b>sem repetir</b> e aplica na hora.
-                            </div>
+                {/* Colors VS chip */}
+                {hasColors && (
+                    <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <div className="flex items-center gap-2 flex-1">
+                            <span
+                                className="w-5 h-5 rounded-full shrink-0 border-2"
+                                style={{
+                                    backgroundColor: aHex,
+                                    borderColor: isWhiteHex(aHex) ? "#cbd5e1" : aHex,
+                                }}
+                            />
+                            <span
+                                className="text-sm font-semibold"
+                                style={{ color: isWhiteHex(aHex) ? "#334155" : aHex }}
+                            >
+                                {aName}
+                            </span>
+                        </div>
+                        <span className="text-xs font-medium text-slate-400">vs</span>
+                        <div className="flex items-center gap-2 flex-1 justify-end">
+                            <span
+                                className="text-sm font-semibold"
+                                style={{ color: isWhiteHex(bHex) ? "#334155" : bHex }}
+                            >
+                                {bName}
+                            </span>
+                            <span
+                                className="w-5 h-5 rounded-full shrink-0 border-2"
+                                style={{
+                                    backgroundColor: bHex,
+                                    borderColor: isWhiteHex(bHex) ? "#cbd5e1" : bHex,
+                                }}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {teamsSetPanel ?? (
+                    <div className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-sm text-slate-400">
+                        {teamsAlreadyAssigned
+                            ? "Carregando times..."
+                            : "Times ainda não foram definidos."}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // ── Admin view ────────────────────────────────────────────────────────────
+    return (
+        <div className="card p-4 space-y-4">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="font-semibold text-slate-900">MatchMaking</div>
+                <button className="btn flex items-center gap-1.5 text-sm" onClick={onRefresh}>
+                    <RefreshCw size={13} />
+                    <span className="hidden sm:inline">Recarregar</span>
+                </button>
+            </div>
+
+            {/* Config row — algorithm, PPT, GK + Gerar */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className="block">
+                    <div className="label">Algoritmo</div>
+                    <select
+                        className="input h-9 text-sm"
+                        value={strategyType}
+                        onChange={(e) => setStrategyType(Number(e.target.value) as StrategyId)}
+                    >
+                        {STRATEGIES.map((s) => (
+                            <option key={s.id} value={s.id}>
+                                {s.name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <label className="block">
+                    <div className="label">Players/Team</div>
+                    <input
+                        className="input h-9 text-sm"
+                        type="number"
+                        value={playersPerTeam}
+                        onChange={(e) => setPlayersPerTeam(Number(e.target.value))}
+                    />
+                </label>
+
+                <div className="flex flex-col justify-end gap-2">
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={includeGoalkeepers}
+                            onChange={(e) => setIncludeGoalkeepers(e.target.checked)}
+                        />
+                        <span className="text-sm font-medium text-slate-700">Incluir goleiros</span>
+                    </label>
+                    <button className="btn btn-primary h-9 text-sm" onClick={onGenerateTeams}>
+                        Gerar times
+                    </button>
+                </div>
+            </div>
+
+            {/* ── Colors ── */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                {/* Colors header */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                        <div className="text-sm font-semibold text-slate-900">Cores dos times</div>
+                        {colorsLocked && !allowEditColors && (
+                            <div className="text-xs text-slate-500 mt-0.5">Cores já definidas.</div>
                         )}
                     </div>
 
-                    {/* TIMES GERADOS */}
-                    {generatedTeamsView ? generatedTeamsView : <div className="muted mt-3">Gere times para visualizar aqui.</div>}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {colorsLocked && (
+                            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={allowEditColors}
+                                    onChange={(e) => setAllowEditColors(e.target.checked)}
+                                />
+                                Editar
+                            </label>
+                        )}
 
-                    {/* SETAR TIMES */}
-                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                        <button
-                            className={cls("btn btn-primary", (!canAssignTeams || assigningTeams) && "opacity-50 pointer-events-none")}
-                            disabled={!canAssignTeams || assigningTeams}
-                            onClick={onAssignTeamsFromGenerated}
-                        >
-                            {assigningTeams ? "Setando..." : teamsAlreadyAssigned ? "Times já setados" : "Setar times"}
-                        </button>
-
-                        {teamsAlreadyAssigned ? (
-                            <span className="text-xs text-slate-500">
-                                Times já foram setados. Use o swap para trocar 1 jogador de cada lado.
-                            </span>
-                        ) : null}
-                    </div>
-
-                    {/* LISTA VISUAL (TIMES SETADOS) */}
-                    {teamsAlreadyAssigned ? (
-                        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                <div>
-                                    <div className="font-semibold text-slate-900">Times setados</div>
-                                    <div className="text-xs text-slate-500">Use essa lista para decidir quem trocar.</div>
-                                </div>
-                                <span className="pill">A: {sortedTeamAPlayers.length} • B: {sortedTeamBPlayers.length}</span>
-                            </div>
-
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div
-                                    className="rounded-xl border border-slate-200 bg-slate-50 p-3 border-l-4"
-                                    style={{ borderLeftColor: currentTeamAColorHex || "#3b82f6" }}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="font-semibold text-slate-900">Time A</div>
-                                        <span className="pill">{sortedTeamAPlayers.length}</span>
-                                    </div>
-
-                                    <ul className="mt-3 space-y-2 text-sm">
-                                        {sortedTeamAPlayers.map((p) => (
-                                            <li key={p.playerId} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                                                <span className="truncate font-medium text-slate-900">
-                                                    {p.playerName} {p.isGoalkeeper ? <span title="Goleiro">🧤</span> : null}
-                                                </span>
-                                            </li>
-                                        ))}
-                                        {sortedTeamAPlayers.length === 0 ? <li className="text-slate-500">Nenhum.</li> : null}
-                                    </ul>
-                                </div>
-
-                                <div
-                                    className="rounded-xl border border-slate-200 bg-slate-50 p-3 border-l-4"
-                                    style={{ borderLeftColor: currentTeamBColorHex || "#f59e0b" }}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="font-semibold text-slate-900">Time B</div>
-                                        <span className="pill">{sortedTeamBPlayers.length}</span>
-                                    </div>
-
-                                    <ul className="mt-3 space-y-2 text-sm">
-                                        {sortedTeamBPlayers.map((p) => (
-                                            <li key={p.playerId} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                                                <span className="truncate font-medium text-slate-900">
-                                                    {p.playerName} {p.isGoalkeeper ? <span title="Goleiro">🧤</span> : null}
-                                                </span>
-                                            </li>
-                                        ))}
-                                        {sortedTeamBPlayers.length === 0 ? <li className="text-slate-500">Nenhum.</li> : null}
-                                    </ul>
-                                </div>
-                            </div>
+                        {/* Mode toggle pill */}
+                        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                            <button
+                                type="button"
+                                disabled={colorsReadOnly}
+                                onClick={() => setColorMode("manual")}
+                                className={cls(
+                                    "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
+                                    colorMode === "manual"
+                                        ? "bg-white shadow-sm text-slate-900"
+                                        : "text-slate-500 hover:text-slate-700",
+                                    colorsReadOnly && "pointer-events-none"
+                                )}
+                            >
+                                Manual
+                            </button>
+                            <button
+                                type="button"
+                                disabled={colorsReadOnly}
+                                onClick={() => setColorMode("random")}
+                                className={cls(
+                                    "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
+                                    colorMode === "random"
+                                        ? "bg-white shadow-sm text-slate-900"
+                                        : "text-slate-500 hover:text-slate-700",
+                                    colorsReadOnly && "pointer-events-none"
+                                )}
+                            >
+                                Aleatório
+                            </button>
                         </div>
-                    ) : null}
 
-                    {/* SWAP */}
-                    {canSwap ? (
-                        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                <div>
-                                    <div className="font-semibold text-slate-900">Trocar jogadores (swap)</div>
-                                    <div className="text-xs text-slate-500">Selecione 1 do Time A e 1 do Time B, depois confirme.</div>
-                                </div>
-
-                                <button
-                                    className={cls("btn btn-primary h-9", (!swapA || !swapB || swapping) && "opacity-50 pointer-events-none")}
-                                    disabled={!swapA || !swapB || swapping}
-                                    onClick={onSwap}
-                                >
-                                    {swapping ? "Trocando..." : "Trocar"}
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                <label className="block">
-                                    <div className="label">Jogador do Time A</div>
-                                    <select className="input h-9 text-sm" value={swapA} onChange={(e) => setSwapA(e.target.value)}>
-                                        <option value="">Selecione...</option>
-                                        {sortedTeamAPlayers.map((p) => (
-                                            <option key={p.playerId} value={p.playerId}>
-                                                {p.playerName} {p.isGoalkeeper ? "🧤" : ""}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-
-                                <label className="block">
-                                    <div className="label">Jogador do Time B</div>
-                                    <select className="input h-9 text-sm" value={swapB} onChange={(e) => setSwapB(e.target.value)}>
-                                        <option value="">Selecione...</option>
-                                        {sortedTeamBPlayers.map((p) => (
-                                            <option key={p.playerId} value={p.playerId}>
-                                                {p.playerName} {p.isGoalkeeper ? "🧤" : ""}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {/* START */}
-                    <div className="mt-4 flex items-center justify-end gap-2">
-                        <button
-                            className={cls("btn btn-primary flex items-center gap-1.5", !canStartNow && "opacity-50 pointer-events-none")}
-                            disabled={!canStartNow}
-                            onClick={onStart}
-                            title={!canStartNow ? "Defina os times antes de iniciar" : "Iniciar partida"}
-                        >
-                            <Play size={14} />
-                            Iniciar
-                        </button>
+                        {colorMode === "random" ? (
+                            <button
+                                type="button"
+                                disabled={colorsReadOnly}
+                                onClick={onSetColorsRandomDistinct}
+                                className={cls(
+                                    "btn h-8 text-xs flex items-center gap-1.5",
+                                    colorsReadOnly && "opacity-50 pointer-events-none"
+                                )}
+                            >
+                                <Shuffle size={11} />
+                                Sortear
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                disabled={colorsReadOnly || !teamAColorId || !teamBColorId}
+                                onClick={onApplyManualColors}
+                                className={cls(
+                                    "btn btn-primary h-8 text-xs",
+                                    (colorsReadOnly || !teamAColorId || !teamBColorId) &&
+                                        "opacity-50 pointer-events-none"
+                                )}
+                            >
+                                Aplicar cores
+                            </button>
+                        )}
                     </div>
-                </>
+                </div>
+
+                {colorMode === "manual" ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2.5">
+                                Time A
+                            </div>
+                            <ColorSwatchPicker
+                                colors={teamColors}
+                                selectedId={teamAColorId}
+                                disabledId={teamBColorId}
+                                readOnly={colorsReadOnly}
+                                onSelect={setTeamAColorId}
+                            />
+                            {teamAColor ? (
+                                <ColorPreviewChip hex={teamAColor.hexValue} name={teamAColor.name} />
+                            ) : currentTeamAColorHex ? (
+                                <ColorPreviewChip
+                                    hex={currentTeamAColorHex}
+                                    name={currentTeamAColorName || "Time A"}
+                                />
+                            ) : null}
+                        </div>
+
+                        <div>
+                            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2.5">
+                                Time B
+                            </div>
+                            <ColorSwatchPicker
+                                colors={teamColors}
+                                selectedId={teamBColorId}
+                                disabledId={teamAColorId}
+                                readOnly={colorsReadOnly}
+                                onSelect={setTeamBColorId}
+                            />
+                            {teamBColor ? (
+                                <ColorPreviewChip hex={teamBColor.hexValue} name={teamBColor.name} />
+                            ) : currentTeamBColorHex ? (
+                                <ColorPreviewChip
+                                    hex={currentTeamBColorHex}
+                                    name={currentTeamBColorName || "Time B"}
+                                />
+                            ) : null}
+                        </div>
+
+                        {teamAColorId && teamBColorId && teamAColorId === teamBColorId && (
+                            <div className="md:col-span-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+                                ⚠️ As duas cores são iguais — selecione cores diferentes.
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <Shuffle size={14} className="shrink-0 text-slate-400" />
+                        Sorteia 2 cores distintas do banco e aplica automaticamente.
+                    </div>
+                )}
+            </div>
+
+            {/* ── Generated options ── */}
+            {generatedOptions && generatedOptions.length > 0 ? (
+                <TeamGenCarousel
+                    options={generatedOptions}
+                    selectedIndex={selectedTeamGenIdx}
+                    onSelect={setSelectedTeamGenIdx}
+                    adminView={admin}
+                    byPlayerId={byPlayerId}
+                    teamAHex={currentTeamAColorHex}
+                    teamAName={currentTeamAColorName || "Time A"}
+                    teamBHex={currentTeamBColorHex}
+                    teamBName={currentTeamBColorName || "Time B"}
+                />
+            ) : (
+                <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
+                    Clique em <b>Gerar times</b> para ver as opções de sorteio.
+                </div>
             )}
+
+            {/* ── Setar times — shown only when options exist ── */}
+            {generatedOptions && generatedOptions.length > 0 && (
+                <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div className="text-xs text-slate-500">
+                        {teamsAlreadyAssigned ? (
+                            <span className="flex items-center gap-1.5 font-medium text-emerald-700">
+                                <Check size={13} />
+                                Times já setados
+                            </span>
+                        ) : (
+                            "Escolha uma opção acima e confirme aqui."
+                        )}
+                    </div>
+                    <button
+                        disabled={!canAssignTeams || assigningTeams}
+                        onClick={onAssignTeamsFromGenerated}
+                        className={cls(
+                            "btn btn-primary h-9 text-sm",
+                            (!canAssignTeams || assigningTeams) && "opacity-50 pointer-events-none"
+                        )}
+                    >
+                        {assigningTeams ? "Setando..." : "Setar times"}
+                    </button>
+                </div>
+            )}
+
+            {/* ── Assigned teams panel with inline swap + Iniciar ── */}
+            {teamsSetPanel}
         </div>
     );
 }
