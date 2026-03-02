@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Section } from "../../components/Section";
 import useAccountStore from "../../auth/accountStore";
 import { GroupInvitesApi, UsersApi } from "../../api/endpoints";
 import { useInviteStore } from "../../stores/inviteStore";
+import { extractApiError } from "../../lib/apiError";
 import {
     Shield,
     User,
@@ -79,34 +81,6 @@ function fullName(u: { firstName?: string; lastName?: string }) {
     return [u.firstName ?? "", u.lastName ?? ""].join(" ").trim() || "-";
 }
 
-function extractApiErrorMessage(err: any): string {
-    const data = err?.response?.data;
-
-    // 1) padrão { message }
-    const msg = data?.message;
-    if (typeof msg === "string" && msg.trim()) return msg;
-
-    // 2) modelstate { errors: { field: [..] } }
-    const errors = data?.errors;
-    if (errors && typeof errors === "object") {
-        const firstKey = Object.keys(errors)[0];
-        const firstArr = errors[firstKey];
-        if (Array.isArray(firstArr) && typeof firstArr[0] === "string") return firstArr[0];
-    }
-
-    // 3) string crua
-    if (typeof data === "string" && data.trim()) {
-        // se vier HTML/stacktrace gigante, tenta pegar a primeira linha útil
-        const line = data.split("\n").map(s => s.trim()).find(s => s.length > 0);
-        if (line) return line.slice(0, 180);
-        return data.slice(0, 180);
-    }
-
-    // 4) fallback axios
-    if (typeof err?.message === "string" && err.message.trim()) return err.message;
-
-    return "Falha ao alterar senha.";
-}
 
 /** ========= UI helpers ========= */
 
@@ -506,7 +480,7 @@ function ChangePasswordModal({
             await UsersApi.changePassword(userId, { currentPassword: current, newPassword: next1 });
             onClose();
         } catch (e: any) {
-            const msg = extractApiErrorMessage(e);
+            const msg = extractApiError(e, "Falha ao alterar senha.");
 
             if (msg.toLowerCase().includes("current password is invalid")) {
                 setError("A senha atual está incorreta.");
@@ -569,7 +543,7 @@ type GroupInviteDto = {
 
 export default function AdminUsersPage() {
     const active = useAccountStore((s) => s.getActive());
-    const isAdminOrGod = useMemo(() => !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode")), [active]);
+    const isAdminOrGod = useMemo(() => !!active && active.roles.includes("GodMode"), [active]);
     const myUserId = active?.userId ?? null;
 
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
@@ -662,6 +636,8 @@ export default function AdminUsersPage() {
             });
             const data = resp?.data ?? resp;
             setResult(data as PagedResultDto<UserListItemDto>);
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao carregar lista de usuários."));
         } finally {
             setLoading(false);
         }

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { toast } from 'sonner';
 import { Field } from '../components/Field';
 import { UsersApi } from '../api/endpoints';
 import type { CreateUserDto } from '../api/generated/types';
 import { Link, useNavigate } from 'react-router-dom';
+import { extractApiError } from '../lib/apiError';
 
 const schema = z.object({
   name: z.string().min(2),
@@ -22,9 +24,13 @@ export default function RegisterPage(){
   const onSubmit = async (form: Form) => {
     setMsg(null);
     const dto: CreateUserDto = { name: form.name, email: form.email, password: form.password } as any;
-    await UsersApi.create(dto);
-    setMsg('Usuário criado! Faça login.');
-    setTimeout(() => nav('/login'), 600);
+    try {
+      await UsersApi.create(dto);
+      setMsg('Usuário criado! Faça login.');
+      setTimeout(() => nav('/login'), 600);
+    } catch (e) {
+      toast.error(extractApiError(e, "Falha ao criar usuário."));
+    }
   };
 
   return (

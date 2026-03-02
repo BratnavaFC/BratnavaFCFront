@@ -1,4 +1,5 @@
 ﻿import { Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
 import Layout from './layout/Layout';
@@ -19,6 +20,8 @@ import VisualStatsPage from "./pages/VisualStatsPage";
 
 export default function App() {
     return (
+        <>
+        <Toaster position="bottom-right" richColors />
         <Routes>
             <Route path="/" element={<Navigate to="/app" replace />} />
             <Route path="/login" element={<LoginPage />} />
@@ -64,5 +67,6 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
+        </>
     );
 }

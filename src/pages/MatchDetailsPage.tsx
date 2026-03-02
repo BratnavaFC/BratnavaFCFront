@@ -1,4 +1,5 @@
 import { CSSProperties, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router-dom";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
@@ -11,6 +12,7 @@ import {
     RefreshCw,
     Trophy,
 } from "lucide-react";
+import { extractApiError } from "../lib/apiError";
 
 /* ===================== helpers ===================== */
 
@@ -529,8 +531,12 @@ export default function MatchDetailsPage() {
     useEffect(() => {
         (async () => {
             if (!groupId || !matchId) return;
-            const res = await MatchesApi.details(groupId, matchId);
-            setData(res.data);
+            try {
+                const res = await MatchesApi.details(groupId, matchId);
+                setData(res.data);
+            } catch (e) {
+                toast.error(extractApiError(e, "Falha ao carregar detalhes da partida."));
+            }
         })();
     }, [groupId, matchId]);
 

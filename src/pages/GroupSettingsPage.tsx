@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
+import { extractApiError } from '../lib/apiError';
 
 const DAY_OPTIONS = [
     { value: '', label: 'Sem padrão' },
@@ -56,8 +58,8 @@ export default function GroupSettingsPage() {
                 );
                 setIsPersisted(gs.isPersisted ?? false);
             }
-        } catch {
-            setMsg({ text: 'Erro ao carregar configurações.', ok: false });
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao carregar configurações.'));
         } finally {
             setLoading(false);
         }
@@ -79,13 +81,8 @@ export default function GroupSettingsPage() {
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
-        } catch (e: any) {
-            const detail =
-                e?.response?.data?.error ??
-                e?.response?.data?.message ??
-                e?.message ??
-                'Erro ao salvar.';
-            setMsg({ text: detail, ok: false });
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao salvar configurações.'));
         } finally {
             setSaving(false);
         }

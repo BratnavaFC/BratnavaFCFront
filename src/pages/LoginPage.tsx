@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from "sonner";
 import { Field } from "../components/Field";
 import { AuthApi, GroupsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import type { LoginDto } from "../api/generated/types";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { extractApiError } from "../lib/apiError";
 
 const schema = z.object({
     email: z.string().email(),
@@ -70,7 +72,13 @@ export default function LoginPage() {
 
         const dto: LoginDto = { username: form.email, password: form.password } as any;
 
-        const res = await AuthApi.login(dto);
+        let res;
+        try {
+            res = await AuthApi.login(dto);
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao fazer login."));
+            return;
+        }
 
         const accessToken =
             res.data?.accessToken ??

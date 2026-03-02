@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Section } from "../components/Section";
 import { TeamColorApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
@@ -7,6 +8,7 @@ import { PreviewModal } from "../components/PreviewModal";
 import { TeamColorEditModal } from "../components/TeamColorEditModal";
 import { useIsMobile } from "../hooks/UseIsMobile";
 import { isAdmin, isGroupAdmin } from "../auth/guards";
+import { extractApiError } from "../lib/apiError";
 
 type Item = any;
 
@@ -41,6 +43,8 @@ export default function TeamColorsPage() {
                 const activeIdx = data.findIndex((x: any) => x.isActive);
                 setSelectedId(data[activeIdx >= 0 ? activeIdx : 0].id);
             }
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao carregar uniformes."));
         } finally {
             setLoading(false);
         }
@@ -112,6 +116,8 @@ export default function TeamColorsPage() {
 
             await load();
             setEditOpen(false);
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao salvar cor."));
         } finally {
             setSaving(false);
         }
@@ -120,20 +126,26 @@ export default function TeamColorsPage() {
     async function activateSelected() {
         if (!canManage) return;
         if (!groupId || !selectedColor) return;
-        await TeamColorApi.activate(groupId, selectedColor.id);
-        await load();
+        try {
+            await TeamColorApi.activate(groupId, selectedColor.id);
+            await load();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao ativar cor."));
+        }
     }
 
     async function deactivateSelected() {
         if (!canManage) return;
         if (!groupId || !selectedColor) return;
-
-        const api: any = TeamColorApi as any;
-        if (!api.deactivate)
-            throw new Error("TeamColorApi.deactivate não existe. Crie o endpoint/método.");
-
-        await api.deactivate(groupId, selectedColor.id);
-        await load();
+        try {
+            const api: any = TeamColorApi as any;
+            if (!api.deactivate)
+                throw new Error("TeamColorApi.deactivate não existe. Crie o endpoint/método.");
+            await api.deactivate(groupId, selectedColor.id);
+            await load();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao inativar cor."));
+        }
     }
 
     return (

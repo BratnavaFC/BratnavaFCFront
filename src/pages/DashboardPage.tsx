@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { Section } from '../components/Section';
 import { GroupsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
+import { extractApiError } from '../lib/apiError';
 
 export default function DashboardPage(){
   const store = useAccountStore();
@@ -20,6 +22,8 @@ export default function DashboardPage(){
       if (!active.activeGroupId && (res.data?.[0]?.id)) {
         store.updateActive({ activeGroupId: res.data[0].id });
       }
+    } catch (e) {
+      toast.error(extractApiError(e, "Falha ao carregar grupos."));
     } finally {
       setLoading(false);
     }
