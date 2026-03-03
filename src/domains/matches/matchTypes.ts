@@ -25,6 +25,7 @@ export type PlayerInMatchDto = {
     playerId: string; // PlayerId
     playerName: string;
     isGoalkeeper: boolean;
+    isGuest: boolean;
     team: number; // 0 unassigned, 1 A, 2 B
     inviteResponse: number; // 1 None, 2 Rejected, 3 Accepted
 };
