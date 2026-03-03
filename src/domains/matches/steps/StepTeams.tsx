@@ -291,8 +291,8 @@ export function StepTeams({
                 </div>
             </div>
 
-            {/* Two team columns */}
-            <div className="grid grid-cols-2 divide-x divide-slate-100">
+            {/* Two team columns — stack on mobile, side-by-side on sm+ */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
                 {/* ── Team A ── */}
                 <div>
                     <div
@@ -421,7 +421,7 @@ export function StepTeams({
                                         "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
                                         clickable && "cursor-pointer",
                                         isSelected
-                                            ? "bg-amber-50 border-r-[3px] border-amber-400"
+                                            ? "bg-amber-50 border-l-[3px] border-amber-400"
                                             : clickable
                                             ? "hover:bg-slate-50"
                                             : ""

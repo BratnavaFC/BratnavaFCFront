@@ -781,7 +781,7 @@ export default function AdminUsersPage() {
                         ) : (result?.items?.length ?? 0) === 0 ? (
                             <div className="p-6 text-sm text-slate-600">Nenhum usuário encontrado.</div>
                         ) : (
-                            <div className="p-3 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                                 {result!.items.map((u) => {
                                     const isMe     = u.id === myUserId;
                                     const isInativo = u.status === 2;
