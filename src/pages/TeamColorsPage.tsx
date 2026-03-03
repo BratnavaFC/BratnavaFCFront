@@ -151,7 +151,7 @@ export default function TeamColorsPage() {
     return (
         <div className="space-y-4">
             <Section
-                title="Uniformes (TeamColor)"
+                title="Uniformes"
                 right={
                     <span className="pill">
                         {loading ? "carregando..." : `${items.length} cores`}

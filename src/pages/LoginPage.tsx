@@ -145,10 +145,6 @@ export default function LoginPage() {
                     {addMode ? "Adicionar conta" : "Entrar"}
                 </div>
 
-                <div className="muted mt-1">
-                    Login via /api/Authentication/login + refresh automático.
-                </div>
-
                 <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
                     <Field label="Email">
                         <input
