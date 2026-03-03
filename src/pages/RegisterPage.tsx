@@ -39,7 +39,6 @@ export default function RegisterPage(){
     <div className="min-h-screen grid place-items-center p-6">
       <div className="card w-full max-w-md p-6">
         <div className="text-2xl font-black tracking-tight">Criar usuário</div>
-        <div className="muted mt-1">Cadastro via /api/Users</div>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <Field label="Username">
