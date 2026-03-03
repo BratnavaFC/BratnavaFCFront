@@ -900,17 +900,17 @@ export default function AdminUsersPage() {
                         </div>
                     ) : (
                         <div className="rounded-2xl border bg-white overflow-hidden">
-                            <div className="px-5 py-4 border-b flex items-center justify-between">
-                                <div>
+                            <div className="px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div className="min-w-0">
                                     <div className="text-base font-semibold text-slate-900">
                                         {fullName(myUser)}
                                     </div>
-                                    <div className="text-xs text-slate-500">
+                                    <div className="text-xs text-slate-500 truncate">
                                         @{myUser.userName} • {myUser.email}
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 shrink-0">
                                     <Button
                                         variant="secondary"
                                         onClick={() => {
