@@ -182,10 +182,6 @@ export default function TeamColorsPage() {
                             {canManage ? (
                                 <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <span className="pill">Selecionado:</span>
-                                        <span className="pill">{selectedColor?.name ?? "—"}</span>
-                                        <span className="pill">{selectedColor?.hexValue ?? "—"}</span>
-                                        {selectedColor?.isActive ? <span className="pill">Ativo</span> : null}
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row gap-2">
@@ -223,10 +219,6 @@ export default function TeamColorsPage() {
                             ) : (
                                 <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <span className="pill">Selecionado:</span>
-                                        <span className="pill">{selectedColor?.name ?? "—"}</span>
-                                        <span className="pill">{selectedColor?.hexValue ?? "—"}</span>
-                                        {selectedColor?.isActive ? <span className="pill">Ativo</span> : null}
                                     </div>
 
                                     {isMobile ? (
