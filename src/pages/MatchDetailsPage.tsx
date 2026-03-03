@@ -762,7 +762,7 @@ export default function MatchDetailsPage() {
                     teamAName={aName}
                     teamBName={bName}
                     totalMinutes={60}
-                    durationMs={5000}
+                    durationMs={10000}
                     autoPlay
                 />
             </Section>
