@@ -781,48 +781,65 @@ export default function AdminUsersPage() {
                         ) : (result?.items?.length ?? 0) === 0 ? (
                             <div className="p-6 text-sm text-slate-600">Nenhum usuário encontrado.</div>
                         ) : (
-                            <div className="divide-y">
-                                {result!.items.map((u) => (
-                                    <div
-                                        key={u.id}
-                                        className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition"
-                                    >
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <div className="text-sm font-semibold text-slate-900 truncate">
-                                                    {fullName(u)}
+                            <div className="p-3 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                                {result!.items.map((u) => {
+                                    const isMe     = u.id === myUserId;
+                                    const isInativo = u.status === 2;
+                                    return (
+                                        <div
+                                            key={u.id}
+                                            className={[
+                                                "relative rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
+                                                isInativo ? "border-slate-200 opacity-50" : isMe ? "border-emerald-400" : "border-slate-200",
+                                            ].join(" ")}
+                                        >
+                                            {/* name + badges row */}
+                                            <div className="flex items-center justify-between gap-1 min-w-0">
+                                                <div className="text-sm font-semibold text-slate-900 truncate min-w-0">
+                                                    <span className="truncate">{fullName(u)}</span>
                                                 </div>
+                                                <div className="flex items-center gap-0.5 shrink-0">
+                                                    {isInativo && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-slate-100 border-slate-300 text-slate-500 leading-none">
+                                                            Inativo
+                                                        </span>
+                                                    )}
+                                                    {isMe && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">
+                                                            Você
+                                                        </span>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openEdit(u)}
+                                                        className="ml-0.5 h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                        title="Editar usuário"
+                                                        aria-label="Editar usuário"
+                                                    >
+                                                        <Pencil size={11} />
+                                                    </button>
+                                                </div>
+                                            </div>
 
-                                                <span
-                                                    className={[
-                                                        "text-[11px] px-2 py-0.5 rounded-full border",
-                                                        u.status === 2
-                                                            ? "bg-rose-50 border-rose-200 text-rose-700"
-                                                            : "bg-emerald-50 border-emerald-200 text-emerald-700",
-                                                    ].join(" ")}
-                                                >
-                                                    {statusLabel(u.status)}
+                                            {/* secondary info row */}
+                                            <div className="flex items-center justify-between gap-1">
+                                                <span className="text-[11px] text-slate-400 truncate">
+                                                    {[u.userName && `@${u.userName}`, u.email].filter(Boolean).join(" · ")}
                                                 </span>
-
-                                                <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-50 border-slate-200 text-slate-700">
+                                                <span className={[
+                                                    "text-[10px] px-1.5 py-0.5 rounded-full border leading-none shrink-0",
+                                                    u.role === 3
+                                                        ? "bg-violet-50 border-violet-200 text-violet-700"
+                                                        : u.role === 2
+                                                            ? "bg-amber-50 border-amber-200 text-amber-700"
+                                                            : "bg-slate-50 border-slate-200 text-slate-600",
+                                                ].join(" ")}>
                                                     {roleLabel(u.role)}
                                                 </span>
                                             </div>
-
-                                            <div className="text-xs text-slate-500 truncate">
-                                                @{u.userName} • {u.email}
-                                            </div>
                                         </div>
-
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => openEdit(u)}
-                                            iconLeft={<Pencil size={16} />}
-                                        >
-                                            Editar
-                                        </Button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
 

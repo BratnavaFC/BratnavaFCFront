@@ -1,9 +1,10 @@
 // src/pages/GroupsPage.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Section } from "../components/Section";
 import { GroupInvitesApi, GroupsApi, PlayersApi, UsersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { Check, Loader2, Pencil, Plus, Search, UserPlus, X } from "lucide-react";
+import { Check, Loader2, Pencil, Plus, Search, ShieldPlus, UserPlus, X } from "lucide-react";
+import { isGodMode } from "../auth/guards";
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -694,6 +695,208 @@ function EditPlayerModal({
     );
 }
 
+// ─── AddAdminModal ────────────────────────────────────────────────────────────
+
+function AddAdminModal({
+    open,
+    onClose,
+    groupId,
+    groupName,
+}: {
+    open: boolean;
+    onClose: () => void;
+    groupId: string;
+    groupName: string;
+}) {
+    const [query, setQuery]       = useState("");
+    const [results, setResults]   = useState<UserResult[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [added, setAdded]       = useState<Set<string>>(new Set());
+    const [adding, setAdding]     = useState<Record<string, boolean>>({});
+    const [addErr, setAddErr]     = useState<Record<string, string>>({});
+    const [searchErr, setSearchErr] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (open) {
+            setQuery("");
+            setResults([]);
+            setAdded(new Set());
+            setAdding({});
+            setAddErr({});
+            setSearchErr(null);
+            setTimeout(() => inputRef.current?.focus(), 60);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        const q = query.trim();
+        if (q.length < 2) {
+            setResults([]);
+            setSearchErr(null);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            setSearching(true);
+            setSearchErr(null);
+            try {
+                const res = await UsersApi.list({ search: q, pageSize: 8 });
+                setResults(res.data?.items ?? []);
+            } catch {
+                setSearchErr("Erro ao buscar usuários.");
+                setResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    async function handleAdd(user: UserResult) {
+        setAdding((prev) => ({ ...prev, [user.id]: true }));
+        setAddErr((prev) => { const n = { ...prev }; delete n[user.id]; return n; });
+        try {
+            await GroupsApi.addAdmin(groupId, user.id);
+            setAdded((prev) => new Set(prev).add(user.id));
+        } catch (e: any) {
+            const msg =
+                e?.response?.data?.error ??
+                e?.response?.data?.message ??
+                "Erro ao adicionar admin.";
+            setAddErr((prev) => ({ ...prev, [user.id]: msg }));
+        } finally {
+            setAdding((prev) => {
+                const next = { ...prev };
+                delete next[user.id];
+                return next;
+            });
+        }
+    }
+
+    if (!open) return null;
+
+    const q = query.trim();
+    const showResults = q.length >= 2;
+
+    return (
+        <div className="fixed inset-0 z-50">
+            <div
+                className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+                onClick={onClose}
+            />
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border overflow-hidden flex flex-col max-h-[85vh]">
+
+                    {/* header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-violet-600 text-white flex items-center justify-center">
+                                <ShieldPlus size={17} />
+                            </div>
+                            <div>
+                                <div className="text-base font-semibold text-slate-900">Adicionar admin</div>
+                                <div className="text-xs text-slate-500 truncate max-w-[220px]">{groupName}</div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            aria-label="Fechar"
+                            type="button"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* search input */}
+                    <div className="px-5 pt-4 pb-3 shrink-0">
+                        <div className="relative">
+                            <Search
+                                size={15}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                            />
+                            <input
+                                ref={inputRef}
+                                className="input w-full pl-9 pr-9"
+                                placeholder="Buscar por nome ou username..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                            />
+                            {searching && (
+                                <Loader2
+                                    size={14}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin pointer-events-none"
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* results */}
+                    <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2">
+                        {!showResults ? (
+                            <p className="text-sm text-slate-400 text-center py-6">
+                                {q.length === 1 ? "Continue digitando..." : "Digite para buscar usuários."}
+                            </p>
+                        ) : searchErr ? (
+                            <p className="text-sm text-rose-500 text-center py-6">{searchErr}</p>
+                        ) : searching ? null : results.length === 0 ? (
+                            <p className="text-sm text-slate-400 text-center py-6">
+                                Nenhum usuário encontrado para "{query}".
+                            </p>
+                        ) : (
+                            results.map((u) => {
+                                const isAdded   = added.has(u.id);
+                                const isAdding  = !!adding[u.id];
+                                const err       = addErr[u.id];
+                                return (
+                                    <div key={u.id} className="space-y-1">
+                                        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                                            {/* avatar */}
+                                            <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                                {initials(u)}
+                                            </div>
+
+                                            {/* info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                                    {fullName(u)}
+                                                </div>
+                                                <div className="text-xs text-slate-400">
+                                                    @{u.userName}
+                                                </div>
+                                            </div>
+
+                                            {/* action */}
+                                            {isAdded ? (
+                                                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 shrink-0">
+                                                    <Check size={13} /> Adicionado
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary text-xs px-3 py-1.5 shrink-0 flex items-center gap-1.5"
+                                                    disabled={isAdding}
+                                                    onClick={() => handleAdd(u)}
+                                                >
+                                                    {isAdding
+                                                        ? <><Loader2 size={12} className="animate-spin" /> Adicionando...</>
+                                                        : <><ShieldPlus size={13} /> Admin</>
+                                                    }
+                                                </button>
+                                            )}
+                                        </div>
+                                        {err && <p className="text-xs text-rose-500 px-1">{err}</p>}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── GroupsPage ──────────────────────────────────────────────────────────────
 
 export default function GroupsPage() {
@@ -702,12 +905,15 @@ export default function GroupsPage() {
     const activeGroupId  = active?.activeGroupId ?? "";
     const activePlayerId = active?.activePlayerId ?? "";
 
-    const [group, setGroup]           = useState<GroupDto | null>(null);
-    const [loading, setLoading]       = useState(false);
-    const [error, setError]           = useState<string | null>(null);
-    const [inviteOpen, setInviteOpen]   = useState(false);
+    const isGod = isGodMode();
+
+    const [group, setGroup]               = useState<GroupDto | null>(null);
+    const [loading, setLoading]           = useState(false);
+    const [error, setError]               = useState<string | null>(null);
+    const [inviteOpen, setInviteOpen]     = useState(false);
     const [addGuestOpen, setAddGuestOpen] = useState(false);
-    const [editPlayer, setEditPlayer] = useState<PlayerDto | null>(null);
+    const [addAdminOpen, setAddAdminOpen] = useState(false);
+    const [editPlayer, setEditPlayer]     = useState<PlayerDto | null>(null);
 
     function loadGroup() {
         if (!activeGroupId) { setGroup(null); return; }
@@ -727,6 +933,15 @@ export default function GroupsPage() {
     const isAdminOfGroup  = isGroupAdmin(activeGroupId);
     const visiblePlayers  = group?.players?.filter((p) => isAdminOfGroup || p.status === 1) ?? [];
     const activePlayers   = group?.players?.filter((p) => p.status === 1) ?? [];
+
+    // "Você" sempre aparece primeiro; demais mantêm ordem original
+    const sortedPlayers = useMemo(() =>
+        [...visiblePlayers].sort((a, b) => {
+            if (a.id === activePlayerId) return -1;
+            if (b.id === activePlayerId) return 1;
+            return 0;
+        }),
+    [visiblePlayers, activePlayerId]);
     const existingUserIds = new Set(
         (group?.players ?? []).map((p) => p.userId).filter((id): id is string => !!id)
     );
@@ -742,7 +957,7 @@ export default function GroupsPage() {
                     ) : group ? (
                         <div className="flex items-center gap-2">
                             <span className="pill">{activePlayers.length} jogadores</span>
-                            {isGroupAdmin(activeGroupId) && (
+                            {(isAdminOfGroup || isGod) && (
                                 <>
                                     <button
                                         type="button"
@@ -760,6 +975,14 @@ export default function GroupsPage() {
                                         <UserPlus size={15} />
                                         <span className="hidden sm:inline">Convidar</span>
                                     </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary flex items-center gap-1.5 text-sm"
+                                        onClick={() => setAddAdminOpen(true)}
+                                    >
+                                        <ShieldPlus size={15} />
+                                        <span className="hidden sm:inline">Admins</span>
+                                    </button>
                                 </>
                             )}
                         </div>
@@ -776,17 +999,15 @@ export default function GroupsPage() {
                     <div className="muted">Nenhum jogador ativo nesta patota.</div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                        {visiblePlayers.map((p) => {
+                        {sortedPlayers.map((p) => {
                             const isMe      = p.id === activePlayerId;
                             const isInativo = p.status !== 1;
                             const canEdit   = isAdminOfGroup || isMe;
                             return (
                                 <div
                                     key={p.id}
-                                    onClick={canEdit ? () => setEditPlayer(p) : undefined}
                                     className={[
-                                        "rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
-                                        canEdit ? "cursor-pointer hover:bg-slate-50" : "cursor-default",
+                                        "group relative rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
                                         isInativo ? "border-slate-200 opacity-50" : isMe ? "border-emerald-400" : "border-slate-200",
                                     ].join(" ")}
                                 >
@@ -806,6 +1027,18 @@ export default function GroupsPage() {
                                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">
                                                     Você
                                                 </span>
+                                            )}
+                                            {/* botão de edição — sempre visível */}
+                                            {canEdit && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditPlayer(p)}
+                                                    className="ml-0.5 h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                    title="Editar jogador"
+                                                    aria-label="Editar jogador"
+                                                >
+                                                    <Pencil size={11} />
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -861,6 +1094,13 @@ export default function GroupsPage() {
                 groupName={group?.name ?? ""}
                 existingUserIds={existingUserIds}
                 guestPlayers={guestPlayers}
+            />
+
+            <AddAdminModal
+                open={addAdminOpen}
+                onClose={() => setAddAdminOpen(false)}
+                groupId={activeGroupId}
+                groupName={group?.name ?? ""}
             />
         </div>
     );

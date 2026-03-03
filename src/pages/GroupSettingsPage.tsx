@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
 import { extractApiError } from '../lib/apiError';
+import { isGodMode } from '../auth/guards';
 
 const DAY_OPTIONS = [
     { value: '', label: 'Sem padrão' },
@@ -18,8 +20,17 @@ const DAY_OPTIONS = [
 ];
 
 export default function GroupSettingsPage() {
+    const nav = useNavigate();
     const active = useAccountStore((s) => s.getActive());
     const groupId = active?.activeGroupId;
+    const isGroupAdm = !!groupId && (active?.groupAdminIds?.includes(groupId) ?? false);
+    const isGod = isGodMode();
+
+    useEffect(() => {
+        if (!isGroupAdm && !isGod) {
+            nav("/app", { replace: true });
+        }
+    }, [isGroupAdm, isGod, nav]);
 
     // ── player limits ──────────────────────────────────────────────
     const [minPlayers, setMinPlayers] = useState(5);

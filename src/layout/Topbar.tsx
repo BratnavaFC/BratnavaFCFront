@@ -214,6 +214,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
         const player = myPlayers.find((p) => p.playerId === playerId);
         if (!player) return;
         updateActive({ activePlayerId: player.playerId, activeGroupId: player.groupId });
+        nav("/app");
     }
 
     const display = useMemo(() => {
