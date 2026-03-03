@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { PlayersApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
+import { extractApiError } from '../lib/apiError';
 
 export default function PlayersPage(){
   const active = useAccountStore(s => s.getActive());
@@ -17,22 +19,25 @@ export default function PlayersPage(){
   async function create(){
     if (!active?.userId || !groupId) return;
     setMsg(null);
-    const res = await PlayersApi.create({
-      name,
-      userId: active.userId,
-      groupId,
-      skillPoints,
-      isGoalkeeper,
-      isGuest,
-      status: 1
-    } as any);
-    const playerId = res.data?.id ?? res.data?.playerId;
-    if (playerId) {
-      // store convenience
-      useAccountStore.getState().updateActive({ activePlayerId: playerId });
-      setMsg(`Player criado: ${playerId}`);
-    } else {
-      setMsg('Player criado.');
+    try {
+      const res = await PlayersApi.create({
+        name,
+        userId: active.userId,
+        groupId,
+        skillPoints,
+        isGoalkeeper,
+        isGuest,
+        status: 1
+      } as any);
+      const playerId = res.data?.id ?? res.data?.playerId;
+      if (playerId) {
+        useAccountStore.getState().updateActive({ activePlayerId: playerId });
+        setMsg(`Player criado: ${playerId}`);
+      } else {
+        setMsg('Player criado.');
+      }
+    } catch (e) {
+      toast.error(extractApiError(e, "Falha ao criar perfil."));
     }
   }
 

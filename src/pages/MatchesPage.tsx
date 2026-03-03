@@ -1,9 +1,11 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { RotateCcw } from "lucide-react";
 import { Section } from "../components/Section";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { isAdmin, isGroupAdmin } from "../auth/guards";
+import { extractApiError } from "../lib/apiError";
 
 import { MatchWizard } from "../domains/matches/steps/MatchWizard";
 import type {
@@ -334,10 +336,16 @@ export default function MatchesPage() {
 
                 await loadStepPayload(id, sk);
             } catch (e: any) {
-                // 404 => sem partida em andamento
-                setCurrentMatchId(null);
-                setCurrent(null);
+                if (e?.response?.status === 404) {
+                    // 404 => sem partida em andamento (esperado)
+                    setCurrentMatchId(null);
+                    setCurrent(null);
+                } else {
+                    toast.error(extractApiError(e, "Falha ao carregar partida atual."));
+                }
             }
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao carregar dados da página."));
         } finally {
             setLoading(false);
         }
@@ -356,6 +364,8 @@ export default function MatchesPage() {
             const playedAt = toUtcIso(playedAtDate, playedAtTime);
             await MatchesApi.create(groupId!, { placeName: placeName.trim(), playedAt } as any);
             await loadCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao criar partida."));
         } finally {
             setCreating(false);
         }
@@ -366,6 +376,8 @@ export default function MatchesPage() {
 
         try {
             await MatchesApi.rewind(groupId, currentMatchId);
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao voltar etapa."));
         } finally {
             await refreshCurrent();
         }
@@ -510,6 +522,8 @@ export default function MatchesPage() {
         try {
             await MatchesApi.accept(groupId, currentMatchId, { playerId } as any);
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao aceitar convite."));
         } finally {
             setMutatingInvite((prev) => ({ ...prev, [playerId]: false }));
         }
@@ -522,6 +536,8 @@ export default function MatchesPage() {
         try {
             await MatchesApi.reject(groupId, currentMatchId, { playerId } as any);
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao recusar convite."));
         } finally {
             setMutatingInvite((prev) => ({ ...prev, [playerId]: false }));
         }
@@ -529,36 +545,56 @@ export default function MatchesPage() {
 
     async function goToMatchMaking() {
         if (!admin || !groupId || !currentMatchId) return;
-        await MatchesApi.goToMatchMaking(groupId, currentMatchId);
-        await refreshCurrent();
+        try {
+            await MatchesApi.goToMatchMaking(groupId, currentMatchId);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao avançar para matchmaking."));
+        }
     }
 
     async function addGuestToMatch(name: string, isGoalkeeper: boolean, starRating: number | null) {
         if (!admin || !groupId || !currentMatchId) return;
-        await MatchesApi.addGuest(groupId, currentMatchId, {
-            name,
-            isGoalkeeper,
-            guestStarRating: starRating ?? undefined,
-        });
-        await loadAcceptation(currentMatchId);
+        try {
+            await MatchesApi.addGuest(groupId, currentMatchId, {
+                name,
+                isGoalkeeper,
+                guestStarRating: starRating ?? undefined,
+            });
+            await loadAcceptation(currentMatchId);
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao adicionar convidado."));
+        }
     }
 
     async function startMatch() {
         if (!admin || !groupId || !currentMatchId) return;
-        await MatchesApi.start(groupId, currentMatchId);
-        await refreshCurrent();
+        try {
+            await MatchesApi.start(groupId, currentMatchId);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao iniciar partida."));
+        }
     }
 
     async function endMatch() {
         if (!admin || !groupId || !currentMatchId) return;
-        await MatchesApi.end(groupId, currentMatchId);
-        await refreshCurrent();
+        try {
+            await MatchesApi.end(groupId, currentMatchId);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao encerrar partida."));
+        }
     }
 
     async function goToPostGame() {
         if (!admin || !groupId || !currentMatchId) return;
-        await MatchesApi.goToPostGame(groupId, currentMatchId);
-        await refreshCurrent();
+        try {
+            await MatchesApi.goToPostGame(groupId, currentMatchId);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao ir para pós-jogo."));
+        }
     }
 
     async function finalizeMatch() {
@@ -567,6 +603,8 @@ export default function MatchesPage() {
         try {
             await MatchesApi.finalize(groupId, currentMatchId);
             await loadCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao finalizar partida."));
         } finally {
             setFinalizing(false);
         }
@@ -591,11 +629,14 @@ export default function MatchesPage() {
         if (players.length < 2) return;
 
         const req = { players, strategyType, playersPerTeam, includeGoalkeepers, optionsCount: 3 };
-        const res = await TeamGenApi.generate(req as any);
-        const options = normalizeTeamGenOptions(res.data);
-
-        setTeamGenOptions(options);
-        setSelectedTeamGenIdx(0);
+        try {
+            const res = await TeamGenApi.generate(req as any);
+            const options = normalizeTeamGenOptions(res.data);
+            setTeamGenOptions(options);
+            setSelectedTeamGenIdx(0);
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao gerar times."));
+        }
     }
 
     async function setColorsRandomDistinct() {
@@ -608,18 +649,25 @@ export default function MatchesPage() {
         const a = shuffled[0];
         const b = shuffled.find((x) => x.id !== a.id) ?? shuffled[1];
 
-        await MatchesApi.setColors(groupId, currentMatchId, { teamAColorId: a.id, teamBColorId: b.id } as any);
-
-        setTeamAColorId(String(a.id));
-        setTeamBColorId(String(b.id));
-        await refreshCurrent();
+        try {
+            await MatchesApi.setColors(groupId, currentMatchId, { teamAColorId: a.id, teamBColorId: b.id } as any);
+            setTeamAColorId(String(a.id));
+            setTeamBColorId(String(b.id));
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao definir cores."));
+        }
     }
 
     async function applyManualColors() {
         if (!groupId || !currentMatchId) return;
         if (!teamAColorId || !teamBColorId) return;
-        await MatchesApi.setColors(groupId, currentMatchId, { teamAColorId, teamBColorId } as any);
-        await refreshCurrent();
+        try {
+            await MatchesApi.setColors(groupId, currentMatchId, { teamAColorId, teamBColorId } as any);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao aplicar cores."));
+        }
     }
 
     async function assignTeamsFromGenerated() {
@@ -639,6 +687,8 @@ export default function MatchesPage() {
             } as any);
 
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao atribuir times."));
         } finally {
             setAssigningTeams(false);
         }
@@ -654,6 +704,8 @@ export default function MatchesPage() {
             setSwapA("");
             setSwapB("");
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao trocar jogadores."));
         } finally {
             setSwapping(false);
         }
@@ -676,6 +728,8 @@ export default function MatchesPage() {
         try {
             await MatchesApi.setScore(groupId, currentMatchId, { teamAGoals: a, teamBGoals: b } as any);
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao registrar placar."));
         } finally {
             setSettingScore(false);
         }
@@ -689,6 +743,8 @@ export default function MatchesPage() {
         try {
             await MatchesApi.vote(groupId, currentMatchId, { voterPlayerId: voteVoterMpId, votedPlayerId: voteVotedMpId } as any);
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao registrar voto."));
         } finally {
             setVoting(false);
         }
@@ -711,6 +767,8 @@ export default function MatchesPage() {
             setGoalAssistPlayerId("");
             setGoalTime("");
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao adicionar gol."));
         } finally {
             setAddingGoal(false);
         }
@@ -724,6 +782,8 @@ export default function MatchesPage() {
         try {
             await MatchesApi.removeGoal(groupId, currentMatchId, goalId);
             await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao remover gol."));
         } finally {
             setRemovingGoal((p) => ({ ...p, [goalId]: false }));
         }

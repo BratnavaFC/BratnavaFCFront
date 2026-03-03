@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
+import { extractApiError } from '../lib/apiError';
+import { isGodMode } from '../auth/guards';
 
 const DAY_OPTIONS = [
     { value: '', label: 'Sem padrão' },
@@ -16,8 +20,17 @@ const DAY_OPTIONS = [
 ];
 
 export default function GroupSettingsPage() {
+    const nav = useNavigate();
     const active = useAccountStore((s) => s.getActive());
     const groupId = active?.activeGroupId;
+    const isGroupAdm = !!groupId && (active?.groupAdminIds?.includes(groupId) ?? false);
+    const isGod = isGodMode();
+
+    useEffect(() => {
+        if (!isGroupAdm && !isGod) {
+            nav("/app", { replace: true });
+        }
+    }, [isGroupAdm, isGod, nav]);
 
     // ── player limits ──────────────────────────────────────────────
     const [minPlayers, setMinPlayers] = useState(5);
@@ -56,8 +69,8 @@ export default function GroupSettingsPage() {
                 );
                 setIsPersisted(gs.isPersisted ?? false);
             }
-        } catch {
-            setMsg({ text: 'Erro ao carregar configurações.', ok: false });
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao carregar configurações.'));
         } finally {
             setLoading(false);
         }
@@ -79,13 +92,8 @@ export default function GroupSettingsPage() {
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
-        } catch (e: any) {
-            const detail =
-                e?.response?.data?.error ??
-                e?.response?.data?.message ??
-                e?.message ??
-                'Erro ao salvar.';
-            setMsg({ text: detail, ok: false });
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao salvar configurações.'));
         } finally {
             setSaving(false);
         }

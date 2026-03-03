@@ -12,8 +12,10 @@ type Item = { to: string; label: string; icon: any; badge?: number };
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const active = useAccountStore((s) => s.getActive());
-    const isAdminOrGod = !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode"));
+    const isAdminOrGod = !!active && active.roles.includes("GodMode");
     const isGod = isGodMode();
+    const isGroupAdm = !!active?.activeGroupId &&
+        (active?.groupAdminIds?.includes(active.activeGroupId) ?? false);
     const pendingCount = useInviteStore((s) => s.pendingCount);
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
 
@@ -26,13 +28,17 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     }, [active?.userId, setPendingCount]);
 
     const items: Item[] = useMemo(() => [
-        { to: "/app",                                                                    label: "Dashboard",     icon: LayoutDashboard },
-        { to: "/app/groups",                                                             label: "Grupos",        icon: Users },
-        { to: "/app/team-colors",                                                        label: "Cores",         icon: Palette },
-        { to: "/app/matches",                                                            label: "Partidas",      icon: CalendarDays },
-        { to: "/app/history",                                                            label: "Histórico",     icon: History },
-        { to: active?.activeGroupId ? `/app/groups/${active.activeGroupId}/visual-stats` : "/app",     label: "Visual Stats",  icon: BarChart3 },
-        { to: "/app/settings",                                                           label: "Configurações", icon: Settings },
+        { to: "/app",             label: "Dashboard",     icon: LayoutDashboard },
+        { to: "/app/groups",      label: "Grupos",        icon: Users },
+        { to: "/app/team-colors", label: "Cores",         icon: Palette },
+        { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
+        { to: "/app/history",     label: "Histórico",     icon: History },
+        ...(isGroupAdm || isGod ? [{
+            to: active?.activeGroupId ? `/app/groups/${active.activeGroupId}/visual-stats` : "/app",
+            label: "Visual Stats",
+            icon: BarChart3,
+        }] : []),
+        ...(isGroupAdm || isGod ? [{ to: "/app/settings", label: "Configurações", icon: Settings }] : []),
         {
             to: "/app/admin/users",
             label: isAdminOrGod ? "Usuários" : "Minha conta",
@@ -40,7 +46,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             badge: isAdminOrGod ? 0 : pendingCount,
         },
         ...(isGod ? [{ to: "/app/admin/godmode", label: "GodMode", icon: ShieldAlert }] : []),
-    ], [isAdminOrGod, isGod, pendingCount]);
+    ], [isAdminOrGod, isGod, isGroupAdm, active?.activeGroupId, pendingCount]);
 
     return (
         <aside className={`bg-white border-r transition-all duration-300 ${open ? "w-64" : "w-16"}`}>

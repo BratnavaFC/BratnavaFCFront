@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { TeamGenApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
+import { isGodMode } from "../auth/guards";
 import {
     BarChart3,
     ChevronDown,
@@ -220,13 +221,22 @@ type MainTab = "rankings" | "players";
 export default function VisualStatsPage() {
     const { groupId } = useParams();
     const navigate = useNavigate();
-    const activeGroupId = useAccountStore((s) => s.getActive()?.activeGroupId);
+    const active = useAccountStore((s) => s.getActive());
+    const activeGroupId = active?.activeGroupId;
+    const isGroupAdm = !!activeGroupId && (active?.groupAdminIds?.includes(activeGroupId) ?? false);
+    const isGod = isGodMode();
 
     useEffect(() => {
-        if (activeGroupId && activeGroupId !== groupId) {
+        if (!activeGroupId) return;
+        if (!isGroupAdm && !isGod) {
+            // usuário não é admin do grupo ativo nem GodMode → volta ao dashboard
+            navigate("/app", { replace: true });
+            return;
+        }
+        if (activeGroupId !== groupId) {
             navigate(`/app/groups/${activeGroupId}/visual-stats`, { replace: true });
         }
-    }, [activeGroupId, groupId, navigate]);
+    }, [activeGroupId, isGroupAdm, isGod, groupId, navigate]);
 
     const [data, setData] = useState<PlayerVisualStatsReport | null>(null);
     const [loading, setLoading] = useState(true);

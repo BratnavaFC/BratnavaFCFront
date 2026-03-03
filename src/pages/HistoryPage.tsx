@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { useNavigate } from "react-router-dom";
 import { Calendar, ChevronLeft, ChevronRight, MapPin, RefreshCw } from "lucide-react";
+import { extractApiError } from "../lib/apiError";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -115,6 +117,8 @@ export default function HistoryPage() {
             const res = await MatchesApi.history(groupId, 400);
             setItems(Array.isArray(res.data) ? res.data : []);
             setPage(1);
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao carregar histórico."));
         } finally {
             setLoading(false);
         }

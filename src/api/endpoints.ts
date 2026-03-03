@@ -47,6 +47,7 @@ export const GroupsApi = {
   remove: (groupId: string) => http.delete(`/api/Groups/${groupId}`),
   inactivate: (groupId: string) => http.post(`/api/Groups/${groupId}/inactivate`),
   reactivate: (groupId: string) => http.post(`/api/Groups/${groupId}/reactivate`),
+  addAdmin: (groupId: string, userId: string) => http.post(`/api/Groups/${groupId}/admins`, { userId }),
 };
 
 export const GroupSettingsApi = {
