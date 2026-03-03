@@ -13,6 +13,8 @@ import {
     Trophy,
 } from "lucide-react";
 import { extractApiError } from "../lib/apiError";
+import useAccountStore from "../auth/accountStore";
+import { isGodMode } from "../auth/guards";
 
 /* ===================== helpers ===================== */
 
@@ -528,6 +530,11 @@ export default function MatchDetailsPage() {
     const [data, setData] = useState<any>(null);
     const [goalsTab, setGoalsTab] = useState<"gols" | "teamA" | "teamB" | "timeline">("gols");
 
+    const active = useAccountStore((s) => s.getActive());
+    const isGod = isGodMode();
+    const isGroupAdm = !!groupId && (active?.groupAdminIds?.includes(groupId) ?? false);
+    const canSeeMvp = isGroupAdm || isGod;
+
     useEffect(() => {
         (async () => {
             if (!groupId || !matchId) return;
@@ -633,11 +640,15 @@ export default function MatchDetailsPage() {
 
     const scoreA = data.teamAGoals ?? "–";
     const scoreB = data.teamBGoals ?? "–";
-    const mvp = data.computedMvp;
+    const mvp = data.computedMvp; // baseado em votos — visível só para admin/god
     const voteCounts: any[] = [...(data.voteCounts ?? [])].sort(
         (a, b) => (b.count ?? 0) - (a.count ?? 0)
     );
     const maxVotes = voteCounts.length > 0 ? (voteCounts[0].count ?? 0) : 0;
+
+    // MVP baseado na flag isMvp (camelCase do backend) — visível para todos
+    const mvpPlayer = [...(teamAPlayers as any[]), ...(teamBPlayers as any[])].find((p) => p.isMvp);
+    const mvpPlayerTeamName = mvpPlayer ? (mvpPlayer.team === 1 ? aName : mvpPlayer.team === 2 ? bName : "") : "";
 
     // Team-colored dot for goal rows
     const GoalDot = ({ team }: { team: GoalTeam }) => {
@@ -729,20 +740,27 @@ export default function MatchDetailsPage() {
                         )}
                     </div>
 
-                    {/* MVP inline in hero */}
-                    {mvp?.playerName && (
-                        <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-400/10 border border-amber-400/20 px-4 py-2.5">
-                            <Trophy size={15} className="text-amber-400 shrink-0" />
-                            <span className="text-sm font-semibold text-amber-300">
-                                MVP: {mvp.playerName}
-                            </span>
-                            {mvp.team && (
-                                <span className="text-xs text-amber-400/60">
-                                    ({mvp.team === 1 ? aName : mvp.team === 2 ? bName : "?"})
+                    {/* MVP inline no hero */}
+                    {(() => {
+                        // Admin/god veem o MVP por votos; demais pelo isMvp
+                        const heroMvpName = canSeeMvp ? (mvp?.playerName ?? mvpPlayer?.playerName) : mvpPlayer?.playerName;
+                        const heroMvpTeam = canSeeMvp ? (mvp?.team ?? mvpPlayer?.team) : mvpPlayer?.team;
+                        if (!heroMvpName) return null;
+                        const heroTeamLabel = heroMvpTeam === 1 ? aName : heroMvpTeam === 2 ? bName : "";
+                        return (
+                            <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-400/10 border border-amber-400/20 px-4 py-2.5">
+                                <Trophy size={15} className="text-amber-400 shrink-0" />
+                                <span className="text-sm font-semibold text-amber-300">
+                                    MVP: {heroMvpName}
                                 </span>
-                            )}
-                        </div>
-                    )}
+                                {heroTeamLabel && (
+                                    <span className="text-xs text-amber-400/60">
+                                        ({heroTeamLabel})
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* Bottom color strips */}
@@ -796,9 +814,14 @@ export default function MatchDetailsPage() {
                                                 🧤
                                             </span>
                                         )}
-                                        <span className="text-sm text-slate-800 truncate">
+                                        <span className="text-sm text-slate-800 truncate flex-1">
                                             {p.playerName}
                                         </span>
+                                        {p.isMvp && (
+                                            <span title="MVP" className="shrink-0">
+                                                <Trophy size={13} className="text-amber-400" />
+                                            </span>
+                                        )}
                                     </li>
                                 ))
                             )}
@@ -831,9 +854,14 @@ export default function MatchDetailsPage() {
                                                 🧤
                                             </span>
                                         )}
-                                        <span className="text-sm text-slate-800 truncate">
+                                        <span className="text-sm text-slate-800 truncate flex-1">
                                             {p.playerName}
                                         </span>
+                                        {p.isMvp && (
+                                            <span title="MVP" className="shrink-0">
+                                                <Trophy size={13} className="text-amber-400" />
+                                            </span>
+                                        )}
                                     </li>
                                 ))
                             )}
@@ -977,76 +1005,77 @@ export default function MatchDetailsPage() {
                 </div>
             </Section>
 
-            {/* ── MVP / Votação ─────────────────────────────────────── */}
-            <Section title="MVP">
-                <div className="space-y-3">
-                    {/* Winner card */}
-                    {mvp?.playerName ? (
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 border border-amber-200 shrink-0">
-                                    <Trophy size={20} className="text-amber-500" />
-                                </div>
-                                <div>
-                                    <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">
-                                        Melhor do jogo
+            {/* ── MVP ───────────────────────────────────────────────── */}
+            {/* Todos veem o MVP por isMvp; admin/god veem também a apuração de votos */}
+            {(mvpPlayer || canSeeMvp) && (
+                <Section title="MVP">
+                    <div className="space-y-3">
+                        {/* Winner card — baseado em isMvp (todos) */}
+                        {mvpPlayer ? (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 border border-amber-200 shrink-0">
+                                        <Trophy size={20} className="text-amber-500" />
                                     </div>
-                                    <div className="font-bold text-slate-900 text-xl leading-none">
-                                        {mvp.playerName}
-                                    </div>
-                                    {mvp.team && (
-                                        <div className="text-xs text-slate-500 mt-1">
-                                            {mvp.team === 1 ? aName : mvp.team === 2 ? bName : ""}
+                                    <div>
+                                        <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">
+                                            Melhor do jogo
                                         </div>
-                                    )}
+                                        <div className="font-bold text-slate-900 text-xl leading-none">
+                                            {mvpPlayer.playerName}
+                                        </div>
+                                        {mvpPlayerTeamName && (
+                                            <div className="text-xs text-slate-500 mt-1">{mvpPlayerTeamName}</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
-                            <Trophy size={28} className="mx-auto text-slate-300 mb-2" />
-                            <div className="text-sm text-slate-400">MVP não definido</div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
+                                <Trophy size={28} className="mx-auto text-slate-300 mb-2" />
+                                <div className="text-sm text-slate-400">MVP não definido</div>
+                            </div>
+                        )}
 
-                    {/* Vote tally */}
-                    {voteCounts.length > 0 && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">
-                                Apuração de votos
-                            </div>
-                            <div className="space-y-2.5">
-                                {voteCounts.map((vc: any) => {
-                                    const pct = maxVotes > 0 ? ((vc.count ?? 0) / maxVotes) * 100 : 0;
-                                    const isWinner = vc.votedForName === mvp?.playerName;
-                                    return (
-                                        <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
-                                            <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 truncate flex items-center gap-1.5 shrink-0">
-                                                {isWinner && (
-                                                    <Trophy size={11} className="text-amber-400 shrink-0" />
-                                                )}
-                                                {vc.votedForName}
-                                            </div>
-                                            <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                <div
-                                                    className={cn(
-                                                        "h-full rounded-full transition-all",
-                                                        isWinner ? "bg-amber-400" : "bg-slate-300"
+                        {/* Apuração de votos — apenas admin / god mode */}
+                        {canSeeMvp && voteCounts.length > 0 && (
+                            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+                                    Apuração de votos
+                                </div>
+                                <div className="space-y-2.5">
+                                    {voteCounts.map((vc: any) => {
+                                        const pct = maxVotes > 0 ? ((vc.count ?? 0) / maxVotes) * 100 : 0;
+                                        const isWinner = vc.votedForName === mvp?.playerName;
+                                        return (
+                                            <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
+                                                <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 truncate flex items-center gap-1.5 shrink-0">
+                                                    {isWinner && (
+                                                        <Trophy size={11} className="text-amber-400 shrink-0" />
                                                     )}
-                                                    style={{ width: `${pct}%` }}
-                                                />
+                                                    {vc.votedForName}
+                                                </div>
+                                                <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                    <div
+                                                        className={cn(
+                                                            "h-full rounded-full transition-all",
+                                                            isWinner ? "bg-amber-400" : "bg-slate-300"
+                                                        )}
+                                                        style={{ width: `${pct}%` }}
+                                                    />
+                                                </div>
+                                                <div className="text-sm font-bold text-slate-700 tabular-nums w-5 text-right shrink-0">
+                                                    {vc.count}
+                                                </div>
                                             </div>
-                                            <div className="text-sm font-bold text-slate-700 tabular-nums w-5 text-right shrink-0">
-                                                {vc.count}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            </Section>
+                        )}
+                    </div>
+                </Section>
+            )}
 
         </div>
     );
