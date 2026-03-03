@@ -56,6 +56,7 @@ function StarRating({
 type GroupDto = {
     id: string;
     name: string;
+    adminIds: string[];
     players: PlayerDto[];
 };
 
@@ -690,11 +691,13 @@ function AddAdminModal({
     onClose,
     groupId,
     groupName,
+    existingAdminUserIds,
 }: {
     open: boolean;
     onClose: () => void;
     groupId: string;
     groupName: string;
+    existingAdminUserIds: Set<string>;
 }) {
     const [query, setQuery]       = useState("");
     const [results, setResults]   = useState<UserResult[]>([]);
@@ -833,6 +836,7 @@ function AddAdminModal({
                             </p>
                         ) : (
                             results.map((u) => {
+                                const isAlreadyAdmin = existingAdminUserIds.has(u.id);
                                 const isAdded   = added.has(u.id);
                                 const isAdding  = !!adding[u.id];
                                 const err       = addErr[u.id];
@@ -855,7 +859,11 @@ function AddAdminModal({
                                             </div>
 
                                             {/* action */}
-                                            {isAdded ? (
+                                            {isAlreadyAdmin ? (
+                                                <span className="text-xs font-medium text-slate-400 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 shrink-0">
+                                                    Já é admin
+                                                </span>
+                                            ) : isAdded ? (
                                                 <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 shrink-0">
                                                     <Check size={13} /> Adicionado
                                                 </span>
@@ -933,6 +941,7 @@ export default function GroupsPage() {
     const existingUserIds = new Set(
         (group?.players ?? []).map((p) => p.userId).filter((id): id is string => !!id)
     );
+    const existingAdminUserIds = new Set<string>(group?.adminIds ?? []);
     const guestPlayers = (group?.players ?? []).filter((p) => p.isGuest && !p.userId);
 
     return (
@@ -1088,6 +1097,7 @@ export default function GroupsPage() {
                 onClose={() => setAddAdminOpen(false)}
                 groupId={activeGroupId}
                 groupName={group?.name ?? ""}
+                existingAdminUserIds={existingAdminUserIds}
             />
         </div>
     );
