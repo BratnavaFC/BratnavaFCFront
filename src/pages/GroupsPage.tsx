@@ -610,18 +610,6 @@ function EditPlayerModal({
                         {/* Campos exclusivos para admin */}
                         {isAdmin && (
                             <>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-700">Habilidade</label>
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        className="input w-full"
-                                        value={skillPoints}
-                                        onChange={(e) => setSkillPoints(Number(e.target.value))}
-                                        disabled={loading}
-                                    />
-                                </div>
-
                                 {player.isGuest && (
                                     <div className="space-y-1">
                                         <div className="flex items-center justify-between">
@@ -998,7 +986,7 @@ export default function GroupsPage() {
                 ) : visiblePlayers.length === 0 ? (
                     <div className="muted">Nenhum jogador ativo nesta patota.</div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                         {sortedPlayers.map((p) => {
                             const isMe      = p.id === activePlayerId;
                             const isInativo = p.status !== 1;
@@ -1048,7 +1036,6 @@ export default function GroupsPage() {
                                         <span className="text-[11px] text-slate-400 truncate">
                                             {[
                                                 p.userName && `@${p.userName}`,
-                                                `skill ${p.skillPoints}`,
                                             ].filter(Boolean).join(" · ")}
                                         </span>
                                         {p.isGuest && !isInativo && (

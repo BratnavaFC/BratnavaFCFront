@@ -269,20 +269,18 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                         </button>
                     ) : null}
 
-                    {/* Player selector */}
-                    {myPlayers.length === 1 ? (
+                    {/* Player selector — desktop only; shown in mobile dropdown */}
+                    {!isMobile && myPlayers.length === 1 && (
                         <span className="text-sm text-slate-600 font-medium px-2 truncate max-w-[200px]">
                             {myPlayers[0].playerName} ({myPlayers[0].groupName})
                         </span>
-                    ) : myPlayers.length > 1 ? (
+                    )}
+                    {!isMobile && myPlayers.length > 1 && (
                         <div className="relative">
                             <select
                                 value={active?.activePlayerId ?? ""}
                                 onChange={(e) => handlePlayerChange(e.target.value)}
-                                className={[
-                                    "input appearance-none pr-9",
-                                    isMobile ? "h-10 text-sm w-[150px]" : "w-[220px]",
-                                ].join(" ")}
+                                className="input appearance-none pr-9 w-[220px]"
                             >
                                 <option value="" disabled>Selecionar player</option>
                                 {myPlayers.map((p) => (
@@ -296,7 +294,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
                             />
                         </div>
-                    ) : null}
+                    )}
 
                     {/* Account selector */}
                     <div className="relative">
@@ -304,8 +302,8 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                             value={activeAccountId ?? ""}
                             onChange={(e) => setActiveAccount(e.target.value)}
                             className={[
-                                "input appearance-none pr-9",
-                                isMobile ? "h-10 text-sm w-[160px]" : "w-[240px]",
+                                "input appearance-none pr-8",
+                                isMobile ? "h-10 text-sm w-[130px]" : "w-[240px]",
                             ].join(" ")}
                         >
                             {activeAccountId == null ? (
@@ -319,7 +317,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                         </select>
                         <ChevronDown
                             size={16}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
                         />
                     </div>
 
@@ -351,7 +349,33 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                                         aria-label="Fechar acoes"
                                         onClick={() => setMobileMenuOpen(false)}
                                     />
-                                    <div className="absolute right-0 mt-2 z-50 w-56 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                    <div className="absolute right-0 mt-2 z-50 w-64 rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden">
+                                        {/* Player selector section (mobile only) */}
+                                        {myPlayers.length > 0 && (
+                                            <div className="px-3 py-2.5 border-b border-slate-100">
+                                                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                                                    Patota ativa
+                                                </div>
+                                                {myPlayers.length === 1 ? (
+                                                    <div className="text-sm text-slate-700 font-medium truncate">
+                                                        {myPlayers[0].playerName}{" "}
+                                                        <span className="text-xs text-slate-400">({myPlayers[0].groupName})</span>
+                                                    </div>
+                                                ) : (
+                                                    <select
+                                                        value={active?.activePlayerId ?? ""}
+                                                        onChange={(e) => { setMobileMenuOpen(false); handlePlayerChange(e.target.value); }}
+                                                        className="input h-9 text-sm w-full"
+                                                    >
+                                                        {myPlayers.map((p) => (
+                                                            <option key={p.playerId} value={p.playerId}>
+                                                                {p.playerName} ({p.groupName})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                            </div>
+                                        )}
                                         <button
                                             className="w-full px-3 py-2.5 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
                                             onClick={() => { setMobileMenuOpen(false); nav("/login?add=1"); }}

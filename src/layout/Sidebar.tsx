@@ -1,7 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
-    LayoutDashboard, Users, Palette, CalendarDays, History, Settings, BarChart3, Shield, ShieldAlert
+    LayoutDashboard, Users, Palette, CalendarDays, History, Settings, BarChart3, Shield, ShieldAlert,
+    Menu, X,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -51,9 +52,24 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     return (
         <aside className={`bg-white border-r transition-all duration-300 ${open ? "w-64" : "w-16"}`}>
             <div className="h-full flex flex-col">
-                <button className="p-4 border-b hover:bg-slate-50" onClick={onToggle}>
-                    {open ? "◀" : "▶"}
-                </button>
+                {/* Sidebar header / toggle */}
+                <div className={[
+                    "flex items-center border-b border-slate-100 shrink-0 transition-all duration-300",
+                    open ? "px-4 py-3 gap-3 justify-between" : "px-2 py-3 justify-center",
+                ].join(" ")}>
+                    {open && (
+                        <span className="text-sm font-bold text-slate-900 tracking-widest uppercase select-none">
+                            Bratnava FC
+                        </span>
+                    )}
+                    <button
+                        onClick={onToggle}
+                        aria-label={open ? "Recolher menu" : "Expandir menu"}
+                        className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.98] transition grid place-items-center shrink-0"
+                    >
+                        {open ? <X size={18} className="text-slate-700" /> : <Menu size={18} className="text-slate-700" />}
+                    </button>
+                </div>
 
                 <nav className="flex-1 p-2 space-y-1">
                     {items.map((item) => {

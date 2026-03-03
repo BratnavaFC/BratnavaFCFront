@@ -622,7 +622,7 @@ export default function MatchDetailsPage() {
                 <div className="h-8 w-36 rounded-xl bg-slate-100 animate-pulse" />
                 <div className="h-56 rounded-2xl bg-slate-200 animate-pulse" />
                 <div className="h-36 rounded-2xl bg-slate-100 animate-pulse" />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
                     <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
                 </div>
@@ -762,7 +762,7 @@ export default function MatchDetailsPage() {
                     teamAName={aName}
                     teamBName={bName}
                     totalMinutes={60}
-                    durationMs={5000}
+                    durationMs={10000}
                     autoPlay
                 />
             </Section>

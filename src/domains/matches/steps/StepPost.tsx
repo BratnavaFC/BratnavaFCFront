@@ -414,7 +414,7 @@ export function StepPost({
                         Você pode setar manualmente (ou deixar pelos gols).
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 mt-3 max-w-[420px]">
+                    <div className="grid grid-cols-2 gap-3 mt-3 max-w-full sm:max-w-[420px]">
                         <label className="block">
                             <div className="label">Time A</div>
                             <input

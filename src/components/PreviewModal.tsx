@@ -72,8 +72,8 @@ export function PreviewModal({ open, onClose, title, item, isMobile }: Props) {
 
                 {/* jersey stage */}
                 <div
-                    className="flex items-center justify-center py-8"
-                    style={{ background: "linear-gradient(160deg, #ffffff 0%, #000000 100%)" }}
+                    className="flex items-center justify-center py-10"
+                    style={{ background: "radial-gradient(circle at center, #e2e8f0 0%, #94a3b8 55%, #1e293b 100%)" }}
                 >
                     <div style={{ width: "55%", maxWidth: 160 }}>
                         <UniformPreview hex={hex} />
