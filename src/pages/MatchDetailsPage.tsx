@@ -586,7 +586,11 @@ export default function MatchDetailsPage() {
                 g?.scorerMatchPlayerId && teamIndex.byMatchPlayerId.get(g.scorerMatchPlayerId);
             const teamFromPlayerId =
                 g?.scorerPlayerId && teamIndex.byPlayerId.get(g.scorerPlayerId);
-            const team: GoalTeam = (teamFromMatchPlayerId ?? teamFromPlayerId ?? "?") as GoalTeam;
+            const scorerTeam: GoalTeam = (teamFromMatchPlayerId ?? teamFromPlayerId ?? "?") as GoalTeam;
+            // Gol contra: o ponto vai para o time adversário do marcador
+            const team: GoalTeam = g?.isOwnGoal
+                ? (scorerTeam === "A" ? "B" : scorerTeam === "B" ? "A" : "?")
+                : scorerTeam;
             return { ...g, team };
         });
     }, [data, teamIndex]);
@@ -613,6 +617,7 @@ export default function MatchDetailsPage() {
                 time: g.time,
                 scorerName: g.scorerName,
                 assistName: g.assistName,
+                isOwnGoal: g.isOwnGoal,
                 team: g.team as GoalTeam,
                 scoreA: a,
                 scoreB: b,
@@ -909,6 +914,9 @@ export default function MatchDetailsPage() {
                                 <div className="min-w-0 flex-1">
                                     <div className="text-sm font-medium text-slate-900 truncate">
                                         ⚽ {g.scorerName ?? "—"}
+                                        {g.isOwnGoal && (
+                                            <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
+                                        )}
                                     </div>
                                     {g.assistName && (
                                         <div className="text-xs text-slate-500 truncate">
@@ -979,6 +987,9 @@ export default function MatchDetailsPage() {
                                                         #{t.idx}
                                                     </span>
                                                     ⚽ {t.scorerName ?? "—"}
+                                                    {t.isOwnGoal && (
+                                                        <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
+                                                    )}
                                                 </div>
                                                 {t.assistName && (
                                                     <div className="text-xs text-slate-500">

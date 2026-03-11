@@ -54,6 +54,7 @@ export type GoalDto = {
     assistName?: string | null;
     timeSeconds?: number | null;
     time?: string | null;
+    isOwnGoal?: boolean;
 };
 
 export type MatchMvpDto = {

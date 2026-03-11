@@ -74,6 +74,7 @@ export function MatchWizard({
     onEndMatch,
     onGoToPostGame,
     postProps,
+    playingGoalProps,
     onFinalize,
     onReloadDone,
 }: any) {
@@ -231,7 +232,12 @@ export function MatchWizard({
             {stepKey === "teams" ? <StepTeams {...teamsProps} /> : null}
 
             {stepKey === "playing" ? (
-                <StepPlaying admin={admin} onRefresh={onRefresh} onEnd={onEndMatch} />
+                <StepPlaying
+                    admin={admin}
+                    onRefresh={onRefresh}
+                    onEnd={onEndMatch}
+                    {...(playingGoalProps ?? {})}
+                />
             ) : null}
 
             {stepKey === "ended" ? (

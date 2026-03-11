@@ -96,9 +96,6 @@ export default function MatchesPage() {
     const [voteVotedMpId, setVoteVotedMpId] = useState<string>("");
 
     const [addingGoal, setAddingGoal] = useState(false);
-    const [goalScorerPlayerId, setGoalScorerPlayerId] = useState<string>("");
-    const [goalAssistPlayerId, setGoalAssistPlayerId] = useState<string>("");
-    const [goalTime, setGoalTime] = useState<string>("");
 
     const [removingGoal, setRemovingGoal] = useState<Record<string, boolean>>({});
     const [finalizing, setFinalizing] = useState(false);
@@ -268,7 +265,17 @@ export default function MatchesPage() {
             return;
         }
 
-        // playing/ended: por enquanto header basta (se quiser, pode criar endpoints próprios depois)
+        if (step === "playing") {
+            // participants vêm do matchmaking; goals do details
+            await loadMatchMaking(matchId);
+            const detailsRes = await MatchesApi.details(groupId!, matchId).catch(() => ({ data: null }));
+            const dDto = (detailsRes as any)?.data as any;
+            const goals = (dDto?.goals ?? dDto?.Goals ?? []) as any[];
+            setCurrent((prev) => mergeCurrent(prev, { goals } as any));
+            return;
+        }
+
+        // ended: header basta
     }
 
     async function loadCurrent() {
@@ -750,22 +757,19 @@ export default function MatchesPage() {
         }
     }
 
-    async function addGoal() {
-        if (!admin || !groupId || !currentMatchId) return;
-        if (!goalScorerPlayerId) return;
-        if (!goalTime.trim()) return;
+    async function addGoal(scorerPlayerId: string, assistPlayerId: string | null, time: string, isOwnGoal = false) {
+        if (!groupId || !currentMatchId) return;
+        if (!scorerPlayerId || !time.trim()) return;
 
         setAddingGoal(true);
         try {
             await MatchesApi.addGoal(groupId, currentMatchId, {
-                scorerPlayerId: goalScorerPlayerId,
-                assistPlayerId: goalAssistPlayerId?.trim() ? goalAssistPlayerId : null,
-                time: goalTime.trim(),
+                scorerPlayerId,
+                assistPlayerId: assistPlayerId?.trim() ? assistPlayerId : null,
+                time: time.trim(),
+                isOwnGoal,
             } as any);
 
-            setGoalScorerPlayerId("");
-            setGoalAssistPlayerId("");
-            setGoalTime("");
             await refreshCurrent();
         } catch (e) {
             toast.error(extractApiError(e, "Falha ao adicionar gol."));
@@ -897,12 +901,6 @@ export default function MatchesPage() {
             setVoteVotedMpId,
             onVoteMvp: voteMvp,
 
-            goalScorerPlayerId,
-            setGoalScorerPlayerId,
-            goalAssistPlayerId,
-            setGoalAssistPlayerId,
-            goalTime,
-            setGoalTime,
             addingGoal,
             onAddGoal: addGoal,
             goals: (current as any)?.goals ?? [],
@@ -925,13 +923,24 @@ export default function MatchesPage() {
         voting,
         voteVoterMpId,
         voteVotedMpId,
-        goalScorerPlayerId,
-        goalAssistPlayerId,
-        goalTime,
         addingGoal,
         removingGoal,
         activePlayerId,
         participants,
+    ]);
+
+    const playingGoalProps = useMemo(() => ({
+        participants,
+        goals: (current as any)?.goals ?? [],
+        addingGoal,
+        onAddGoal: addGoal,
+        removingGoal,
+        onRemoveGoal: removeGoal,
+    }), [
+        participants,
+        (current as any)?.goals,
+        addingGoal,
+        removingGoal,
     ]);
 
     const currentExistsInCreate = !!current && stepKey === "create";
@@ -1007,6 +1016,7 @@ export default function MatchesPage() {
                             onEndMatch={endMatch}
                             onGoToPostGame={goToPostGame}
                             postProps={postProps}
+                            playingGoalProps={playingGoalProps}
                             onFinalize={finalizeMatch}
                             onReloadDone={loadCurrent}
                             finalizing={finalizing as any}

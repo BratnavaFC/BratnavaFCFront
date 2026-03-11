@@ -1,6 +1,7 @@
-import { Check, Trophy, X } from "lucide-react";
+import { Check, Trophy } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto, VoteCountDto, VoteDto } from "../matchTypes";
 import { cls } from "../matchUtils";
+import { GoalTracker } from "./GoalTracker";
 
 export function StepPost({
     admin,
@@ -31,12 +32,6 @@ export function StepPost({
     onVoteMvp,
 
     // goals
-    goalScorerPlayerId,
-    setGoalScorerPlayerId,
-    goalAssistPlayerId,
-    setGoalAssistPlayerId,
-    goalTime,
-    setGoalTime,
     addingGoal,
     onAddGoal,
     goals,
@@ -68,14 +63,8 @@ export function StepPost({
     setVoteVotedMpId: (v: string) => void;
     onVoteMvp: () => void;
 
-    goalScorerPlayerId: string;
-    setGoalScorerPlayerId: (v: string) => void;
-    goalAssistPlayerId: string;
-    setGoalAssistPlayerId: (v: string) => void;
-    goalTime: string;
-    setGoalTime: (v: string) => void;
     addingGoal: boolean;
-    onAddGoal: () => void;
+    onAddGoal: (scorerPlayerId: string, assistPlayerId: string | null, time: string) => Promise<void>;
     goals: GoalDto[];
     removingGoal: Record<string, boolean>;
     onRemoveGoal: (goalId: string) => void;
@@ -121,9 +110,6 @@ export function StepPost({
                         </div>
                         <div className="text-lg font-bold text-slate-900">
                             {currentMvpName || "—"}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                            Parciais: {voteCounts.length}
                         </div>
                     </div>
                 </div>
@@ -189,39 +175,16 @@ export function StepPost({
                     )}
                 </div>
 
-                {/* Goals read-only */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="font-semibold text-slate-900">Gols</div>
-                    <div className="text-xs text-slate-500">Visualização</div>
-
-                    <div className="mt-3 grid gap-2">
-                        {goals.length === 0 ? (
-                            <div className="muted">Sem gols.</div>
-                        ) : (
-                            goals.map((g) => (
-                                <div
-                                    key={g.goalId}
-                                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-                                >
-                                    <div className="min-w-0">
-                                        <div className="font-medium text-slate-900 truncate">
-                                            ⚽ {g.scorerName}
-                                            {g.assistName ? (
-                                                <span className="text-slate-500">
-                                                    {" "}• 🤝 {g.assistName}
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                        <div className="text-xs text-slate-500 truncate">
-                                            {g.time ?? "—"}
-                                        </div>
-                                    </div>
-                                    <span className="pill">gol</span>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                {/* Goals — qualquer usuário pode marcar, ninguém pode remover */}
+                <GoalTracker
+                    participants={participants}
+                    goals={goals}
+                    addingGoal={addingGoal}
+                    onAddGoal={onAddGoal}
+                    removingGoal={removingGoal}
+                    onRemoveGoal={onRemoveGoal}
+                    canRemove={false}
+                />
             </div>
         );
     }
@@ -454,133 +417,17 @@ export function StepPost({
                     </div>
                 </div>
 
-                {/* Goals */}
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="font-semibold text-slate-900">Gols</div>
-                    <div className="text-xs text-slate-500">
-                        Adicionar/remover gols (recalcula o placar automaticamente).
-                    </div>
-
-                    {(() => {
-                        // Teammates of the selected scorer (same team, excludes scorer)
-                        const scorer = participants.find((p) => p.playerId === goalScorerPlayerId);
-                        const assistCandidates = scorer
-                            ? participants.filter(
-                                  (p) => p.team === scorer.team && p.playerId !== goalScorerPlayerId
-                              )
-                            : [];
-
-                        return (
-                    <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-                        <label className="block">
-                            <div className="label">Autor</div>
-                            <select
-                                className="input h-9 text-sm"
-                                value={goalScorerPlayerId}
-                                onChange={(e) => {
-                                    setGoalScorerPlayerId(e.target.value);
-                                    setGoalAssistPlayerId(""); // reset assist when scorer changes
-                                }}
-                            >
-                                <option value="">Selecione...</option>
-                                {participants.map((p) => (
-                                    <option key={p.playerId} value={p.playerId}>
-                                        {p.playerName}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <label className="block">
-                            <div className="label">Assistência (opcional)</div>
-                            <select
-                                className="input h-9 text-sm"
-                                value={goalAssistPlayerId}
-                                onChange={(e) => setGoalAssistPlayerId(e.target.value)}
-                                disabled={!goalScorerPlayerId}
-                            >
-                                <option value="">
-                                    {goalScorerPlayerId ? "Sem assistência" : "Selecione o autor primeiro"}
-                                </option>
-                                {assistCandidates.map((p) => (
-                                    <option key={p.playerId} value={p.playerId}>
-                                        {p.playerName}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <label className="block">
-                            <div className="label">Tempo (ex: 21:04)</div>
-                            <input
-                                className="input h-9 text-sm"
-                                value={goalTime}
-                                onChange={(e) => setGoalTime(e.target.value)}
-                                placeholder="21:04"
-                            />
-                        </label>
-                    </div>
-
-                    <div className="mt-3 flex justify-end">
-                        <button
-                            className={cls(
-                                "btn btn-primary",
-                                (!goalScorerPlayerId || !goalTime.trim() || addingGoal) &&
-                                    "opacity-50 pointer-events-none"
-                            )}
-                            disabled={!goalScorerPlayerId || !goalTime.trim() || addingGoal}
-                            onClick={onAddGoal}
-                        >
-                            {addingGoal ? "Adicionando..." : "Adicionar gol"}
-                        </button>
-                    </div>
-                    </>
-                        ); // end IIFE return
-                    })()} {/* end IIFE */}
-
-                    <div className="mt-4">
-                        <div className="text-sm font-semibold text-slate-900">Lista de gols</div>
-                        <div className="mt-2 grid gap-2">
-                            {goals.length === 0 ? (
-                                <div className="muted">Sem gols.</div>
-                            ) : (
-                                goals.map((g) => (
-                                    <div
-                                        key={g.goalId}
-                                        className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-                                    >
-                                        <div className="min-w-0">
-                                            <div className="font-medium text-slate-900 truncate">
-                                                ⚽ {g.scorerName}
-                                                {g.assistName ? (
-                                                    <span className="text-slate-500">
-                                                        {" "}• 🤝 {g.assistName}
-                                                    </span>
-                                                ) : null}
-                                            </div>
-                                            <div className="text-xs text-slate-500 truncate">
-                                                {g.time ?? "—"}
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            className={cls(
-                                                "flex items-center justify-center w-7 h-7 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 transition-colors shrink-0",
-                                                removingGoal[g.goalId] &&
-                                                    "opacity-50 pointer-events-none"
-                                            )}
-                                            disabled={!!removingGoal[g.goalId]}
-                                            onClick={() => onRemoveGoal(g.goalId)}
-                                            title="Remover gol"
-                                        >
-                                            <X size={13} />
-                                        </button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
+                {/* Goals — GoalTracker (admin pode remover) */}
+                <div className="mt-4">
+                    <GoalTracker
+                        participants={participants}
+                        goals={goals}
+                        addingGoal={addingGoal}
+                        onAddGoal={onAddGoal}
+                        removingGoal={removingGoal}
+                        onRemoveGoal={onRemoveGoal}
+                        canRemove={true}
+                    />
                 </div>
             </div>
         </div>
