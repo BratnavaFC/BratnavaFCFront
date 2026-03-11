@@ -5,9 +5,12 @@ import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
 import {
     Calendar,
+    ChevronDown,
     ChevronLeft,
+    ChevronUp,
     MapPin,
     Pause,
+    Pencil,
     Play,
     RefreshCw,
     Trophy,
@@ -534,6 +537,15 @@ export default function MatchDetailsPage() {
     const isGod = isGodMode();
     const isGroupAdm = !!groupId && (active?.groupAdminIds?.includes(groupId) ?? false);
     const canSeeMvp = isGroupAdm || isGod;
+    const isAdmin = isGroupAdm || isGod;
+
+    // ── Edit goal state ───────────────────────────────────────────────────────
+    const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+    const [editScorerId, setEditScorerId] = useState<string>("");
+    const [editAssistId, setEditAssistId] = useState<string | null>(null);
+    const [editTime, setEditTime] = useState<string>("");
+    const [editIsOwnGoal, setEditIsOwnGoal] = useState<boolean>(false);
+    const [savingGoal, setSavingGoal] = useState<boolean>(false);
 
     useEffect(() => {
         (async () => {
@@ -665,6 +677,54 @@ export default function MatchDetailsPage() {
             />
         );
     };
+
+    // ── Edit goal helpers ─────────────────────────────────────────────────────
+    function incrementEditTime(current: string, delta: number): string {
+        const parts = current.split(":");
+        let h = parseInt(parts[0] ?? "0", 10);
+        let m = parseInt(parts[1] ?? "0", 10);
+        if (isNaN(h)) h = 0;
+        if (isNaN(m)) m = 0;
+        const total = ((h * 60 + m + delta) % 1440 + 1440) % 1440;
+        return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+    }
+
+    function openEditGoal(g: any) {
+        setEditingGoalId(g.goalId);
+        setEditScorerId(g.scorerPlayerId ?? "");
+        setEditAssistId(g.assistPlayerId ?? null);
+        setEditTime(g.time ?? "");
+        setEditIsOwnGoal(g.isOwnGoal ?? false);
+    }
+
+    function closeEditGoal() {
+        setEditingGoalId(null);
+        setEditScorerId("");
+        setEditAssistId(null);
+        setEditTime("");
+        setEditIsOwnGoal(false);
+    }
+
+    async function saveEditGoal() {
+        if (!editingGoalId || !editScorerId || !groupId || !matchId) return;
+        setSavingGoal(true);
+        try {
+            await MatchesApi.updateGoal(groupId, matchId, editingGoalId, {
+                scorerPlayerId: editScorerId,
+                assistPlayerId: editAssistId,
+                time: editTime || null,
+                isOwnGoal: editIsOwnGoal,
+            });
+            const res = await MatchesApi.details(groupId, matchId);
+            setData(res.data);
+            closeEditGoal();
+            toast.success("Gol atualizado.");
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao atualizar o gol."));
+        } finally {
+            setSavingGoal(false);
+        }
+    }
 
     return (
         <div className="space-y-4 sm:space-y-6">
@@ -903,12 +963,196 @@ export default function MatchDetailsPage() {
                         </TabButton>
                     </div>
 
+                    {/* Edit panel — shown above tabs when admin is editing */}
+                    {isAdmin && editingGoalId && (() => {
+                        const allPlayers = [...(teamAPlayers as any[]), ...(teamBPlayers as any[])];
+                        const editScorer = allPlayers.find((p) => p.playerId === editScorerId);
+                        const editAssistCandidates = editScorer
+                            ? allPlayers.filter((p) =>
+                                  p.playerId !== editScorerId &&
+                                  (editIsOwnGoal ? p.team !== editScorer.team : p.team === editScorer.team)
+                              )
+                            : [];
+                        return (
+                            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 mb-4 space-y-3">
+                                <div className="text-xs font-semibold text-blue-700 uppercase tracking-widest">
+                                    Editando gol
+                                </div>
+
+                                {/* Time field */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-600 shrink-0">Tempo:</span>
+                                    <input
+                                        className="border border-slate-200 rounded-lg px-2 py-1 text-sm w-24 text-center tabular-nums bg-white"
+                                        value={editTime}
+                                        onChange={(e) => setEditTime(e.target.value)}
+                                        placeholder="21:04"
+                                    />
+                                    <div className="flex flex-col gap-0.5">
+                                        <button
+                                            type="button"
+                                            className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+                                            onClick={() => setEditTime(incrementEditTime(editTime, 1))}
+                                            title="+1 minuto"
+                                        >
+                                            <ChevronUp size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+                                            onClick={() => setEditTime(incrementEditTime(editTime, -1))}
+                                            title="-1 minuto"
+                                        >
+                                            <ChevronDown size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Scorer selection — two columns */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <div className="text-xs font-semibold text-blue-600 mb-1.5 uppercase tracking-widest">
+                                            {aName}
+                                        </div>
+                                        <div className="space-y-1">
+                                            {(teamAPlayers as any[]).map((p: any) => (
+                                                <button
+                                                    key={p.playerId}
+                                                    type="button"
+                                                    className={cls(
+                                                        "w-full text-left rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                                                        editScorerId === p.playerId
+                                                            ? "border-emerald-400 bg-emerald-100 text-emerald-900"
+                                                            : "border-slate-200 bg-white hover:bg-blue-50 text-slate-700"
+                                                    )}
+                                                    onClick={() => {
+                                                        setEditScorerId(p.playerId);
+                                                        setEditAssistId(null);
+                                                        setEditIsOwnGoal(false);
+                                                    }}
+                                                >
+                                                    {p.isGoalkeeper ? "🧤 " : ""}{p.playerName}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs font-semibold text-red-600 mb-1.5 uppercase tracking-widest">
+                                            {bName}
+                                        </div>
+                                        <div className="space-y-1">
+                                            {(teamBPlayers as any[]).map((p: any) => (
+                                                <button
+                                                    key={p.playerId}
+                                                    type="button"
+                                                    className={cls(
+                                                        "w-full text-left rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                                                        editScorerId === p.playerId
+                                                            ? "border-emerald-400 bg-emerald-100 text-emerald-900"
+                                                            : "border-slate-200 bg-white hover:bg-red-50 text-slate-700"
+                                                    )}
+                                                    onClick={() => {
+                                                        setEditScorerId(p.playerId);
+                                                        setEditAssistId(null);
+                                                        setEditIsOwnGoal(false);
+                                                    }}
+                                                >
+                                                    {p.isGoalkeeper ? "🧤 " : ""}{p.playerName}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Gol contra + assist (when scorer selected) */}
+                                {editScorer && (
+                                    <>
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded accent-orange-500"
+                                                checked={editIsOwnGoal}
+                                                onChange={(e) => {
+                                                    setEditIsOwnGoal(e.target.checked);
+                                                    setEditAssistId(null);
+                                                }}
+                                            />
+                                            <span className="text-sm text-slate-700">Gol contra</span>
+                                            {editIsOwnGoal && (
+                                                <span className="text-xs text-orange-600 font-medium">
+                                                    (ponto para o time adversário)
+                                                </span>
+                                            )}
+                                        </label>
+
+                                        {editAssistCandidates.length > 0 && (
+                                            <div>
+                                                <div className="text-xs text-slate-500 mb-1.5">
+                                                    {editIsOwnGoal ? "Quem forçou (opcional):" : "Assistência (opcional):"}
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {editAssistCandidates.map((p: any) => (
+                                                        <button
+                                                            key={p.playerId}
+                                                            type="button"
+                                                            className={cls(
+                                                                "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+                                                                editAssistId === p.playerId
+                                                                    ? "border-emerald-400 bg-emerald-200 text-emerald-900"
+                                                                    : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"
+                                                            )}
+                                                            onClick={() =>
+                                                                setEditAssistId((prev) =>
+                                                                    prev === p.playerId ? null : p.playerId
+                                                                )
+                                                            }
+                                                        >
+                                                            {p.isGoalkeeper ? "🧤 " : ""}{p.playerName}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Action buttons */}
+                                <div className="flex items-center gap-2 pt-1">
+                                    <button
+                                        type="button"
+                                        className="btn text-sm"
+                                        onClick={closeEditGoal}
+                                        disabled={savingGoal}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={cls(
+                                            "btn btn-primary text-sm",
+                                            (!editScorerId || savingGoal) && "opacity-50 pointer-events-none"
+                                        )}
+                                        disabled={!editScorerId || savingGoal}
+                                        onClick={saveEditGoal}
+                                    >
+                                        {savingGoal ? "Salvando..." : "Salvar alterações"}
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Reusable goal card renderer */}
                     {(() => {
                         const goalCard = (g: any) => (
                             <div
                                 key={g.goalId}
-                                className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+                                className={cls(
+                                    "flex items-center gap-3 rounded-xl border px-3 py-2.5",
+                                    editingGoalId === g.goalId
+                                        ? "border-blue-300 bg-blue-50"
+                                        : "border-slate-100 bg-slate-50"
+                                )}
                             >
                                 <GoalDot team={g.team} />
                                 <div className="min-w-0 flex-1">
@@ -928,6 +1172,23 @@ export default function MatchDetailsPage() {
                                     <span className="text-xs text-slate-400 font-mono shrink-0">
                                         {g.time}
                                     </span>
+                                )}
+                                {isAdmin && (
+                                    <button
+                                        type="button"
+                                        title={editingGoalId === g.goalId ? "Cancelar edição" : "Editar gol"}
+                                        onClick={() =>
+                                            editingGoalId === g.goalId ? closeEditGoal() : openEditGoal(g)
+                                        }
+                                        className={cls(
+                                            "flex items-center justify-center w-7 h-7 rounded-lg border transition-colors shrink-0",
+                                            editingGoalId === g.goalId
+                                                ? "border-blue-300 bg-blue-100 text-blue-700"
+                                                : "border-slate-200 bg-white hover:bg-slate-100 text-slate-400"
+                                        )}
+                                    >
+                                        <Pencil size={12} />
+                                    </button>
                                 )}
                             </div>
                         );

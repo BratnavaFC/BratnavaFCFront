@@ -92,6 +92,8 @@ export const MatchesApi = {
   setScore: (groupId: string, matchId: string, dto: SetScoreRequestDto) => http.patch(`/api/Matches/group/${groupId}/${matchId}/score`, dto),
   addGoal: (groupId: string, matchId: string, dto: AddGoalRequestDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/goals`, dto),
   addGoalsBulk: (groupId: string, matchId: string, dto: AddGoalsBulkRequestDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/goals/bulk`, dto),
+  updateGoal: (groupId: string, matchId: string, goalId: string, dto: { scorerPlayerId: string; assistPlayerId?: string | null; time?: string | null; isOwnGoal?: boolean }) =>
+    http.put(`/api/Matches/group/${groupId}/${matchId}/goals/${goalId}`, dto),
   deleteGoal: (groupId: string, matchId: string, goalId: string) => http.delete(`/api/Matches/group/${groupId}/${matchId}/goals/${goalId}`),
   assignTeams: (groupId: string, matchId: string, dto: AssignTeamsDto) => http.put(`/api/Matches/group/${groupId}/${matchId}/teams`, dto),
   swap: (groupId: string, matchId: string, dto: SwapPlayersDto) => http.post(`/api/Matches/group/${groupId}/${matchId}/swap`, dto),
