@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Section } from '../components/Section';
 import { PlayersApi, MatchesApi } from '../api/endpoints';
@@ -305,7 +306,7 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-3">
             {recentMatches.map(m => (
-              <RecentMatchCard key={m.matchId} match={m} playerId={selectedPlayerId} />
+              <RecentMatchCard key={m.matchId} match={m} playerId={selectedPlayerId} groupId={groupId ?? ''} />
             ))}
           </div>
         )}
@@ -318,13 +319,18 @@ export default function DashboardPage() {
 // ─── CurrentMatchCard ─────────────────────────────────────────────────────────
 
 function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: string }) {
+  const nav   = useNavigate();
   const dates = formatDate(match.playedAt);
   const found = playerId ? getPlayerInMatch(match, playerId) : null;
   const isAssigned   = found && found.player.team !== 0;
   const isUnassigned = found && found.player.team === 0;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <div
+      className="rounded-2xl border border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all"
+      onClick={() => nav('/app/matches')}
+      role="button"
+    >
 
       {/* Header bar */}
       <div className="flex items-center justify-between gap-3 bg-slate-900 px-5 py-3">
@@ -417,7 +423,8 @@ function TeamBlock({ color, label, count }: { color?: TeamColor | null; label: s
 
 // ─── RecentMatchCard ──────────────────────────────────────────────────────────
 
-function RecentMatchCard({ match, playerId }: { match: MatchDetails; playerId: string }) {
+function RecentMatchCard({ match, playerId, groupId }: { match: MatchDetails; playerId: string; groupId: string }) {
+  const nav     = useNavigate();
   const dates   = formatDate(match.playedAt);
   const found   = getPlayerInMatch(match, playerId);
   if (!found) return null;
@@ -429,7 +436,10 @@ function RecentMatchCard({ match, playerId }: { match: MatchDetails; playerId: s
   const isMvp    = match.computedMvp?.playerId === playerId;
   const hasScore = typeof match.teamAGoals === 'number' && typeof match.teamBGoals === 'number';
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden flex items-center">
+    <button
+      className="w-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden flex items-center cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all"
+      onClick={() => nav(`/app/history/${groupId}/${match.matchId}`)}
+    >
       {/* Date */}
       <div className="px-4 py-3 shrink-0 text-center min-w-[54px]">
         <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{dates?.month ?? '—'}</div>
@@ -478,6 +488,6 @@ function RecentMatchCard({ match, playerId }: { match: MatchDetails; playerId: s
           </span>
         </div>
       )}
-    </div>
+    </button>
   );
 }

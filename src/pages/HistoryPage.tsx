@@ -233,7 +233,19 @@ export default function HistoryPage() {
                                     const statusName = m?.statusName ?? m?.status ?? "";
                                     const meta = statusMeta(statusName);
                                     const dates = formatDate(m.playedAt);
-                                    const accentColor = teamAHex ?? meta.accent;
+
+                                    // Accent strip: winner's color, half-and-half on draw, fallback otherwise
+                                    const accentStyle = (() => {
+                                        if (score) {
+                                            if (score.a > score.b && teamAHex)
+                                                return { backgroundColor: teamAHex };
+                                            if (score.b > score.a && teamBHex)
+                                                return { backgroundColor: teamBHex };
+                                            if (score.a === score.b && teamAHex && teamBHex)
+                                                return { background: `linear-gradient(to bottom, ${teamAHex} 50%, ${teamBHex} 50%)` };
+                                        }
+                                        return { backgroundColor: teamAHex ?? meta.accent };
+                                    })();
 
                                     return (
                                         <button
@@ -245,7 +257,7 @@ export default function HistoryPage() {
                                                 {/* Left accent strip */}
                                                 <div
                                                     className="w-1 shrink-0"
-                                                    style={{ backgroundColor: accentColor }}
+                                                    style={accentStyle}
                                                 />
 
                                                 {/* Date box — desktop only */}

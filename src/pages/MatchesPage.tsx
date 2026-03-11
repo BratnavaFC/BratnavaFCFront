@@ -4,7 +4,7 @@ import { RotateCcw } from "lucide-react";
 import { Section } from "../components/Section";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { isAdmin, isGroupAdmin } from "../auth/guards";
+import { isGodMode } from "../auth/guards";
 import { extractApiError } from "../lib/apiError";
 
 import { MatchWizard } from "../domains/matches/steps/MatchWizard";
@@ -48,7 +48,7 @@ export default function MatchesPage() {
     const groupId = active?.activeGroupId;
 
     const activePlayerId: string | null = (active as any)?.activePlayerId ?? null;
-    const admin = isAdmin() || isGroupAdmin(groupId ?? "");
+    const admin = isGodMode() || !!(groupId && active?.groupAdminIds?.includes(groupId));
     const readOnlyUser = !admin;
 
     const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);

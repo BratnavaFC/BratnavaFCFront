@@ -9,7 +9,7 @@ import { useInviteStore } from "../stores/inviteStore";
 import { GroupInvitesApi } from "../api/endpoints";
 import { isGodMode } from "../auth/guards";
 
-type Item = { to: string; label: string; icon: any; badge?: number };
+type Item = { to: string; label: string; icon: any; badge?: number; end?: boolean };
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const active = useAccountStore((s) => s.getActive());
@@ -29,7 +29,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     }, [active?.userId, setPendingCount]);
 
     const items: Item[] = useMemo(() => [
-        { to: "/app",             label: "Dashboard",     icon: LayoutDashboard },
+        { to: "/app",             label: "Dashboard",     icon: LayoutDashboard, end: true },
         { to: "/app/groups",      label: "Grupos",        icon: Users },
         { to: "/app/team-colors", label: "Cores",         icon: Palette },
         { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
@@ -80,6 +80,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                             <NavLink
                                 key={item.to}
                                 to={item.to}
+                                end={item.end}
                                 onClick={() => !pinned && onClose()}
                                 className={({ isActive }) =>
                                     [

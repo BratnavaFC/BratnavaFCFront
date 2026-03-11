@@ -920,7 +920,7 @@ export default function MatchDetailsPage() {
                                     </div>
                                     {g.assistName && (
                                         <div className="text-xs text-slate-500 truncate">
-                                            🤝 {g.assistName}
+                                            🅰️ {g.assistName}
                                         </div>
                                     )}
                                 </div>
@@ -993,7 +993,7 @@ export default function MatchDetailsPage() {
                                                 </div>
                                                 {t.assistName && (
                                                     <div className="text-xs text-slate-500">
-                                                        🤝 {t.assistName}
+                                                        🅰️ {t.assistName}
                                                     </div>
                                                 )}
                                             </div>
@@ -1021,32 +1021,38 @@ export default function MatchDetailsPage() {
             {(mvpPlayer || canSeeMvp) && (
                 <Section title="MVP">
                     <div className="space-y-3">
-                        {/* Winner card — baseado em isMvp (todos) */}
-                        {mvpPlayer ? (
-                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 border border-amber-200 shrink-0">
-                                        <Trophy size={20} className="text-amber-500" />
-                                    </div>
-                                    <div>
-                                        <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">
-                                            Melhor do jogo
+                        {/* Winner card — admin/god usa mvp (votos); demais usa isMvp */}
+                        {(() => {
+                            const cardName = canSeeMvp ? (mvp?.playerName ?? mvpPlayer?.playerName) : mvpPlayer?.playerName;
+                            const cardTeam = canSeeMvp ? (mvp?.team ?? mvpPlayer?.team) : mvpPlayer?.team;
+                            const cardTeamName = cardTeam === 1 ? aName : cardTeam === 2 ? bName : (mvpPlayerTeamName ?? "");
+                            if (!cardName) return (
+                                <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
+                                    <Trophy size={28} className="mx-auto text-slate-300 mb-2" />
+                                    <div className="text-sm text-slate-400">MVP não definido</div>
+                                </div>
+                            );
+                            return (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 border border-amber-200 shrink-0">
+                                            <Trophy size={20} className="text-amber-500" />
                                         </div>
-                                        <div className="font-bold text-slate-900 text-xl leading-none">
-                                            {mvpPlayer.playerName}
+                                        <div>
+                                            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">
+                                                Melhor do jogo
+                                            </div>
+                                            <div className="font-bold text-slate-900 text-xl leading-none">
+                                                {cardName}
+                                            </div>
+                                            {cardTeamName && (
+                                                <div className="text-xs text-slate-500 mt-1">{cardTeamName}</div>
+                                            )}
                                         </div>
-                                        {mvpPlayerTeamName && (
-                                            <div className="text-xs text-slate-500 mt-1">{mvpPlayerTeamName}</div>
-                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
-                                <Trophy size={28} className="mx-auto text-slate-300 mb-2" />
-                                <div className="text-sm text-slate-400">MVP não definido</div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {/* Apuração de votos — apenas admin / god mode */}
                         {canSeeMvp && voteCounts.length > 0 && (
