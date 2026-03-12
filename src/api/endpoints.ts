@@ -67,12 +67,14 @@ export const PlayersApi = {
 };
 
 export const TeamColorApi = {
-  list: (groupId: string) => http.get(`/api/TeamColor/group/${groupId}`),
+  list: (groupId: string, activeOnly?: boolean) =>
+    http.get(`/api/TeamColor/group/${groupId}`, activeOnly ? { params: { activeOnly: true } } : undefined),
   create: (groupId: string, dto: CreateTeamColorDto) => http.post(`/api/TeamColor/group/${groupId}`, dto),
   get: (groupId: string, colorId: string) => http.get(`/api/TeamColor/group/${groupId}/${colorId}`),
   update: (groupId: string, colorId: string, dto: UpdateTeamColorDto) => http.put(`/api/TeamColor/group/${groupId}/${colorId}`, dto),
   remove: (groupId: string, colorId: string) => http.delete(`/api/TeamColor/group/${groupId}/${colorId}`),
   activate: (groupId: string, colorId: string) => http.post(`/api/TeamColor/group/${groupId}/${colorId}/activate`),
+  deactivate: (groupId: string, colorId: string) => http.post(`/api/TeamColor/group/${groupId}/${colorId}/deactivate`),
 };
 
 export const MatchesApi = {

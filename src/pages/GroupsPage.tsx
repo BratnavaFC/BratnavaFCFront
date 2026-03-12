@@ -927,22 +927,25 @@ export default function GroupsPage() {
     }, [activeGroupId]);
 
     const isAdminOfGroup  = isGroupAdmin(activeGroupId);
-    const visiblePlayers  = group?.players?.filter((p) => isAdminOfGroup || p.status === 1) ?? [];
-    const activePlayers   = group?.players?.filter((p) => p.status === 1) ?? [];
+    const activePlayers   = group?.players?.filter((p) => p.status === 1 && !p.isGuest) ?? [];
+    const guestPlayers    = group?.players?.filter((p) => p.status === 1 && p.isGuest) ?? [];
+    // inactive players only visible to admin/god
+    const inactivePlayers = (isAdminOfGroup || isGod)
+        ? (group?.players?.filter((p) => p.status !== 1) ?? [])
+        : [];
 
     // "Você" sempre aparece primeiro; demais mantêm ordem original
     const sortedPlayers = useMemo(() =>
-        [...visiblePlayers].sort((a, b) => {
+        [...activePlayers].sort((a, b) => {
             if (a.id === activePlayerId) return -1;
             if (b.id === activePlayerId) return 1;
             return 0;
         }),
-    [visiblePlayers, activePlayerId]);
+    [activePlayers, activePlayerId]);
     const existingUserIds = new Set(
         (group?.players ?? []).map((p) => p.userId).filter((id): id is string => !!id)
     );
     const existingAdminUserIds = new Set<string>(group?.adminIds ?? []);
-    const guestPlayers = (group?.players ?? []).filter((p) => p.isGuest && !p.userId);
 
     return (
         <div className="space-y-6">
@@ -992,78 +995,190 @@ export default function GroupsPage() {
                     <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
                 ) : loading ? (
                     <div className="muted flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Carregando...</div>
-                ) : visiblePlayers.length === 0 ? (
-                    <div className="muted">Nenhum jogador ativo nesta patota.</div>
+                ) : (activePlayers.length === 0 && inactivePlayers.length === 0) ? (
+                    <div className="muted">Nenhum jogador nesta patota.</div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                        {sortedPlayers.map((p) => {
-                            const isMe      = p.id === activePlayerId;
-                            const isInativo = p.status !== 1;
-                            const canEdit   = isAdminOfGroup || isMe;
-                            return (
-                                <div
-                                    key={p.id}
-                                    className={[
-                                        "group relative rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
-                                        isInativo ? "border-slate-200 opacity-50" : isMe ? "border-emerald-400" : "border-slate-200",
-                                    ].join(" ")}
-                                >
-                                    {/* name + badges row */}
-                                    <div className="flex items-center justify-between gap-1 min-w-0">
-                                        <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
-                                            <span className="truncate">{p.name}</span>
-                                            {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
-                                        </div>
-                                        <div className="flex items-center gap-0.5 shrink-0">
-                                            {isInativo && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-slate-100 border-slate-300 text-slate-500 leading-none">
-                                                    Inativo
-                                                </span>
-                                            )}
-                                            {isMe && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">
-                                                    Você
-                                                </span>
-                                            )}
-                                            {/* botão de edição — sempre visível */}
-                                            {canEdit && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setEditPlayer(p)}
-                                                    className="ml-0.5 h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
-                                                    title="Editar jogador"
-                                                    aria-label="Editar jogador"
-                                                >
-                                                    <Pencil size={11} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
+                    <div className="space-y-4">
+                        {/* ── Jogadores Ativos ── */}
+                        {activePlayers.length === 0 ? (
+                            <div className="muted">Nenhum jogador ativo.</div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                                {sortedPlayers.map((p) => {
+                                    const isMe    = p.id === activePlayerId;
+                                    const canEdit = isAdminOfGroup || isGod || isMe;
+                                    return (
+                                        <div
+                                            key={p.id}
+                                            className={[
+                                                "group relative rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
+                                                isMe ? "border-emerald-400" : "border-slate-200",
+                                            ].join(" ")}
+                                        >
+                                            {/* name + badges row */}
+                                            <div className="flex items-center justify-between gap-1 min-w-0">
+                                                <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
+                                                    <span className="truncate">{p.name}</span>
+                                                    {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
+                                                </div>
+                                                <div className="flex items-center gap-0.5 shrink-0">
+                                                    {isMe && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">
+                                                            Você
+                                                        </span>
+                                                    )}
+                                                    {canEdit && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditPlayer(p)}
+                                                            className="ml-0.5 h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                            title="Editar jogador"
+                                                            aria-label="Editar jogador"
+                                                        >
+                                                            <Pencil size={11} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                    {/* secondary info row */}
-                                    <div className="flex items-center justify-between gap-1">
-                                        <span className="text-[11px] text-slate-400 truncate">
-                                            {[
-                                                p.userName && `@${p.userName}`,
-                                            ].filter(Boolean).join(" · ")}
-                                        </span>
-                                        {p.isGuest && !isInativo && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
-                                                Convidado
-                                            </span>
-                                        )}
-                                    </div>
+                                            {/* secondary info row */}
+                                            <div className="flex items-center justify-between gap-1">
+                                                <span className="text-[11px] text-slate-400 truncate">
+                                                    {p.userName ? `@${p.userName}` : ""}
+                                                </span>
+                                                {p.isGuest && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
+                                                        Convidado
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                    {/* star rating for guests */}
-                                    {p.isGuest && p.guestStarRating != null && (
-                                        <div className="text-[11px] leading-none text-amber-400 mt-0.5">
-                                            {"★".repeat(p.guestStarRating)}
-                                            <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
+                                            {/* star rating — admin only */}
+                                            {p.isGuest && p.guestStarRating != null && (isAdminOfGroup || isGod) && (
+                                                <div className="text-[11px] leading-none text-amber-400 mt-0.5">
+                                                    {"★".repeat(p.guestStarRating)}
+                                                    <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* ── Convidados ── */}
+                        {guestPlayers.length > 0 && (
+                            <div className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 pt-1">
+                                    Convidados ({guestPlayers.length})
                                 </div>
-                            );
-                        })}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                                    {guestPlayers.map((p) => {
+                                        const canEdit = isAdminOfGroup || isGod;
+                                        return (
+                                            <div
+                                                key={p.id}
+                                                className="relative rounded-lg border border-amber-200 px-3 py-2 bg-amber-50/40 flex flex-col gap-0.5"
+                                            >
+                                                {/* name + edit row */}
+                                                <div className="flex items-center justify-between gap-1 min-w-0">
+                                                    <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
+                                                        <span className="truncate">{p.name}</span>
+                                                        {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-0.5 shrink-0">
+                                                        {canEdit && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditPlayer(p)}
+                                                                className="h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                                title="Editar jogador"
+                                                                aria-label="Editar jogador"
+                                                            >
+                                                                <Pencil size={11} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* convidado badge row */}
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
+                                                        Convidado
+                                                    </span>
+                                                </div>
+
+                                                {/* star rating — admin only */}
+                                                {p.guestStarRating != null && (isAdminOfGroup || isGod) && (
+                                                    <div className="text-[11px] leading-none text-amber-400 mt-0.5">
+                                                        {"★".repeat(p.guestStarRating)}
+                                                        <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── Jogadores Inativos (admin only) ── */}
+                        {inactivePlayers.length > 0 && (
+                            <div className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 pt-1">
+                                    Jogadores Inativos ({inactivePlayers.length})
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                                    {inactivePlayers.map((p) => {
+                                        return (
+                                            <div
+                                                key={p.id}
+                                                className="relative rounded-lg border border-slate-200 px-3 py-2 bg-white flex flex-col gap-0.5 opacity-60"
+                                            >
+                                                {/* name + badges row */}
+                                                <div className="flex items-center justify-between gap-1 min-w-0">
+                                                    <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
+                                                        <span className="truncate">{p.name}</span>
+                                                        {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-0.5 shrink-0">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditPlayer(p)}
+                                                            className="h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                            title="Editar jogador"
+                                                            aria-label="Editar jogador"
+                                                        >
+                                                            <Pencil size={11} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* secondary info row */}
+                                                <div className="flex items-center justify-between gap-1">
+                                                    <span className="text-[11px] text-slate-400 truncate">
+                                                        {p.userName ? `@${p.userName}` : ""}
+                                                    </span>
+                                                    {p.isGuest && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
+                                                            Convidado
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* star rating — admin only */}
+                                                {p.isGuest && p.guestStarRating != null && (
+                                                    <div className="text-[11px] leading-none text-amber-400 mt-0.5">
+                                                        {"★".repeat(p.guestStarRating)}
+                                                        <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </Section>
@@ -1071,7 +1186,7 @@ export default function GroupsPage() {
             <EditPlayerModal
                 open={!!editPlayer}
                 player={editPlayer}
-                isAdmin={isGroupAdmin(activeGroupId)}
+                isAdmin={isAdminOfGroup || isGod}
                 onClose={() => setEditPlayer(null)}
                 onSaved={loadGroup}
             />

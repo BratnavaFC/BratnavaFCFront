@@ -123,15 +123,17 @@ export function MatchWizard({
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                            <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                                <Users size={14} className="text-slate-400" />
-                                {acceptedCount}/{maxPlayers}
+                        {stepKey === "accept" && (
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                                <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                                    <Users size={14} className="text-slate-400" />
+                                    {acceptedCount}/{maxPlayers}
+                                </div>
+                                <span className="text-[11px] text-slate-400">
+                                    Pendentes: {pendingCount}
+                                </span>
                             </div>
-                            <span className="text-[11px] text-slate-400">
-                                Pendentes: {pendingCount}
-                            </span>
-                        </div>
+                        )}
                     </div>
 
                     {/* Acceptance progress bar (only during accept step) */}

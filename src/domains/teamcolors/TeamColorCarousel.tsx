@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { UniformPreview } from "./UniformPreview";
 
@@ -29,40 +29,27 @@ export function TeamColorCarousel({
 }: Props) {
     const count = items?.length ?? 0;
 
-    const initialIndex = useMemo(() => {
+    // index is PURELY derived from selectedId — no useState, no effects, no loops
+    const index = useMemo(() => {
         if (!count) return 0;
-        const selectedIdx = selectedId
-            ? items.findIndex((i: any) => i.id === selectedId)
-            : -1;
-        if (selectedIdx >= 0) return selectedIdx;
+        const idx = selectedId ? items.findIndex((i: any) => i.id === selectedId) : -1;
+        if (idx >= 0) return idx;
         const activeIdx = items.findIndex((i: any) => i.isActive);
         return activeIdx >= 0 ? activeIdx : 0;
     }, [items, selectedId, count]);
-
-    const [index, setIndex] = useState(initialIndex);
-
-    useEffect(() => {
-        if (!count) return;
-        setIndex(initialIndex);
-    }, [count, initialIndex]);
-
-    useEffect(() => {
-        if (!count) return;
-        const id = items[index]?.id;
-        if (id && id !== selectedId) onSelectedIdChange(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [index, count]);
 
     const canNav = count > 1;
 
     function prev() {
         if (!canNav) return;
-        setIndex((i) => (i - 1 + count) % count);
+        const newIndex = (index - 1 + count) % count;
+        onSelectedIdChange(items[newIndex].id);
     }
 
     function next() {
         if (!canNav) return;
-        setIndex((i) => (i + 1) % count);
+        const newIndex = (index + 1) % count;
+        onSelectedIdChange(items[newIndex].id);
     }
 
     function relPos(i: number) {
@@ -109,7 +96,7 @@ export function TeamColorCarousel({
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setIndex(i);
+                                        onSelectedIdChange(c.id);
                                         if (onPreview) onPreview(c);
                                     }}
                                     className="w-full text-left focus:outline-none"
@@ -214,11 +201,11 @@ export function TeamColorCarousel({
 
                 {/* animated dot indicators */}
                 <div className="flex items-center gap-1.5">
-                    {items.map((_: any, i: number) => (
+                    {items.map((c: any, i: number) => (
                         <button
                             key={i}
                             type="button"
-                            onClick={() => setIndex(i)}
+                            onClick={() => onSelectedIdChange(items[i].id)}
                             className="rounded-full transition-all duration-300"
                             style={{
                                 width: i === index ? 20 : 7,

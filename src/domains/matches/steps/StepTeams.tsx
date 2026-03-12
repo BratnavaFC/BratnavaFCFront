@@ -223,9 +223,9 @@ export function StepTeams({
         return m;
     }, [allPlayers]);
 
+
     const canAssignTeams = useMemo(() => {
         if (!admin) return false;
-        if (teamsAlreadyAssigned) return false;
         const opt =
             generatedOptions?.[
                 Math.max(0, Math.min(selectedTeamGenIdx, (generatedOptions?.length ?? 1) - 1))
@@ -233,7 +233,7 @@ export function StepTeams({
         const aLen = opt?.teamA?.length ?? 0;
         const bLen = opt?.teamB?.length ?? 0;
         return aLen > 0 && bLen > 0 && Math.abs(aLen - bLen) <= 1;
-    }, [admin, teamsAlreadyAssigned, generatedOptions, selectedTeamGenIdx]);
+    }, [admin, generatedOptions, selectedTeamGenIdx]);
 
     const aHex = normalizeHex(currentTeamAColorHex);
     const bHex = normalizeHex(currentTeamBColorHex);
@@ -270,8 +270,8 @@ export function StepTeams({
     }
 
     // ── Assigned-teams panel (shared between admin and non-admin) ────────────
-    const canMoveToA = !!sel1 && sel1.team === "B";
-    const canMoveToB = !!sel1 && sel1.team === "A";
+    const canMoveToA = !!sel1 && sel1.team === "B" && !sel2Id;
+    const canMoveToB = !!sel1 && sel1.team === "A" && !sel2Id;
     const canSwapPlayers = !!sel1 && !!sel2Id;
 
     const teamsSetPanel = teamsAlreadyAssigned ? (
@@ -386,42 +386,19 @@ export function StepTeams({
                                     className={cls(
                                         "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
                                         admin && "cursor-pointer",
-                                        isSel1
-                                            ? "bg-amber-50 border-l-[3px] border-amber-400"
-                                            : isSel2
-                                            ? "bg-emerald-50 border-l-[3px] border-emerald-400"
-                                            : isOpposite
-                                            ? "hover:bg-emerald-50"
-                                            : admin
-                                            ? "hover:bg-slate-50"
-                                            : ""
+                                        isSel1 ? "bg-amber-50 border-l-[3px] border-amber-400"
+                                        : isSel2 ? "bg-emerald-50 border-l-[3px] border-emerald-400"
+                                        : isOpposite ? "hover:bg-emerald-50"
+                                        : admin ? "hover:bg-slate-50" : ""
                                     )}
                                 >
-                                    <span
-                                        className={cls(
-                                            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                                            isSel1
-                                                ? "bg-amber-400 text-white"
-                                                : isSel2
-                                                ? "bg-emerald-400 text-white"
-                                                : "bg-slate-100 text-slate-500"
-                                        )}
-                                    >
+                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 text-slate-500")}>
                                         {p.playerName.charAt(0).toUpperCase()}
                                     </span>
-                                    <span
-                                        className={cls(
-                                            "truncate flex-1 font-medium",
-                                            isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900"
-                                        )}
-                                    >
+                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900")}>
                                         {p.playerName}
                                     </span>
-                                    {p.isGoalkeeper && (
-                                        <span title="Goleiro" className="shrink-0 text-xs">
-                                            🧤
-                                        </span>
-                                    )}
+                                    {p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>}
                                     {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
                             );
@@ -465,6 +442,7 @@ export function StepTeams({
                         {sortedTeamBPlayers.map((p) => {
                             const isSel1 = sel1?.id === p.playerId;
                             const isSel2 = sel2Id === p.playerId;
+                            const isSelected = isSel1 || isSel2;
                             const isOpposite = admin && sel1 && sel1.team !== "B" && !isSel1;
                             return (
                                 <li
@@ -473,43 +451,20 @@ export function StepTeams({
                                     className={cls(
                                         "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
                                         admin && "cursor-pointer",
-                                        isSel1
-                                            ? "bg-amber-50 border-l-[3px] border-amber-400"
-                                            : isSel2
-                                            ? "bg-emerald-50 border-l-[3px] border-emerald-400"
-                                            : isOpposite
-                                            ? "hover:bg-emerald-50"
-                                            : admin
-                                            ? "hover:bg-slate-50"
-                                            : ""
+                                        isSel1 ? "bg-amber-50 border-l-[3px] border-amber-400"
+                                        : isSel2 ? "bg-emerald-50 border-l-[3px] border-emerald-400"
+                                        : isOpposite ? "hover:bg-emerald-50"
+                                        : admin ? "hover:bg-slate-50" : ""
                                     )}
                                 >
-                                    <span
-                                        className={cls(
-                                            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                                            isSel1
-                                                ? "bg-amber-400 text-white"
-                                                : isSel2
-                                                ? "bg-emerald-400 text-white"
-                                                : "bg-slate-100 text-slate-500"
-                                        )}
-                                    >
+                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 text-slate-500")}>
                                         {p.playerName.charAt(0).toUpperCase()}
                                     </span>
-                                    <span
-                                        className={cls(
-                                            "truncate flex-1 font-medium",
-                                            isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900"
-                                        )}
-                                    >
+                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900")}>
                                         {p.playerName}
                                     </span>
-                                    {p.isGoalkeeper && (
-                                        <span title="Goleiro" className="shrink-0 text-xs">
-                                            🧤
-                                        </span>
-                                    )}
-                                    {(isSel1 || isSel2) && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
+                                    {p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>}
+                                    {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
                             );
                         })}
@@ -520,8 +475,8 @@ export function StepTeams({
                 </div>
             </div>
 
-            {/* ── Unassigned players (e.g. goalkeepers excluded, or manual sort leftovers) ── */}
-            {admin && allPlayers.some((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted) && (
+            {/* ── Unassigned players — only visible after teams have been generated ── */}
+            {admin && generatedOptions !== null && allPlayers.some((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted) && (
                 <div className="border-t border-amber-100 bg-amber-50/60">
                     <div className="flex items-center justify-between px-4 py-2.5">
                         <div>
@@ -535,48 +490,57 @@ export function StepTeams({
                         </span>
                     </div>
                     <ul className="divide-y divide-amber-100/60">
-                        {allPlayers
-                            .filter((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted)
-                            .map((p) => (
-                                <li
-                                    key={p.playerId}
-                                    className="flex items-center gap-2.5 px-4 py-2.5"
-                                >
-                                    <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold flex items-center justify-center shrink-0">
-                                        {p.playerName.charAt(0).toUpperCase()}
-                                    </span>
-                                    <span className="truncate flex-1 text-sm font-medium text-slate-900">
-                                        {p.playerName}
-                                        {p.isGoalkeeper && (
-                                            <span title="Goleiro" className="ml-1 text-xs">
-                                                🧤
-                                            </span>
-                                        )}
-                                    </span>
-                                    <button
-                                        onClick={() => onAssignUnassigned(p.playerId, "A")}
-                                        title={`Atribuir para ${aName}`}
-                                        className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
-                                        style={{
-                                            color: hasAColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8",
-                                            borderColor: hasAColor && !isWhiteHex(aHex) ? aHex : "#3b82f6",
-                                        }}
-                                    >
-                                        → A
-                                    </button>
-                                    <button
-                                        onClick={() => onAssignUnassigned(p.playerId, "B")}
-                                        title={`Atribuir para ${bName}`}
-                                        className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
-                                        style={{
-                                            color: hasBColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8",
-                                            borderColor: hasBColor && !isWhiteHex(bHex) ? bHex : "#3b82f6",
-                                        }}
-                                    >
-                                        → B
-                                    </button>
-                                </li>
-                            ))}
+                        {(() => {
+                            const unassigned = allPlayers.filter(
+                                (p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted
+                            );
+                            const unassignedRegular = unassigned.filter((p) => !p.isGuest);
+                            const unassignedGuests  = unassigned.filter((p) => p.isGuest);
+
+                            function UnassignedRow({ p }: { p: PlayerInMatchDto }) {
+                                return (
+                                    <li key={p.playerId} className="flex items-center gap-2.5 px-4 py-2.5">
+                                        <span className={cls("w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0", p.isGuest ? "bg-amber-100 text-amber-600" : "bg-amber-100 text-amber-700")}>
+                                            {p.playerName.charAt(0).toUpperCase()}
+                                        </span>
+                                        <span className="truncate flex-1 text-sm font-medium text-slate-900">
+                                            {p.playerName}
+                                            {p.isGoalkeeper && <span title="Goleiro" className="ml-1 text-xs">🧤</span>}
+                                        </span>
+                                        <button
+                                            onClick={() => onAssignUnassigned(p.playerId, "A")}
+                                            title={`Atribuir para ${aName}`}
+                                            className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                            style={{ color: hasAColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8", borderColor: hasAColor && !isWhiteHex(aHex) ? aHex : "#3b82f6" }}
+                                        >
+                                            → A
+                                        </button>
+                                        <button
+                                            onClick={() => onAssignUnassigned(p.playerId, "B")}
+                                            title={`Atribuir para ${bName}`}
+                                            className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                            style={{ color: hasBColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8", borderColor: hasBColor && !isWhiteHex(bHex) ? bHex : "#3b82f6" }}
+                                        >
+                                            → B
+                                        </button>
+                                    </li>
+                                );
+                            }
+
+                            return (
+                                <>
+                                    {unassignedRegular.map((p) => <UnassignedRow key={p.playerId} p={p} />)}
+                                    {unassignedGuests.length > 0 && (
+                                        <>
+                                            <li className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 bg-amber-50/60 select-none">
+                                                Convidados
+                                            </li>
+                                            {unassignedGuests.map((p) => <UnassignedRow key={p.playerId} p={p} />)}
+                                        </>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </ul>
                 </div>
             )}

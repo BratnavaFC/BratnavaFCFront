@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Section } from "../components/Section";
 import { TeamColorApi } from "../api/endpoints";
@@ -26,6 +26,22 @@ export default function TeamColorsPage() {
     // seleção (carrossel)
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
+    // non-admin only sees active colors
+    const displayItems = useMemo(
+        () => canManage ? items : items.filter((i: any) => i.isActive),
+        [items, canManage]
+    );
+
+    // if selectedId falls outside displayItems (e.g. inactive selected before auth loaded), reset it
+    const prevDisplayRef = useRef<Item[]>([]);
+    useEffect(() => {
+        if (prevDisplayRef.current === displayItems) return;
+        prevDisplayRef.current = displayItems;
+        if (!displayItems.length) { setSelectedId(null); return; }
+        if (selectedId && displayItems.some((i: any) => i.id === selectedId)) return;
+        setSelectedId(displayItems[0].id);
+    }, [displayItems, selectedId]);
+
     const selectedColor = useMemo(
         () => (selectedId ? items.find((i) => i.id === selectedId) : null),
         [items, selectedId]
@@ -40,8 +56,7 @@ export default function TeamColorsPage() {
             setItems(data);
 
             if (!selectedId && data.length) {
-                const activeIdx = data.findIndex((x: any) => x.isActive);
-                setSelectedId(data[activeIdx >= 0 ? activeIdx : 0].id);
+                setSelectedId(data[0].id);
             }
         } catch (e) {
             toast.error(extractApiError(e, "Falha ao carregar uniformes."));
@@ -138,10 +153,7 @@ export default function TeamColorsPage() {
         if (!canManage) return;
         if (!groupId || !selectedColor) return;
         try {
-            const api: any = TeamColorApi as any;
-            if (!api.deactivate)
-                throw new Error("TeamColorApi.deactivate não existe. Crie o endpoint/método.");
-            await api.deactivate(groupId, selectedColor.id);
+            await TeamColorApi.deactivate(groupId, selectedColor.id);
             await load();
         } catch (e) {
             toast.error(extractApiError(e, "Falha ao inativar cor."));
@@ -181,7 +193,7 @@ export default function TeamColorsPage() {
 
                             <div className="mt-3">
                                 <TeamColorCarousel
-                                    items={items}
+                                    items={displayItems}
                                     selectedId={selectedId}
                                     onSelectedIdChange={setSelectedId}
                                     readOnly={!canManage}

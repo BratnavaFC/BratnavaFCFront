@@ -281,7 +281,7 @@ export default function MatchesPage() {
         setLoading(true);
         try {
             // Load colors — critical
-            const colorsRes = await TeamColorApi.list(groupId).catch(() => ({ data: [] }));
+            const colorsRes = await TeamColorApi.list(groupId, true).catch(() => ({ data: [] }));
             const colors = (colorsRes.data ?? []) as TeamColorDto[];
             setTeamColors(colors);
 
@@ -690,6 +690,8 @@ export default function MatchesPage() {
                 TeamBMatchPlayerIds: teamBPlayerIds,
             } as any);
 
+            setTeamGenOptions(null);
+            setSelectedTeamGenIdx(0);
             await refreshCurrent();
         } catch (e) {
             toast.error(extractApiError(e, "Falha ao atribuir times."));

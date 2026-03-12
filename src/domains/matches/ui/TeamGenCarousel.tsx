@@ -93,8 +93,8 @@ export function TeamGenCarousel({
 
     function clearSel() { setSel1Id(null); setSel1Team(null); setSel2Id(null); }
 
-    const canMoveToA = !!sel1Id && sel1Team === "B" && !!onMoveToTeam;
-    const canMoveToB = !!sel1Id && sel1Team === "A" && !!onMoveToTeam;
+    const canMoveToA = !!sel1Id && sel1Team === "B" && !sel2Id && !!onMoveToTeam;
+    const canMoveToB = !!sel1Id && sel1Team === "A" && !sel2Id && !!onMoveToTeam;
     const canSwapNow = !!sel1Id && !!sel2Id && !!onSwapInOption;
     const aButtonColor = aHasColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8";
     const bButtonColor = bHasColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8";

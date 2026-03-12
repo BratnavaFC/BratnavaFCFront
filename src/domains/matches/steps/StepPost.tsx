@@ -312,7 +312,7 @@ export function StepPost({
                             </div>
                             <div className="space-y-1.5">
                                 {participants
-                                    .filter((p) => p.matchPlayerId !== voteVoterMpId && !votedMatchPlayerIds.has(p.matchPlayerId))
+                                    .filter((p) => p.matchPlayerId !== voteVoterMpId)
                                     .map((p) => {
                                         const isSelected = voteVotedMpId === p.matchPlayerId;
                                         return (
