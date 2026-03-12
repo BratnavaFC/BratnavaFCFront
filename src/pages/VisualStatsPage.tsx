@@ -36,6 +36,9 @@ type PlayerVisualStatsItem = {
     losses: number;
     winRate: number;
     mvps: number;
+    goals: number;
+    assists: number;
+    ownGoals: number;
     synergies: PlayerSynergyItem[];
 };
 
@@ -215,7 +218,7 @@ function buildGlobalSynergy(players: PlayerVisualStatsItem[]): GlobalSynergyRow[
 
 /* ===================== Page ===================== */
 
-type SortKey = "winrate" | "games" | "mvps" | "name";
+type SortKey = "winrate" | "games" | "mvps" | "goals" | "assists" | "owngoals" | "name";
 type MainTab = "rankings" | "players";
 
 export default function VisualStatsPage() {
@@ -281,9 +284,12 @@ export default function VisualStatsPage() {
         const q = search.trim().toLowerCase();
         let list = [...players];
         if (q) list = list.filter((p) => p.name.toLowerCase().includes(q));
-        if (sortKey === "winrate") list.sort((a, b) => normalizeWR(b.winRate) - normalizeWR(a.winRate));
-        else if (sortKey === "games") list.sort((a, b) => (b.gamesPlayed || 0) - (a.gamesPlayed || 0));
-        else if (sortKey === "mvps") list.sort((a, b) => (b.mvps || 0) - (a.mvps || 0));
+        if (sortKey === "winrate")   list.sort((a, b) => normalizeWR(b.winRate) - normalizeWR(a.winRate));
+        else if (sortKey === "games")    list.sort((a, b) => (b.gamesPlayed || 0) - (a.gamesPlayed || 0));
+        else if (sortKey === "mvps")     list.sort((a, b) => (b.mvps || 0) - (a.mvps || 0));
+        else if (sortKey === "goals")    list.sort((a, b) => (b.goals || 0) - (a.goals || 0));
+        else if (sortKey === "assists")  list.sort((a, b) => (b.assists || 0) - (a.assists || 0));
+        else if (sortKey === "owngoals") list.sort((a, b) => (b.ownGoals || 0) - (a.ownGoals || 0));
         else list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
         return list;
     }, [players, search, sortKey]);
@@ -385,10 +391,13 @@ export default function VisualStatsPage() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                                 {(
                                     [
-                                        { k: "winrate", label: "Win Rate" },
-                                        { k: "games", label: "Jogos" },
-                                        { k: "mvps", label: "MVPs" },
-                                        { k: "name", label: "Nome" },
+                                        { k: "winrate",  label: "Win Rate" },
+                                        { k: "games",    label: "Jogos" },
+                                        { k: "mvps",     label: "MVPs" },
+                                        { k: "goals",    label: "⚽ Gols" },
+                                        { k: "assists",  label: "🅰️ Assists" },
+                                        { k: "owngoals", label: "🚩 GC" },
+                                        { k: "name",     label: "Nome" },
                                     ] as { k: SortKey; label: string }[]
                                 ).map(({ k, label }) => (
                                     <SortChip
@@ -414,12 +423,15 @@ export default function VisualStatsPage() {
                                         <th className="px-4 py-2.5 text-center w-24">V / E / D</th>
                                         <th className="px-4 py-2.5 text-left min-w-[130px]">Win Rate</th>
                                         <th className="px-4 py-2.5 text-right w-14">MVP</th>
+                                        <th className="px-4 py-2.5 text-right w-12" title="Gols">⚽</th>
+                                        <th className="px-4 py-2.5 text-right w-12" title="Assistências">🅰️</th>
+                                        <th className="px-4 py-2.5 text-right w-12" title="Gols contra">🚩</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {sorted.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
+                                            <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-400">
                                                 Nenhum jogador encontrado.
                                             </td>
                                         </tr>
@@ -508,6 +520,27 @@ export default function VisualStatsPage() {
                                                         ) : (
                                                             <span className="text-slate-300 text-xs">—</span>
                                                         )}
+                                                    </td>
+
+                                                    {/* Goals */}
+                                                    <td className="px-4 py-2.5 text-right tabular-nums text-xs">
+                                                        {(p.goals || 0) > 0
+                                                            ? <span className="font-semibold text-slate-700">{p.goals}</span>
+                                                            : <span className="text-slate-300">—</span>}
+                                                    </td>
+
+                                                    {/* Assists */}
+                                                    <td className="px-4 py-2.5 text-right tabular-nums text-xs">
+                                                        {(p.assists || 0) > 0
+                                                            ? <span className="font-semibold text-slate-700">{p.assists}</span>
+                                                            : <span className="text-slate-300">—</span>}
+                                                    </td>
+
+                                                    {/* Own goals */}
+                                                    <td className="px-4 py-2.5 text-right tabular-nums text-xs">
+                                                        {(p.ownGoals || 0) > 0
+                                                            ? <span className="font-semibold text-red-500">{p.ownGoals}</span>
+                                                            : <span className="text-slate-300">—</span>}
                                                     </td>
                                                 </tr>
                                             );
@@ -598,9 +631,12 @@ export default function VisualStatsPage() {
                             <div className="flex items-center gap-1 flex-wrap">
                                 {(
                                     [
-                                        { k: "winrate", label: "WR" },
-                                        { k: "games", label: "Jogos" },
-                                        { k: "name", label: "Nome" },
+                                        { k: "winrate",  label: "WR" },
+                                        { k: "games",    label: "Jogos" },
+                                        { k: "goals",    label: "⚽" },
+                                        { k: "assists",  label: "🅰️" },
+                                        { k: "owngoals", label: "🚩" },
+                                        { k: "name",     label: "Nome" },
                                     ] as { k: SortKey; label: string }[]
                                 ).map(({ k, label }) => (
                                     <SortChip key={k} active={sortKey === k} dir="desc" onClick={() => setSortKey(k)}>
@@ -726,6 +762,21 @@ export default function VisualStatsPage() {
                                                     {selectedPlayer.mvps > 0 && (
                                                         <span className="inline-flex items-center gap-1 text-amber-500 font-semibold">
                                                             <Trophy size={11} /> {selectedPlayer.mvps} MVP{selectedPlayer.mvps > 1 ? "s" : ""}
+                                                        </span>
+                                                    )}
+                                                    {(selectedPlayer.goals || 0) > 0 && (
+                                                        <span className="tabular-nums text-slate-600">
+                                                            ⚽ {selectedPlayer.goals}
+                                                        </span>
+                                                    )}
+                                                    {(selectedPlayer.assists || 0) > 0 && (
+                                                        <span className="tabular-nums text-slate-600">
+                                                            🅰️ {selectedPlayer.assists}
+                                                        </span>
+                                                    )}
+                                                    {(selectedPlayer.ownGoals || 0) > 0 && (
+                                                        <span className="tabular-nums text-red-500">
+                                                            🚩 {selectedPlayer.ownGoals} GC
                                                         </span>
                                                     )}
                                                 </div>
