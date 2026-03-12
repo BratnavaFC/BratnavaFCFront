@@ -3,6 +3,24 @@ import { ChevronUp, ChevronDown, X } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto } from "../matchTypes";
 import { cls } from "../matchUtils";
 
+function normalizeHex(v: string): string {
+    const s = (v ?? "").trim();
+    if (!s) return "";
+    return s.startsWith("#") ? s : `#${s}`;
+}
+
+function isWhiteOrEmpty(hex: string): boolean {
+    if (!hex) return true;
+    const h = hex.replace("#", "").toLowerCase();
+    return h === "ffffff" || h === "fff";
+}
+
+/** Returns a usable text/border color for a team (falls back to a neutral slate) */
+function teamColor(hex: string, fallback = "#475569"): string {
+    const n = normalizeHex(hex);
+    return n && !isWhiteOrEmpty(n) ? n : fallback;
+}
+
 function getCurrentHHmm(): string {
     const now = new Date();
     const h = String(now.getHours()).padStart(2, "0");
@@ -28,6 +46,10 @@ export function GoalTracker({
     removingGoal,
     onRemoveGoal,
     canRemove,
+    teamAName,
+    teamAHex,
+    teamBName,
+    teamBHex,
 }: {
     participants: PlayerInMatchDto[];
     goals: GoalDto[];
@@ -36,7 +58,15 @@ export function GoalTracker({
     removingGoal: Record<string, boolean>;
     onRemoveGoal: (goalId: string) => void;
     canRemove: boolean;
+    teamAName?: string;
+    teamAHex?: string;
+    teamBName?: string;
+    teamBHex?: string;
 }) {
+    const aName  = teamAName  || "Time A";
+    const bName  = teamBName  || "Time B";
+    const aColor = teamColor(teamAHex ?? "", "#1d4ed8");
+    const bColor = teamColor(teamBHex ?? "", "#dc2626");
     const [scorerId, setScorerId] = useState<string>("");
     const [assistId, setAssistId] = useState<string | null>(null);
     const [isOwnGoal, setIsOwnGoal] = useState(false);
@@ -79,7 +109,7 @@ export function GoalTracker({
         // tempo não é limpo — fica para o próximo gol
     }
 
-    function renderPlayerCard(p: PlayerInMatchDto, accentClass: string) {
+    function renderPlayerCard(p: PlayerInMatchDto, tColor: string) {
         const isSelected = p.playerId === scorerId;
         return (
             <button
@@ -88,8 +118,9 @@ export function GoalTracker({
                     "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                     isSelected
                         ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
-                        : accentClass
+                        : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
                 )}
+                style={isSelected ? {} : { borderLeftColor: tColor, borderLeftWidth: "3px" }}
                 onClick={() => (isSelected ? clearScorer() : selectScorer(p.playerId))}
             >
                 {p.isGoalkeeper ? "🧤 " : ""}
@@ -189,38 +220,34 @@ export function GoalTracker({
                 <div className="grid grid-cols-2 gap-3">
                     {/* Time A */}
                     <div>
-                        <div className="text-xs font-semibold text-blue-600 mb-2 uppercase tracking-widest">
-                            Time A
+                        <div
+                            className="text-xs font-semibold mb-2 uppercase tracking-widest"
+                            style={{ color: aColor }}
+                        >
+                            {aName}
                         </div>
                         <div className="space-y-1.5">
                             {teamA.length === 0 ? (
                                 <div className="text-xs text-slate-400">—</div>
                             ) : (
-                                teamA.map((p) =>
-                                    renderPlayerCard(
-                                        p,
-                                        "border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 text-slate-800"
-                                    )
-                                )
+                                teamA.map((p) => renderPlayerCard(p, aColor))
                             )}
                         </div>
                     </div>
 
                     {/* Time B */}
                     <div>
-                        <div className="text-xs font-semibold text-red-600 mb-2 uppercase tracking-widest">
-                            Time B
+                        <div
+                            className="text-xs font-semibold mb-2 uppercase tracking-widest"
+                            style={{ color: bColor }}
+                        >
+                            {bName}
                         </div>
                         <div className="space-y-1.5">
                             {teamB.length === 0 ? (
                                 <div className="text-xs text-slate-400">—</div>
                             ) : (
-                                teamB.map((p) =>
-                                    renderPlayerCard(
-                                        p,
-                                        "border-slate-200 bg-slate-50 hover:bg-red-50 hover:border-red-200 text-slate-800"
-                                    )
-                                )
+                                teamB.map((p) => renderPlayerCard(p, bColor))
                             )}
                         </div>
                     </div>
@@ -314,16 +341,13 @@ export function GoalTracker({
                                 (g) => effectiveTeam(g) === teamNum
                             );
                             if (teamGoals.length === 0) return null;
-                            const label = teamNum === 1 ? "Time A" : "Time B";
-                            const labelClass =
-                                teamNum === 1 ? "text-blue-600" : "text-red-600";
+                            const label = teamNum === 1 ? aName : bName;
+                            const color = teamNum === 1 ? aColor : bColor;
                             return (
                                 <div key={teamNum}>
                                     <div
-                                        className={cls(
-                                            "text-xs font-semibold mb-1.5 uppercase tracking-widest",
-                                            labelClass
-                                        )}
+                                        className="text-xs font-semibold mb-1.5 uppercase tracking-widest"
+                                        style={{ color }}
                                     >
                                         {label}
                                     </div>

@@ -37,6 +37,12 @@ export function StepPost({
     goals,
     removingGoal,
     onRemoveGoal,
+
+    // team identity
+    teamAName,
+    teamAHex,
+    teamBName,
+    teamBHex,
 }: {
     admin: boolean;
     currentMvpName: string;
@@ -68,6 +74,11 @@ export function StepPost({
     goals: GoalDto[];
     removingGoal: Record<string, boolean>;
     onRemoveGoal: (goalId: string) => void;
+
+    teamAName?: string;
+    teamAHex?: string;
+    teamBName?: string;
+    teamBHex?: string;
 }) {
     // ── Non-admin read-only view (with own vote) ────────────────────────────
     if (!admin) {
@@ -94,24 +105,12 @@ export function StepPost({
                     <span className="pill">{currentMvpName || "MVP —"}</span>
                 </div>
 
-                {/* Score + MVP overview */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
-                        <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                            Placar
-                        </div>
-                        <div className="text-4xl font-extrabold text-slate-900">{scoreText}</div>
+                {/* Score */}
+                <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                        Placar
                     </div>
-
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Trophy size={16} className="text-amber-500 shrink-0" />
-                            <div className="font-semibold text-slate-900 text-sm">MVP</div>
-                        </div>
-                        <div className="text-lg font-bold text-slate-900">
-                            {currentMvpName || "—"}
-                        </div>
-                    </div>
+                    <div className="text-4xl font-extrabold text-slate-900">{scoreText}</div>
                 </div>
 
                 {/* Voting section */}
@@ -140,23 +139,28 @@ export function StepPost({
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            <label className="block">
-                                <div className="label">Votar em</div>
-                                <select
-                                    className="input h-9 text-sm"
-                                    value={voteVotedMpId}
-                                    onChange={(e) => setVoteVotedMpId(e.target.value)}
-                                >
-                                    <option value="">Selecione...</option>
-                                    {participants
-                                        .filter((p) => p.matchPlayerId !== activeMatchPlayerId)
-                                        .map((p) => (
-                                            <option key={p.matchPlayerId} value={p.matchPlayerId}>
+                            <div className="space-y-1.5">
+                                {participants
+                                    .filter((p) => p.matchPlayerId !== activeMatchPlayerId)
+                                    .map((p) => {
+                                        const isSelected = voteVotedMpId === p.matchPlayerId;
+                                        return (
+                                            <button
+                                                key={p.matchPlayerId}
+                                                className={cls(
+                                                    "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                                    isSelected
+                                                        ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
+                                                        : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
+                                                )}
+                                                onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
+                                            >
+                                                {p.isGoalkeeper ? "🧤 " : ""}
                                                 {p.playerName}
-                                            </option>
-                                        ))}
-                                </select>
-                            </label>
+                                            </button>
+                                        );
+                                    })}
+                            </div>
 
                             <div className="flex justify-end">
                                 <button
@@ -184,6 +188,10 @@ export function StepPost({
                     removingGoal={removingGoal}
                     onRemoveGoal={onRemoveGoal}
                     canRemove={false}
+                    teamAName={teamAName}
+                    teamAHex={teamAHex}
+                    teamBName={teamBName}
+                    teamBHex={teamBHex}
                 />
             </div>
         );
@@ -260,45 +268,71 @@ export function StepPost({
                         </div>
                     ) : (
                     <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-                        <label className="block">
-                            <div className="label">
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                        {/* Quem vota */}
+                        <div>
+                            <div className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
                                 Quem vota
                                 {eligibleVoters.length < participants.length && (
-                                    <span className="ml-1 text-[10px] text-slate-400">
+                                    <span className="ml-1 text-[10px] text-slate-400 normal-case tracking-normal font-normal">
                                         ({participants.length - eligibleVoters.length} já votou)
                                     </span>
                                 )}
                             </div>
-                            <select
-                                className="input h-9 text-sm"
-                                value={voteVoterMpId}
-                                onChange={(e) => setVoteVoterMpId(e.target.value)}
-                            >
-                                <option value="">Selecione...</option>
-                                {eligibleVoters.map((p) => (
-                                    <option key={p.matchPlayerId} value={p.matchPlayerId}>
-                                        {p.playerName}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                            <div className="space-y-1.5">
+                                {eligibleVoters.map((p) => {
+                                    const isSelected = voteVoterMpId === p.matchPlayerId;
+                                    return (
+                                        <button
+                                            key={p.matchPlayerId}
+                                            className={cls(
+                                                "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                                isSelected
+                                                    ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
+                                                    : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
+                                            )}
+                                            onClick={() => {
+                                                const next = isSelected ? "" : p.matchPlayerId;
+                                                setVoteVoterMpId(next);
+                                                setVoteVotedMpId("");
+                                            }}
+                                        >
+                                            {p.isGoalkeeper ? "🧤 " : ""}
+                                            {p.playerName}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
-                        <label className="block md:col-span-2">
-                            <div className="label">Votado</div>
-                            <select
-                                className="input h-9 text-sm"
-                                value={voteVotedMpId}
-                                onChange={(e) => setVoteVotedMpId(e.target.value)}
-                            >
-                                <option value="">Selecione...</option>
-                                {participants.map((p) => (
-                                    <option key={p.matchPlayerId} value={p.matchPlayerId}>
-                                        {p.playerName}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        {/* Votado */}
+                        <div>
+                            <div className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
+                                Votado
+                            </div>
+                            <div className="space-y-1.5">
+                                {participants
+                                    .filter((p) => p.matchPlayerId !== voteVoterMpId && !votedMatchPlayerIds.has(p.matchPlayerId))
+                                    .map((p) => {
+                                        const isSelected = voteVotedMpId === p.matchPlayerId;
+                                        return (
+                                            <button
+                                                key={p.matchPlayerId}
+                                                className={cls(
+                                                    "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                                    isSelected
+                                                        ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
+                                                        : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
+                                                )}
+                                                onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
+                                            >
+                                                {p.isGoalkeeper ? "🧤 " : ""}
+                                                {p.playerName}
+                                            </button>
+                                        );
+                                    })}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -427,6 +461,10 @@ export function StepPost({
                         removingGoal={removingGoal}
                         onRemoveGoal={onRemoveGoal}
                         canRemove={true}
+                        teamAName={teamAName}
+                        teamAHex={teamAHex}
+                        teamBName={teamBName}
+                        teamBHex={teamBHex}
                     />
                 </div>
             </div>

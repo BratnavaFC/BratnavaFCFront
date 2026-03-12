@@ -12,6 +12,10 @@ export function StepPlaying({
     onAddGoal,
     removingGoal,
     onRemoveGoal,
+    teamAName,
+    teamAHex,
+    teamBName,
+    teamBHex,
 }: {
     admin: boolean;
     onRefresh: () => void;
@@ -22,6 +26,10 @@ export function StepPlaying({
     onAddGoal: (scorerPlayerId: string, assistPlayerId: string | null, time: string) => Promise<void>;
     removingGoal: Record<string, boolean>;
     onRemoveGoal: (goalId: string) => void;
+    teamAName?: string;
+    teamAHex?: string;
+    teamBName?: string;
+    teamBHex?: string;
 }) {
     return (
         <div className="space-y-4">
@@ -82,6 +90,10 @@ export function StepPlaying({
                 removingGoal={removingGoal}
                 onRemoveGoal={onRemoveGoal}
                 canRemove={admin}
+                teamAName={teamAName}
+                teamAHex={teamAHex}
+                teamBName={teamBName}
+                teamBHex={teamBHex}
             />
         </div>
     );

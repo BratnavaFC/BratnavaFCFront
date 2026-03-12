@@ -82,9 +82,6 @@ export default function MatchesPage() {
 
     // assign/swap
     const [assigningTeams, setAssigningTeams] = useState(false);
-    const [swapping, setSwapping] = useState(false);
-    const [swapA, setSwapA] = useState<string>("");
-    const [swapB, setSwapB] = useState<string>("");
 
     // post-game
     const [settingScore, setSettingScore] = useState(false);
@@ -701,20 +698,134 @@ export default function MatchesPage() {
         }
     }
 
-    async function swapPlayers() {
+    async function swapPlayers(playerAId: string, playerBId: string) {
         if (!admin || !groupId || !currentMatchId) return;
-        if (!swapA || !swapB) return;
-
-        setSwapping(true);
         try {
-            await MatchesApi.swap(groupId, currentMatchId, { playerAId: swapA, playerBId: swapB } as any);
-            setSwapA("");
-            setSwapB("");
+            await MatchesApi.swap(groupId, currentMatchId, { playerAId, playerBId } as any);
             await refreshCurrent();
         } catch (e) {
             toast.error(extractApiError(e, "Falha ao trocar jogadores."));
+        }
+    }
+
+    /** Move a single assigned player from their current team to the other team. */
+    async function movePlayerToOtherTeam(playerId: string, fromTeam: "A" | "B") {
+        if (!admin || !groupId || !currentMatchId) return;
+        const currentA = sortedTeamAPlayers.map((p: any) => p.playerId as string);
+        const currentB = sortedTeamBPlayers.map((p: any) => p.playerId as string);
+        const newA =
+            fromTeam === "A"
+                ? currentA.filter((id) => id !== playerId)
+                : [...currentA, playerId];
+        const newB =
+            fromTeam === "B"
+                ? currentB.filter((id) => id !== playerId)
+                : [...currentB, playerId];
+        setAssigningTeams(true);
+        try {
+            await MatchesApi.assignTeams(groupId, currentMatchId, {
+                TeamAMatchPlayerIds: newA,
+                TeamBMatchPlayerIds: newB,
+            } as any);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao mover jogador."));
         } finally {
-            setSwapping(false);
+            setAssigningTeams(false);
+        }
+    }
+
+    /** Move a player between unassigned/teamA/teamB within the generated carousel (local state only). */
+    function movePlayerInGeneratedOption(playerId: string, targetTeam: "A" | "B") {
+        if (!teamGenOptions) return;
+        const safeIdx = Math.max(0, Math.min(selectedTeamGenIdx, teamGenOptions.length - 1));
+        const opt = teamGenOptions[safeIdx];
+        if (!opt) return;
+
+        const all = [...(opt.unassigned ?? []), ...(opt.teamA ?? []), ...(opt.teamB ?? [])];
+        const player = all.find((p) => p.playerId === playerId);
+        if (!player) return;
+
+        const unassigned = (opt.unassigned ?? []).filter((p) => p.playerId !== playerId);
+        const baseA = (opt.teamA ?? []).filter((p) => p.playerId !== playerId);
+        const baseB = (opt.teamB ?? []).filter((p) => p.playerId !== playerId);
+        const newA = targetTeam === "A" ? [...baseA, player] : baseA;
+        const newB = targetTeam === "B" ? [...baseB, player] : baseB;
+
+        // Recalculate balance metrics
+        const newAWeight = newA.reduce((s, p) => s + p.weight, 0);
+        const newBWeight = newB.reduce((s, p) => s + p.weight, 0);
+        const total = newAWeight + newBWeight;
+        const balanceDiff = total > 0 ? Math.abs(newAWeight - newBWeight) / total : 0;
+
+        const updatedOpt: TeamOptionDto = {
+            ...opt,
+            unassigned,
+            teamA: newA,
+            teamB: newB,
+            teamAWeight: newAWeight,
+            teamBWeight: newBWeight,
+            balanceDiff,
+        };
+        setTeamGenOptions((prev) => prev?.map((o, i) => (i === safeIdx ? updatedOpt : o)) ?? prev);
+    }
+
+    /** Swap two players (one from each team) within the generated carousel (local state only). */
+    function swapInGeneratedOption(playerAId: string, playerBId: string) {
+        if (!teamGenOptions) return;
+        const safeIdx = Math.max(0, Math.min(selectedTeamGenIdx, teamGenOptions.length - 1));
+        const opt = teamGenOptions[safeIdx];
+        if (!opt) return;
+
+        const pA = [...opt.teamA, ...opt.teamB].find((p) => p.playerId === playerAId);
+        const pB = [...opt.teamA, ...opt.teamB].find((p) => p.playerId === playerBId);
+        if (!pA || !pB) return;
+
+        const aInTeamA = opt.teamA.some((p) => p.playerId === playerAId);
+        const bInTeamA = opt.teamA.some((p) => p.playerId === playerBId);
+        if (aInTeamA === bInTeamA) return; // same team — nothing to swap
+
+        const baseA = opt.teamA.filter((p) => p.playerId !== playerAId && p.playerId !== playerBId);
+        const baseB = opt.teamB.filter((p) => p.playerId !== playerAId && p.playerId !== playerBId);
+        // pA came from teamA → goes to teamB; pB came from teamB → goes to teamA  (and vice-versa)
+        const newA = aInTeamA ? [...baseA, pB] : [...baseA, pA];
+        const newB = aInTeamA ? [...baseB, pA] : [...baseB, pB];
+
+        const newAWeight = newA.reduce((s, p) => s + p.weight, 0);
+        const newBWeight = newB.reduce((s, p) => s + p.weight, 0);
+        const total = newAWeight + newBWeight;
+        const balanceDiff = total > 0 ? Math.abs(newAWeight - newBWeight) / total : 0;
+
+        const updatedOpt: TeamOptionDto = {
+            ...opt,
+            teamA: newA,
+            teamB: newB,
+            teamAWeight: newAWeight,
+            teamBWeight: newBWeight,
+            balanceDiff,
+        };
+        setTeamGenOptions((prev) => prev?.map((o, i) => (i === safeIdx ? updatedOpt : o)) ?? prev);
+    }
+
+    /** Assign an unassigned player (team===0) to a team after teams have already been set. */
+    async function assignUnassigned(playerId: string, team: "A" | "B") {
+        if (!admin || !groupId || !currentMatchId) return;
+        const currentA = sortedTeamAPlayers.map((p: any) => p.playerId as string);
+        const currentB = sortedTeamBPlayers.map((p: any) => p.playerId as string);
+        const newA = team === "A" ? [...currentA, playerId] : currentA;
+        const newB = team === "B" ? [...currentB, playerId] : currentB;
+
+        setAssigningTeams(true);
+        try {
+            await MatchesApi.assignTeams(groupId, currentMatchId, {
+                TeamAMatchPlayerIds: newA,
+                TeamBMatchPlayerIds: newB,
+            } as any);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao atribuir jogador."));
+        } finally {
+            setAssigningTeams(false);
         }
     }
 
@@ -836,15 +947,13 @@ export default function MatchesPage() {
             assigningTeams,
             onAssignTeamsFromGenerated: assignTeamsFromGenerated,
 
-            canSwap: admin && teamsAlreadyAssigned,
-            swapA,
-            setSwapA,
-            swapB,
-            setSwapB,
-            swapping,
-            onSwap: swapPlayers,
             sortedTeamAPlayers,
             sortedTeamBPlayers,
+            onSwapPlayers: swapPlayers,
+            onMovePlayerToOtherTeam: movePlayerToOtherTeam,
+            onMovePlayerToTeam: movePlayerInGeneratedOption,
+            onSwapInOption: swapInGeneratedOption,
+            onAssignUnassigned: assignUnassigned,
         };
     }, [
         admin,
@@ -872,9 +981,6 @@ export default function MatchesPage() {
         allPlayers,
         teamsAlreadyAssigned,
         assigningTeams,
-        swapA,
-        swapB,
-        swapping,
         sortedTeamAPlayers,
         sortedTeamBPlayers,
     ]);
@@ -908,6 +1014,11 @@ export default function MatchesPage() {
             onRemoveGoal: removeGoal,
             activeMatchPlayerId:
                 participants.find((p) => p.playerId === activePlayerId)?.matchPlayerId ?? "",
+
+            teamAName: (current as any)?.teamAColor?.name ?? "Time A",
+            teamAHex:  (current as any)?.teamAColor?.hexValue ?? "",
+            teamBName: (current as any)?.teamBColor?.name ?? "Time B",
+            teamBHex:  (current as any)?.teamBColor?.hexValue ?? "",
         };
     }, [
         (current as any)?.computedMvp?.playerName,
@@ -916,6 +1027,10 @@ export default function MatchesPage() {
         (current as any)?.teamAGoals,
         (current as any)?.teamBGoals,
         (current as any)?.goals,
+        (current as any)?.teamAColor?.name,
+        (current as any)?.teamAColor?.hexValue,
+        (current as any)?.teamBColor?.name,
+        (current as any)?.teamBColor?.hexValue,
         participants,
         scoreA,
         scoreB,
@@ -936,9 +1051,17 @@ export default function MatchesPage() {
         onAddGoal: addGoal,
         removingGoal,
         onRemoveGoal: removeGoal,
+        teamAName: (current as any)?.teamAColor?.name ?? "Time A",
+        teamAHex:  (current as any)?.teamAColor?.hexValue ?? "",
+        teamBName: (current as any)?.teamBColor?.name ?? "Time B",
+        teamBHex:  (current as any)?.teamBColor?.hexValue ?? "",
     }), [
         participants,
         (current as any)?.goals,
+        (current as any)?.teamAColor?.name,
+        (current as any)?.teamAColor?.hexValue,
+        (current as any)?.teamBColor?.name,
+        (current as any)?.teamBColor?.hexValue,
         addingGoal,
         removingGoal,
     ]);

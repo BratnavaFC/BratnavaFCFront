@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeftRight, Check, Play, RefreshCw, Shuffle } from "lucide-react";
 import type {
     ColorMode,
@@ -7,7 +7,7 @@ import type {
     TeamColorDto,
     TeamOptionDto,
 } from "../matchTypes";
-import { STRATEGIES } from "../matchTypes";
+import { InviteResponse, STRATEGIES } from "../matchTypes";
 import { cls } from "../matchUtils";
 import { TeamGenCarousel } from "../ui/TeamGenCarousel";
 
@@ -160,15 +160,13 @@ export function StepTeams({
     assigningTeams,
     onAssignTeamsFromGenerated,
 
-    canSwap,
-    swapA,
-    setSwapA,
-    swapB,
-    setSwapB,
-    swapping,
-    onSwap,
     sortedTeamAPlayers,
     sortedTeamBPlayers,
+    onSwapPlayers,
+    onMovePlayerToOtherTeam,
+    onMovePlayerToTeam,
+    onSwapInOption,
+    onAssignUnassigned,
 }: {
     admin: boolean;
     onRefresh: () => void;
@@ -211,15 +209,13 @@ export function StepTeams({
     assigningTeams: boolean;
     onAssignTeamsFromGenerated: () => void;
 
-    canSwap: boolean;
-    swapA: string;
-    setSwapA: (v: string) => void;
-    swapB: string;
-    setSwapB: (v: string) => void;
-    swapping: boolean;
-    onSwap: () => void;
     sortedTeamAPlayers: PlayerInMatchDto[];
     sortedTeamBPlayers: PlayerInMatchDto[];
+    onSwapPlayers: (id1: string, id2: string) => Promise<void>;
+    onMovePlayerToOtherTeam: (playerId: string, fromTeam: "A" | "B") => Promise<void>;
+    onMovePlayerToTeam: (playerId: string, team: "A" | "B") => void;
+    onSwapInOption: (playerAId: string, playerBId: string) => void;
+    onAssignUnassigned: (playerId: string, team: "A" | "B") => Promise<void>;
 }) {
     const byPlayerId = useMemo(() => {
         const m = new Map<string, PlayerInMatchDto>();
@@ -234,7 +230,9 @@ export function StepTeams({
             generatedOptions?.[
                 Math.max(0, Math.min(selectedTeamGenIdx, (generatedOptions?.length ?? 1) - 1))
             ];
-        return (opt?.teamA?.length ?? 0) > 0 && (opt?.teamB?.length ?? 0) > 0;
+        const aLen = opt?.teamA?.length ?? 0;
+        const bLen = opt?.teamB?.length ?? 0;
+        return aLen > 0 && bLen > 0 && Math.abs(aLen - bLen) <= 1;
     }, [admin, teamsAlreadyAssigned, generatedOptions, selectedTeamGenIdx]);
 
     const aHex = normalizeHex(currentTeamAColorHex);
@@ -244,41 +242,94 @@ export function StepTeams({
     const hasAColor = currentTeamAColorHex.trim().length > 0;
     const hasBColor = currentTeamBColorHex.trim().length > 0;
 
+    // ── Post-assignment player selection (move/swap) ──────────────────────────
+    const [sel1, setSel1] = useState<{ id: string; team: "A" | "B" } | null>(null);
+    const [sel2Id, setSel2Id] = useState<string | null>(null);
+    const [acting, setActing] = useState(false);
+
+    function handlePlayerClick(playerId: string, team: "A" | "B") {
+        if (sel1?.id === playerId) { setSel1(null); setSel2Id(null); return; }
+        if (sel2Id === playerId) { setSel2Id(null); return; }
+        if (!sel1) { setSel1({ id: playerId, team }); return; }
+        if (sel1.team === team) { setSel1({ id: playerId, team }); setSel2Id(null); return; }
+        setSel2Id(playerId);
+    }
+
+    async function doMove() {
+        if (!sel1) return;
+        setActing(true);
+        try { await onMovePlayerToOtherTeam(sel1.id, sel1.team); setSel1(null); setSel2Id(null); }
+        finally { setActing(false); }
+    }
+
+    async function doSwap() {
+        if (!sel1 || !sel2Id) return;
+        setActing(true);
+        try { await onSwapPlayers(sel1.id, sel2Id); setSel1(null); setSel2Id(null); }
+        finally { setActing(false); }
+    }
+
     // ── Assigned-teams panel (shared between admin and non-admin) ────────────
+    const canMoveToA = !!sel1 && sel1.team === "B";
+    const canMoveToB = !!sel1 && sel1.team === "A";
+    const canSwapPlayers = !!sel1 && !!sel2Id;
+
     const teamsSetPanel = teamsAlreadyAssigned ? (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            {/* Panel header with action buttons */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/60">
-                <div>
-                    <div className="text-sm font-semibold text-slate-900">Times definidos</div>
-                    {admin && canSwap && (
-                        <div className="text-xs text-slate-500 mt-0.5">
-                            Clique em 1 jogador de cada time para selecionar o swap
+            {/* Panel header */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+                <div className="text-sm font-semibold text-slate-900 flex-1">Times definidos</div>
+                {admin && (
+                    <>
+                        {/* 3-button action bar */}
+                        <div className="flex items-center rounded-lg overflow-hidden divide-x divide-white/30 shrink-0">
+                            <button
+                                disabled={acting || !canMoveToA}
+                                onClick={doMove}
+                                title={`→ ${aName}`}
+                                className={cls(
+                                    "w-8 h-8 flex items-center justify-center text-xs font-bold transition-all rounded-l-lg",
+                                    !acting && canMoveToA
+                                        ? "cursor-pointer hover:brightness-110 active:brightness-95 shadow-sm"
+                                        : "opacity-30 cursor-not-allowed"
+                                )}
+                                style={{ backgroundColor: hasAColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8", color: "white" }}
+                            >
+                                {"<<"}
+                            </button>
+                            <button
+                                disabled={acting || !canSwapPlayers}
+                                onClick={doSwap}
+                                title="Trocar jogadores"
+                                className={cls(
+                                    "w-8 h-8 flex items-center justify-center transition-all bg-emerald-500 text-white",
+                                    !acting && canSwapPlayers
+                                        ? "cursor-pointer hover:brightness-110 active:brightness-95 shadow-sm"
+                                        : "opacity-30 cursor-not-allowed"
+                                )}
+                            >
+                                <ArrowLeftRight size={13} />
+                            </button>
+                            <button
+                                disabled={acting || !canMoveToB}
+                                onClick={doMove}
+                                title={`→ ${bName}`}
+                                className={cls(
+                                    "w-8 h-8 flex items-center justify-center text-xs font-bold transition-all rounded-r-lg",
+                                    !acting && canMoveToB
+                                        ? "cursor-pointer hover:brightness-110 active:brightness-95 shadow-sm"
+                                        : "opacity-30 cursor-not-allowed"
+                                )}
+                                style={{ backgroundColor: hasBColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8", color: "white" }}
+                            >
+                                {">>"}
+                            </button>
                         </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-2">
-                    {admin && canSwap && (
-                        <button
-                            disabled={!swapA || !swapB || swapping}
-                            onClick={onSwap}
-                            className={cls(
-                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all",
-                                swapA && swapB
-                                    ? "bg-amber-500 border-amber-500 text-white hover:bg-amber-600 shadow-sm"
-                                    : "bg-white border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
-                            )}
-                        >
-                            <ArrowLeftRight size={12} />
-                            {swapping ? "Trocando..." : "Trocar"}
-                        </button>
-                    )}
-                    {admin && (
                         <button
                             disabled={!canStartNow}
                             onClick={onStart}
                             className={cls(
-                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                "shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
                                 canStartNow
                                     ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
                                     : "bg-slate-100 text-slate-400 cursor-not-allowed"
@@ -287,8 +338,8 @@ export function StepTeams({
                             <Play size={12} />
                             Iniciar
                         </button>
-                    )}
-                </div>
+                    </>
+                )}
             </div>
 
             {/* Two team columns — stack on mobile, side-by-side on sm+ */}
@@ -324,22 +375,24 @@ export function StepTeams({
                     </div>
                     <ul className="divide-y divide-slate-50">
                         {sortedTeamAPlayers.map((p) => {
-                            const isSelected = swapA === p.playerId;
-                            const clickable = admin && canSwap;
+                            const isSel1 = sel1?.id === p.playerId;
+                            const isSel2 = sel2Id === p.playerId;
+                            const isSelected = isSel1 || isSel2;
+                            const isOpposite = admin && sel1 && sel1.team !== "A" && !isSel1;
                             return (
                                 <li
                                     key={p.playerId}
-                                    onClick={
-                                        clickable
-                                            ? () => setSwapA(swapA === p.playerId ? "" : p.playerId)
-                                            : undefined
-                                    }
+                                    onClick={admin ? () => handlePlayerClick(p.playerId, "A") : undefined}
                                     className={cls(
                                         "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
-                                        clickable && "cursor-pointer",
-                                        isSelected
+                                        admin && "cursor-pointer",
+                                        isSel1
                                             ? "bg-amber-50 border-l-[3px] border-amber-400"
-                                            : clickable
+                                            : isSel2
+                                            ? "bg-emerald-50 border-l-[3px] border-emerald-400"
+                                            : isOpposite
+                                            ? "hover:bg-emerald-50"
+                                            : admin
                                             ? "hover:bg-slate-50"
                                             : ""
                                     )}
@@ -347,8 +400,10 @@ export function StepTeams({
                                     <span
                                         className={cls(
                                             "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                                            isSelected
+                                            isSel1
                                                 ? "bg-amber-400 text-white"
+                                                : isSel2
+                                                ? "bg-emerald-400 text-white"
                                                 : "bg-slate-100 text-slate-500"
                                         )}
                                     >
@@ -357,7 +412,7 @@ export function StepTeams({
                                     <span
                                         className={cls(
                                             "truncate flex-1 font-medium",
-                                            isSelected ? "text-amber-700" : "text-slate-900"
+                                            isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900"
                                         )}
                                     >
                                         {p.playerName}
@@ -367,6 +422,7 @@ export function StepTeams({
                                             🧤
                                         </span>
                                     )}
+                                    {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
                             );
                         })}
@@ -407,22 +463,23 @@ export function StepTeams({
                     </div>
                     <ul className="divide-y divide-slate-50">
                         {sortedTeamBPlayers.map((p) => {
-                            const isSelected = swapB === p.playerId;
-                            const clickable = admin && canSwap;
+                            const isSel1 = sel1?.id === p.playerId;
+                            const isSel2 = sel2Id === p.playerId;
+                            const isOpposite = admin && sel1 && sel1.team !== "B" && !isSel1;
                             return (
                                 <li
                                     key={p.playerId}
-                                    onClick={
-                                        clickable
-                                            ? () => setSwapB(swapB === p.playerId ? "" : p.playerId)
-                                            : undefined
-                                    }
+                                    onClick={admin ? () => handlePlayerClick(p.playerId, "B") : undefined}
                                     className={cls(
                                         "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
-                                        clickable && "cursor-pointer",
-                                        isSelected
+                                        admin && "cursor-pointer",
+                                        isSel1
                                             ? "bg-amber-50 border-l-[3px] border-amber-400"
-                                            : clickable
+                                            : isSel2
+                                            ? "bg-emerald-50 border-l-[3px] border-emerald-400"
+                                            : isOpposite
+                                            ? "hover:bg-emerald-50"
+                                            : admin
                                             ? "hover:bg-slate-50"
                                             : ""
                                     )}
@@ -430,8 +487,10 @@ export function StepTeams({
                                     <span
                                         className={cls(
                                             "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                                            isSelected
+                                            isSel1
                                                 ? "bg-amber-400 text-white"
+                                                : isSel2
+                                                ? "bg-emerald-400 text-white"
                                                 : "bg-slate-100 text-slate-500"
                                         )}
                                     >
@@ -440,7 +499,7 @@ export function StepTeams({
                                     <span
                                         className={cls(
                                             "truncate flex-1 font-medium",
-                                            isSelected ? "text-amber-700" : "text-slate-900"
+                                            isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900"
                                         )}
                                     >
                                         {p.playerName}
@@ -450,6 +509,7 @@ export function StepTeams({
                                             🧤
                                         </span>
                                     )}
+                                    {(isSel1 || isSel2) && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
                             );
                         })}
@@ -459,6 +519,67 @@ export function StepTeams({
                     </ul>
                 </div>
             </div>
+
+            {/* ── Unassigned players (e.g. goalkeepers excluded, or manual sort leftovers) ── */}
+            {admin && allPlayers.some((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted) && (
+                <div className="border-t border-amber-100 bg-amber-50/60">
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                        <div>
+                            <div className="text-sm font-semibold text-amber-800">Não atribuídos</div>
+                            <div className="text-xs text-amber-600 mt-0.5">
+                                Clique em um time para atribuir o jogador
+                            </div>
+                        </div>
+                        <span className="text-xs text-amber-600">
+                            {allPlayers.filter((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted).length}j
+                        </span>
+                    </div>
+                    <ul className="divide-y divide-amber-100/60">
+                        {allPlayers
+                            .filter((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted)
+                            .map((p) => (
+                                <li
+                                    key={p.playerId}
+                                    className="flex items-center gap-2.5 px-4 py-2.5"
+                                >
+                                    <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                        {p.playerName.charAt(0).toUpperCase()}
+                                    </span>
+                                    <span className="truncate flex-1 text-sm font-medium text-slate-900">
+                                        {p.playerName}
+                                        {p.isGoalkeeper && (
+                                            <span title="Goleiro" className="ml-1 text-xs">
+                                                🧤
+                                            </span>
+                                        )}
+                                    </span>
+                                    <button
+                                        onClick={() => onAssignUnassigned(p.playerId, "A")}
+                                        title={`Atribuir para ${aName}`}
+                                        className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                        style={{
+                                            color: hasAColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8",
+                                            borderColor: hasAColor && !isWhiteHex(aHex) ? aHex : "#3b82f6",
+                                        }}
+                                    >
+                                        → A
+                                    </button>
+                                    <button
+                                        onClick={() => onAssignUnassigned(p.playerId, "B")}
+                                        title={`Atribuir para ${bName}`}
+                                        className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                        style={{
+                                            color: hasBColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8",
+                                            borderColor: hasBColor && !isWhiteHex(bHex) ? bHex : "#3b82f6",
+                                        }}
+                                    >
+                                        → B
+                                    </button>
+                                </li>
+                            ))}
+                    </ul>
+                </div>
+            )}
         </div>
     ) : null;
 
@@ -732,6 +853,8 @@ export function StepTeams({
                     teamAName={currentTeamAColorName || "Time A"}
                     teamBHex={currentTeamBColorHex}
                     teamBName={currentTeamBColorName || "Time B"}
+                    onMoveToTeam={admin ? onMovePlayerToTeam : undefined}
+                    onSwapInOption={admin ? onSwapInOption : undefined}
                 />
             ) : (
                 <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
