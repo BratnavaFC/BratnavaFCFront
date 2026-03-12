@@ -202,28 +202,19 @@ export default function DashboardPage() {
     setRecentLoading(true);
     setRecentMatches([]);
     try {
-      const histRes = await MatchesApi.history(groupId, 20);
+      // Backend já filtra por jogador e retorna só 3 partidas finalizadas
+      const histRes = await MatchesApi.history(groupId, 3, selectedPlayerId);
       const items: any[] = Array.isArray(histRes.data) ? histRes.data : [];
-      const sorted = [...items].sort((a, b) =>
-        new Date(b.playedAt ?? 0).getTime() - new Date(a.playedAt ?? 0).getTime()
-      );
-      const toCheck = sorted.slice(0, 6);
 
       const settled = await Promise.allSettled(
-        toCheck.map(m => MatchesApi.details(groupId, m.id ?? m.matchId))
+        items.map(m => MatchesApi.details(groupId, m.id ?? m.matchId))
       );
 
-      const found: MatchDetails[] = [];
-      for (const r of settled) {
-        if (r.status !== 'fulfilled') continue;
-        const d: MatchDetails = r.value.data;
-        if (!d) continue;
-        const inA = d.teamAPlayers?.some(p => p.playerId === selectedPlayerId);
-        const inB = d.teamBPlayers?.some(p => p.playerId === selectedPlayerId);
-        if (!inA && !inB) continue;
-        found.push(d);
-        if (found.length >= 3) break;
-      }
+      const found: MatchDetails[] = settled
+        .filter(r => r.status === 'fulfilled')
+        .map(r => (r as PromiseFulfilledResult<any>).value.data)
+        .filter(Boolean);
+
       setRecentMatches(found);
     } catch (e) {
       toast.error(extractApiError(e, 'Falha ao carregar histórico.'));
