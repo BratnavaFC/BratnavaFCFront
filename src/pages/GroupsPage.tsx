@@ -758,7 +758,6 @@ export default function GroupsPage() {
                         <Loader2 size={16} className="animate-spin text-slate-400" />
                     ) : group ? (
                         <div className="flex items-center gap-2">
-                            <span className="pill">{activePlayers.length} jogadores</span>
                             {(isAdminOfGroup || isGod) && (
                                 <>
                                     <button
@@ -805,6 +804,10 @@ export default function GroupsPage() {
                         {activePlayers.length === 0 ? (
                             <div className="muted">Nenhum jogador ativo.</div>
                         ) : (
+                            <div className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 pt-1">
+                                Mensalistas ({activePlayers.length})
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                                 {sortedPlayers.map((p) => {
                                     const isMe    = p.id === activePlayerId;
@@ -866,6 +869,7 @@ export default function GroupsPage() {
                                     );
                                 })}
                             </div>
+                            </div>
                         )}
 
                         {/* ── Convidados ── */}
@@ -880,7 +884,7 @@ export default function GroupsPage() {
                                         return (
                                             <div
                                                 key={p.id}
-                                                className="relative rounded-lg border border-amber-200 px-3 py-2 bg-amber-50/40 flex flex-col gap-0.5"
+                                                className="relative rounded-lg border border-slate-200 px-3 py-2 bg-white flex flex-col gap-0.5"
                                             >
                                                 {/* name + edit row */}
                                                 <div className="flex items-center justify-between gap-1 min-w-0">
@@ -901,13 +905,6 @@ export default function GroupsPage() {
                                                             </button>
                                                         )}
                                                     </div>
-                                                </div>
-
-                                                {/* convidado badge row */}
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
-                                                        Convidado
-                                                    </span>
                                                 </div>
 
                                                 {/* star rating — admin only */}

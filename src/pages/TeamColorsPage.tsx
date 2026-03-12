@@ -166,7 +166,7 @@ export default function TeamColorsPage() {
                 title="Uniformes"
                 right={
                     <span className="pill">
-                        {loading ? "carregando..." : `${items.length} cores`}
+                        {loading ? "carregando..." : `${displayItems.length} cores`}
                     </span>
                 }
             >
@@ -175,10 +175,8 @@ export default function TeamColorsPage() {
                 ) : (
                     <div className="grid gap-4">
                         <div className="card p-4">
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="text-sm font-semibold text-slate-800">Cores</div>
-
-                                {!isMobile ? (
+                            {!isMobile && (
+                                <div className="flex justify-end mb-3">
                                     <button
                                         className="btn"
                                         onClick={openSelectedPreview}
@@ -186,12 +184,10 @@ export default function TeamColorsPage() {
                                     >
                                         Ver selecionado
                                     </button>
-                                ) : (
-                                    <span className="pill">toque para visualizar</span>
-                                )}
-                            </div>
+                                </div>
+                            )}
 
-                            <div className="mt-3">
+                            <div>
                                 <TeamColorCarousel
                                     items={displayItems}
                                     selectedId={selectedId}

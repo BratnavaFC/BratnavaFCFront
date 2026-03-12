@@ -202,7 +202,7 @@ export default function DashboardPage() {
     setRecentLoading(true);
     setRecentMatches([]);
     try {
-      // Backend já filtra por jogador e retorna só 3 partidas finalizadas
+      // Backend filtra por jogador e retorna só as 3 últimas partidas finalizadas dele
       const histRes = await MatchesApi.history(groupId, 3, selectedPlayerId);
       const items: any[] = Array.isArray(histRes.data) ? histRes.data : [];
 

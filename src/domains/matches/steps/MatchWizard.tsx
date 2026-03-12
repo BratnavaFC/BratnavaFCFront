@@ -187,8 +187,7 @@ export function MatchWizard({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="font-semibold text-slate-900">Partida</div>
+            <div className="flex justify-end">
                 <span className="pill">
                     {loading ? "carregando..." : current ? "ativa" : "sem partida"}
                 </span>
