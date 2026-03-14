@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Loader2, ShieldOff, ShieldPlus, Search, Check, X, AlertTriangle } from 'lucide-react';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
-import { GroupSettingsApi } from '../api/endpoints';
+import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
 import { extractApiError } from '../lib/apiError';
 import { isGodMode } from '../auth/guards';
@@ -19,16 +20,242 @@ const DAY_OPTIONS = [
     { value: '6', label: 'Sábado' },
 ];
 
+// ─── Tipos locais ────────────────────────────────────────────────────────────
+
+type AdminUser = {
+    userId: string;
+    userName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+};
+
+type GroupDetailDto = {
+    id: string;
+    name: string;
+    createdByUserId?: string | null;
+    adminIds: string[];
+    adminUsers?: AdminUser[];
+};
+
+type UserResult = {
+    id: string;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+};
+
+function fullName(u: UserResult | AdminUser) {
+    return `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.userName || 'Admin';
+}
+
+function initials(u: UserResult | AdminUser) {
+    const f = u.firstName?.[0] ?? '';
+    const l = u.lastName?.[0] ?? '';
+    return (f + l).toUpperCase() || (u.userName?.[0] ?? '?').toUpperCase();
+}
+
+// ─── AddAdminModal ────────────────────────────────────────────────────────────
+
+function AddAdminModal({
+    open,
+    onClose,
+    groupId,
+    groupName,
+    existingAdminUserIds,
+    onAdded,
+}: {
+    open: boolean;
+    onClose: () => void;
+    groupId: string;
+    groupName: string;
+    existingAdminUserIds: Set<string>;
+    onAdded: () => void;
+}) {
+    const [query, setQuery]         = useState('');
+    const [results, setResults]     = useState<UserResult[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [added, setAdded]         = useState<Set<string>>(new Set());
+    const [adding, setAdding]       = useState<Record<string, boolean>>({});
+    const [addErr, setAddErr]       = useState<Record<string, string>>({});
+    const [searchErr, setSearchErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (open) {
+            setQuery('');
+            setResults([]);
+            setAdded(new Set());
+            setAdding({});
+            setAddErr({});
+            setSearchErr(null);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        const q = query.trim();
+        if (q.length < 2) { setResults([]); setSearchErr(null); return; }
+        const timer = setTimeout(async () => {
+            setSearching(true);
+            setSearchErr(null);
+            try {
+                const res = await UsersApi.list({ search: q, pageSize: 8 });
+                setResults(res.data?.items ?? []);
+            } catch {
+                setSearchErr('Erro ao buscar usuários.');
+                setResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    async function handleAdd(user: UserResult) {
+        setAdding((prev) => ({ ...prev, [user.id]: true }));
+        setAddErr((prev) => { const n = { ...prev }; delete n[user.id]; return n; });
+        try {
+            await GroupsApi.addAdmin(groupId, user.id);
+            setAdded((prev) => new Set(prev).add(user.id));
+            onAdded();
+        } catch (e) {
+            const msg = extractApiError(e, 'Erro ao adicionar admin.');
+            setAddErr((prev) => ({ ...prev, [user.id]: msg }));
+        } finally {
+            setAdding((prev) => { const n = { ...prev }; delete n[user.id]; return n; });
+        }
+    }
+
+    if (!open) return null;
+
+    const q = query.trim();
+    const showResults = q.length >= 2;
+
+    return (
+        <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border overflow-hidden flex flex-col max-h-[85vh]">
+
+                    {/* header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-violet-600 text-white flex items-center justify-center">
+                                <ShieldPlus size={17} />
+                            </div>
+                            <div>
+                                <div className="text-base font-semibold text-slate-900">Adicionar admin</div>
+                                <div className="text-xs text-slate-500 truncate max-w-[220px]">{groupName}</div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            aria-label="Fechar"
+                            type="button"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* search input */}
+                    <div className="px-5 pt-4 pb-3 shrink-0">
+                        <div className="relative">
+                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            <input
+                                className="input w-full pl-9 pr-9"
+                                placeholder="Buscar por nome ou username..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                autoFocus
+                            />
+                            {searching && (
+                                <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin pointer-events-none" />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* results */}
+                    <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2">
+                        {!showResults ? (
+                            <p className="text-sm text-slate-400 text-center py-6">
+                                {q.length === 1 ? 'Continue digitando...' : 'Digite para buscar usuários.'}
+                            </p>
+                        ) : searchErr ? (
+                            <p className="text-sm text-rose-500 text-center py-6">{searchErr}</p>
+                        ) : searching ? null : results.length === 0 ? (
+                            <p className="text-sm text-slate-400 text-center py-6">
+                                Nenhum usuário encontrado para "{query}".
+                            </p>
+                        ) : (
+                            results.map((u) => {
+                                const isAlreadyAdmin = existingAdminUserIds.has(u.id);
+                                const isAdded        = added.has(u.id);
+                                const isAdding       = !!adding[u.id];
+                                const err            = addErr[u.id];
+                                return (
+                                    <div key={u.id} className="space-y-1">
+                                        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                                            <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                                {initials(u)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-semibold text-slate-900 truncate">{fullName(u)}</div>
+                                                <div className="text-xs text-slate-400">@{u.userName}</div>
+                                            </div>
+                                            {isAlreadyAdmin ? (
+                                                <span className="text-xs font-medium text-slate-400 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 shrink-0">
+                                                    Já é admin
+                                                </span>
+                                            ) : isAdded ? (
+                                                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 shrink-0">
+                                                    <Check size={13} /> Adicionado
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary text-xs px-3 py-1.5 shrink-0 flex items-center gap-1.5"
+                                                    disabled={isAdding}
+                                                    onClick={() => handleAdd(u)}
+                                                >
+                                                    {isAdding
+                                                        ? <><Loader2 size={12} className="animate-spin" /> Adicionando...</>
+                                                        : <><ShieldPlus size={13} /> Admin</>
+                                                    }
+                                                </button>
+                                            )}
+                                        </div>
+                                        {err && <p className="text-xs text-rose-500 px-1">{err}</p>}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Tipos de confirmação ─────────────────────────────────────────────────────
+
+type ConfirmState = {
+    label: string;
+    onConfirm: () => Promise<void>;
+};
+
+// ─── GroupSettingsPage ────────────────────────────────────────────────────────
+
 export default function GroupSettingsPage() {
     const nav = useNavigate();
     const active = useAccountStore((s) => s.getActive());
     const groupId = active?.activeGroupId;
+    const currentUserId = active?.userId;
     const isGroupAdm = !!groupId && (active?.groupAdminIds?.includes(groupId) ?? false);
     const isGod = isGodMode();
 
     useEffect(() => {
         if (!isGroupAdm && !isGod) {
-            nav("/app", { replace: true });
+            nav('/app', { replace: true });
         }
     }, [isGroupAdm, isGod, nav]);
 
@@ -37,17 +264,27 @@ export default function GroupSettingsPage() {
     const [maxPlayers, setMaxPlayers] = useState(6);
 
     // ── match defaults ─────────────────────────────────────────────
-    const [defaultPlaceName, setDefaultPlaceName] = useState('');
-    const [defaultDayOfWeek, setDefaultDayOfWeek] = useState<string>(''); // '' = no default
-    const [defaultKickoffTime, setDefaultKickoffTime] = useState('');     // "HH:mm" for <input type="time">
+    const [defaultPlaceName, setDefaultPlaceName]     = useState('');
+    const [defaultDayOfWeek, setDefaultDayOfWeek]     = useState<string>('');
+    const [defaultKickoffTime, setDefaultKickoffTime] = useState('');
 
     // ── status ─────────────────────────────────────────────────────
     const [isPersisted, setIsPersisted] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+    const [loading, setLoading]         = useState(false);
+    const [saving, setSaving]           = useState(false);
+    const [msg, setMsg]                 = useState<{ text: string; ok: boolean } | null>(null);
 
-    // ── load ───────────────────────────────────────────────────────
+    // ── admins ─────────────────────────────────────────────────────
+    const [group, setGroup]             = useState<GroupDetailDto | null>(null);
+    const [loadingAdmins, setLoadingAdmins] = useState(false);
+    const [removingId, setRemovingId]   = useState<string | null>(null);
+    const [addAdminOpen, setAddAdminOpen] = useState(false);
+
+    // ── confirmação ────────────────────────────────────────────────
+    const [confirm, setConfirm]             = useState<ConfirmState | null>(null);
+    const [confirmLoading, setConfirmLoading] = useState(false);
+
+    // ── load settings ──────────────────────────────────────────────
     async function load() {
         if (!groupId) return;
         setLoading(true);
@@ -59,11 +296,9 @@ export default function GroupSettingsPage() {
                 setMinPlayers(gs.minPlayers ?? 5);
                 setMaxPlayers(gs.maxPlayers ?? 6);
                 setDefaultPlaceName(gs.defaultPlaceName ?? '');
-                // defaultDayOfWeek: backend sends int (0-6) or null
                 setDefaultDayOfWeek(
                     gs.defaultDayOfWeek != null ? String(gs.defaultDayOfWeek) : ''
                 );
-                // defaultKickoffTime: backend TimeSpan → "HH:mm:ss", strip seconds for <input type="time">
                 setDefaultKickoffTime(
                     gs.defaultKickoffTime ? gs.defaultKickoffTime.slice(0, 5) : ''
                 );
@@ -76,7 +311,52 @@ export default function GroupSettingsPage() {
         }
     }
 
-    // ── save ───────────────────────────────────────────────────────
+    // ── load group / admins ────────────────────────────────────────
+    async function loadGroup() {
+        if (!groupId) return;
+        setLoadingAdmins(true);
+        try {
+            const res = await GroupsApi.get(groupId);
+            const raw = res.data as GroupDetailDto;
+
+            // Se o backend já retornou adminUsers com dados, usa direto.
+            // Caso contrário, busca cada usuário em paralelo pelos IDs.
+            const hasNames =
+                raw.adminUsers &&
+                raw.adminUsers.length > 0 &&
+                raw.adminUsers.some((u) => u.firstName || u.lastName || u.userName);
+
+            if (hasNames) {
+                setGroup(raw);
+            } else {
+                const ids = raw.adminIds ?? [];
+                const fetched = await Promise.all(
+                    ids.map(async (id) => {
+                        try {
+                            const r = await UsersApi.get(id);
+                            const u = r.data as UserResult;
+                            return {
+                                userId: id,
+                                userName: u.userName ?? null,
+                                firstName: u.firstName ?? null,
+                                lastName: u.lastName ?? null,
+                            } satisfies AdminUser;
+                        } catch {
+                            // Se falhar, retorna objeto sem nome (será exibido como "Admin")
+                            return { userId: id } satisfies AdminUser;
+                        }
+                    })
+                );
+                setGroup({ ...raw, adminUsers: fetched });
+            }
+        } catch {
+            // silencioso — seção exibirá estado vazio
+        } finally {
+            setLoadingAdmins(false);
+        }
+    }
+
+    // ── save settings ──────────────────────────────────────────────
     async function save() {
         if (!groupId) return;
         setMsg(null);
@@ -87,7 +367,6 @@ export default function GroupSettingsPage() {
                 maxPlayers,
                 defaultPlaceName: defaultPlaceName.trim() || null,
                 defaultDayOfWeek: defaultDayOfWeek !== '' ? Number(defaultDayOfWeek) : null,
-                // "HH:mm" → "HH:mm:ss" so the backend can parse it as a TimeSpan
                 defaultKickoffTime: defaultKickoffTime ? `${defaultKickoffTime}:00` : null,
             } as any);
             setIsPersisted(true);
@@ -99,8 +378,40 @@ export default function GroupSettingsPage() {
         }
     }
 
+    // ── remove admin ───────────────────────────────────────────────
+    function handleRemoveAdmin(userId: string, displayName: string) {
+        if (!groupId) return;
+        setConfirm({
+            label: `Remover "${displayName}" como administrador desta patota?`,
+            onConfirm: async () => {
+                setRemovingId(userId);
+                try {
+                    await GroupsApi.removeAdmin(groupId, userId);
+                    toast.success(`${displayName} removido dos administradores.`);
+                    await loadGroup();
+                } catch (e) {
+                    toast.error(extractApiError(e, 'Erro ao remover administrador.'));
+                } finally {
+                    setRemovingId(null);
+                }
+            },
+        });
+    }
+
+    async function runConfirm() {
+        if (!confirm) return;
+        setConfirmLoading(true);
+        try {
+            await confirm.onConfirm();
+        } finally {
+            setConfirmLoading(false);
+            setConfirm(null);
+        }
+    }
+
     useEffect(() => {
         load();
+        loadGroup();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [groupId]);
 
@@ -114,8 +425,18 @@ export default function GroupSettingsPage() {
         );
     }
 
+    // createdByUserId pode não existir no payload atual — usamos fallback seguro
+    const createdByUserId = group?.createdByUserId ?? null;
+
+    // adminUsers é sempre populado por loadGroup (com dados buscados do backend)
+    const adminList: AdminUser[] = group?.adminUsers ?? [];
+
+    const existingAdminUserIds = new Set<string>(group?.adminIds ?? []);
+
     return (
         <div className="space-y-6">
+
+            {/* ── Configurações gerais ──────────────────────────── */}
             <Section title="Configurações do Grupo">
                 {loading ? (
                     <div className="muted">Carregando…</div>
@@ -219,6 +540,136 @@ export default function GroupSettingsPage() {
                     </div>
                 )}
             </Section>
+
+            {/* ── Administradores ──────────────────────────────── */}
+            <Section
+                title="Administradores"
+                right={
+                    <button
+                        type="button"
+                        className="btn btn-secondary flex items-center gap-1.5 text-sm"
+                        onClick={() => setAddAdminOpen(true)}
+                    >
+                        <ShieldPlus size={15} />
+                        <span className="hidden sm:inline">Adicionar admin</span>
+                    </button>
+                }
+            >
+                {loadingAdmins ? (
+                    <div className="muted flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin" /> Carregando…
+                    </div>
+                ) : adminList.length === 0 ? (
+                    <div className="muted">Nenhum administrador encontrado.</div>
+                ) : (
+                    <div className="space-y-2">
+                        {adminList.map((admin) => {
+                            const isCreator    = createdByUserId && admin.userId === createdByUserId;
+                            const isCurrentUser = admin.userId === currentUserId;
+                            const isRemoving   = removingId === admin.userId;
+                            const displayName  = fullName(admin);
+                            const canRemove    = !isCreator;
+
+                            return (
+                                <div
+                                    key={admin.userId}
+                                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                                >
+                                    {/* avatar */}
+                                    <div className="h-9 w-9 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                        {initials(admin)}
+                                    </div>
+
+                                    {/* info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5">
+                                            {displayName}
+                                            {isCurrentUser && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal">
+                                                    Você
+                                                </span>
+                                            )}
+                                        </div>
+                                        {admin.userName && (
+                                            <div className="text-xs text-slate-400">@{admin.userName}</div>
+                                        )}
+                                    </div>
+
+                                    {/* badge criador ou botão remover */}
+                                    {isCreator ? (
+                                        <span className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-medium shrink-0">
+                                            Criador
+                                        </span>
+                                    ) : canRemove ? (
+                                        <button
+                                            type="button"
+                                            title={`Remover ${displayName} dos admins`}
+                                            aria-label={`Remover ${displayName} dos admins`}
+                                            disabled={isRemoving}
+                                            onClick={() => handleRemoveAdmin(admin.userId, displayName)}
+                                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                        >
+                                            {isRemoving
+                                                ? <><Loader2 size={12} className="animate-spin" /> Removendo…</>
+                                                : <><ShieldOff size={13} /> Remover</>
+                                            }
+                                        </button>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                <p className="mt-3 text-xs text-slate-400">
+                    O criador do grupo não pode ser removido. Admins podem gerenciar jogadores, partidas e configurações.
+                </p>
+            </Section>
+
+            {/* ── Modal adicionar admin ─────────────────────────── */}
+            <AddAdminModal
+                open={addAdminOpen}
+                onClose={() => setAddAdminOpen(false)}
+                groupId={groupId}
+                groupName={group?.name ?? ''}
+                existingAdminUserIds={existingAdminUserIds}
+                onAdded={loadGroup}
+            />
+
+            {/* ── Modal de confirmação ──────────────────────────── */}
+            {confirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="card p-6 w-full max-w-sm space-y-4 shadow-xl">
+                        <div className="flex items-center gap-3 text-rose-600">
+                            <AlertTriangle size={22} />
+                            <span className="font-semibold text-base">Confirmar remoção</span>
+                        </div>
+                        <p className="text-sm text-slate-700">{confirm.label}</p>
+                        <p className="text-xs text-slate-400">Esta ação não pode ser desfeita.</p>
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                className="btn py-1.5 px-4 text-sm"
+                                onClick={() => setConfirm(null)}
+                                disabled={confirmLoading}
+                                type="button"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                className="flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                                onClick={runConfirm}
+                                disabled={confirmLoading}
+                                type="button"
+                            >
+                                {confirmLoading
+                                    ? <><Loader2 size={14} className="animate-spin" /> Removendo…</>
+                                    : <><ShieldOff size={14} /> Remover</>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
