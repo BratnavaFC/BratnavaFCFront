@@ -95,6 +95,13 @@ export type PlayerWeightDto = {
     weight: number;
 };
 
+export type TeamOptionExplanationDto = {
+    resumo: string;
+    analiseTimeA: string;
+    analiseTimeB: string;
+    conclusao: string;
+};
+
 export type TeamOptionDto = {
     teamA: PlayerWeightDto[];
     teamB: PlayerWeightDto[];
@@ -102,9 +109,9 @@ export type TeamOptionDto = {
     teamAWeight: number;
     teamBWeight: number;
     balanceDiff: number;
-    goalkeeperDiff: number;
     synergyTotal: number;
     score: number;
+    explanation?: TeamOptionExplanationDto | null;
 };
 
 export type TeamGenPlayerDto = {

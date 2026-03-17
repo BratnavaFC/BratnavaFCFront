@@ -71,7 +71,6 @@ export default function MatchesPage() {
     const [strategyType, setStrategyType] = useState<StrategyId>(3);
     const [includeGoalkeepers, setIncludeGoalkeepers] = useState(true);
     const [playersPerTeam, setPlayersPerTeam] = useState(6);
-
     // colors
     const [colorMode, setColorMode] = useState<ColorMode>("manual");
     const [teamAColorId, setTeamAColorId] = useState<string>("");

@@ -285,12 +285,16 @@ export function TeamGenCarousel({
                                 {fmtWeight(opt.balanceDiff)}
                             </div>
                         </div>
-                        <div className="flex-1 px-3 py-2">
-                            <div className="text-slate-400 mb-0.5">GK diff</div>
-                            <div className="font-semibold text-slate-900 tabular-nums">
-                                {opt.goalkeeperDiff ?? 0}
-                            </div>
-                        </div>
+                    </div>
+                )}
+
+                {/* Admin explanation */}
+                {adminView && opt.explanation && (
+                    <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 space-y-1 text-xs text-slate-700">
+                        <p><span className="font-semibold text-indigo-700">Resumo: </span>{opt.explanation.resumo}</p>
+                        <p><span className="font-semibold text-indigo-700">Time A: </span>{opt.explanation.analiseTimeA}</p>
+                        <p><span className="font-semibold text-indigo-700">Time B: </span>{opt.explanation.analiseTimeB}</p>
+                        <p><span className="font-semibold text-indigo-700">Conclusão: </span>{opt.explanation.conclusao}</p>
                     </div>
                 )}
 
