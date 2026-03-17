@@ -709,6 +709,16 @@ export default function MatchesPage() {
         }
     }
 
+    async function setPlayerRole(matchPlayerId: string, isGoalkeeper: boolean) {
+        if (!admin || !groupId || !currentMatchId) return;
+        try {
+            await MatchesApi.setPlayerRole(groupId, currentMatchId, matchPlayerId, { isGoalkeeper });
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(extractApiError(e, "Falha ao alterar função do jogador."));
+        }
+    }
+
     /** Move a single assigned player from their current team to the other team. */
     async function movePlayerToOtherTeam(playerId: string, fromTeam: "A" | "B") {
         if (!admin || !groupId || !currentMatchId) return;
@@ -955,6 +965,7 @@ export default function MatchesPage() {
             onMovePlayerToTeam: movePlayerInGeneratedOption,
             onSwapInOption: swapInGeneratedOption,
             onAssignUnassigned: assignUnassigned,
+            onSetPlayerRole: setPlayerRole,
         };
     }, [
         admin,
@@ -984,6 +995,7 @@ export default function MatchesPage() {
         assigningTeams,
         sortedTeamAPlayers,
         sortedTeamBPlayers,
+        setPlayerRole,
     ]);
 
     const postProps = useMemo(() => {
@@ -1136,6 +1148,7 @@ export default function MatchesPage() {
                             onRefresh={refreshCurrent}
                             onGoToMatchMaking={goToMatchMaking}
                             onAddGuest={addGuestToMatch}
+                            onSetPlayerRole={setPlayerRole}
                             teamsProps={teamsProps}
                             onEndMatch={endMatch}
                             onGoToPostGame={goToPostGame}

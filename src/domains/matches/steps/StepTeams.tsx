@@ -167,6 +167,7 @@ export function StepTeams({
     onMovePlayerToTeam,
     onSwapInOption,
     onAssignUnassigned,
+    onSetPlayerRole,
 }: {
     admin: boolean;
     onRefresh: () => void;
@@ -215,6 +216,7 @@ export function StepTeams({
     onMovePlayerToOtherTeam: (playerId: string, fromTeam: "A" | "B") => Promise<void>;
     onMovePlayerToTeam: (playerId: string, team: "A" | "B") => void;
     onSwapInOption: (playerAId: string, playerBId: string) => void;
+    onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
     onAssignUnassigned: (playerId: string, team: "A" | "B") => Promise<void>;
 }) {
     const byPlayerId = useMemo(() => {
@@ -398,7 +400,17 @@ export function StepTeams({
                                     <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900")}>
                                         {p.playerName}
                                     </span>
-                                    {p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>}
+                                    {admin && onSetPlayerRole ? (
+                                        <button
+                                            title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
+                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
+                                        >
+                                            {p.isGoalkeeper ? "🧤" : "⚽"}
+                                        </button>
+                                    ) : (
+                                        p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>
+                                    )}
                                     {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
                             );
@@ -463,7 +475,17 @@ export function StepTeams({
                                     <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900")}>
                                         {p.playerName}
                                     </span>
-                                    {p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>}
+                                    {admin && onSetPlayerRole ? (
+                                        <button
+                                            title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
+                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
+                                        >
+                                            {p.isGoalkeeper ? "🧤" : "⚽"}
+                                        </button>
+                                    ) : (
+                                        p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>
+                                    )}
                                     {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
                             );

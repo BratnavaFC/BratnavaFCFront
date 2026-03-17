@@ -66,6 +66,7 @@ export function MatchWizard({
     onRefresh,
     onGoToMatchMaking,
     onAddGuest,
+    onSetPlayerRole,
 
     // teams
     teamsProps,
@@ -227,6 +228,7 @@ export function MatchWizard({
                     onRefresh={onRefresh}
                     onGoToMatchMaking={onGoToMatchMaking}
                     onAddGuest={onAddGuest}
+                    onSetPlayerRole={onSetPlayerRole}
                 />
             ) : null}
 

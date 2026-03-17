@@ -113,6 +113,10 @@ export const MatchesApi = {
   history: (groupId: string, take: number, playerId?: string) => http.get(`/api/Matches/group/${groupId}/history`, { params: { take, ...(playerId ? { playerId } : {}) } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
     http.post(`/api/Matches/group/${groupId}/${matchId}/guests`, dto),
+  setPlayerRole: (
+    groupId: string, matchId: string, matchPlayerId: string,
+    dto: { isGoalkeeper: boolean }
+  ) => http.patch(`/api/Matches/group/${groupId}/${matchId}/players/${matchPlayerId}/role`, dto),
 };
 
 export const GroupInvitesApi = {

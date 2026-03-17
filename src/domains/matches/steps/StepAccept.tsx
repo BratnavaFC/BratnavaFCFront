@@ -20,6 +20,7 @@ export function StepAccept({
     onRefresh,
     onGoToMatchMaking,
     onAddGuest,
+    onSetPlayerRole,
 }: {
     admin: boolean;
     accepted: PlayerInMatchDto[];
@@ -33,6 +34,7 @@ export function StepAccept({
     onRefresh: () => void;
     onGoToMatchMaking: () => void;
     onAddGuest?: (name: string, isGoalkeeper: boolean, starRating: number | null) => Promise<void>;
+    onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
 }) {
     const [addGuestOpen, setAddGuestOpen] = useState(false);
 
@@ -60,6 +62,7 @@ export function StepAccept({
                         mutatingInvite={mutatingInvite}
                         onAccept={onAccept}
                         onReject={onReject}
+                        onSetPlayerRole={onSetPlayerRole}
                     />
                     <InviteList
                         title="Não Aceitos"
@@ -70,6 +73,7 @@ export function StepAccept({
                         mutatingInvite={mutatingInvite}
                         onAccept={onAccept}
                         onReject={onReject}
+                        onSetPlayerRole={onSetPlayerRole}
                     />
                     <InviteList
                         title="Pendentes"
@@ -80,6 +84,7 @@ export function StepAccept({
                         mutatingInvite={mutatingInvite}
                         onAccept={onAccept}
                         onReject={onReject}
+                        onSetPlayerRole={onSetPlayerRole}
                     />
                 </div>
 

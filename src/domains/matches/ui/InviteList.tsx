@@ -33,6 +33,7 @@ export function InviteList({
     mutatingInvite,
     onAccept,
     onReject,
+    onSetPlayerRole,
 }: {
     title: string;
     items: PlayerInMatchDto[];
@@ -42,6 +43,7 @@ export function InviteList({
     mutatingInvite: Record<string, boolean>;
     onAccept: (playerId: string) => void;
     onReject: (playerId: string) => void;
+    onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
 }) {
     const vm = VARIANT_META[variant];
 
@@ -81,8 +83,16 @@ export function InviteList({
                     <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-medium text-slate-900 truncate">{name}</span>
-                            {p.isGoalkeeper && (
-                                <span title="Goleiro" className="text-base leading-none">🧤</span>
+                            {isAdmin && onSetPlayerRole ? (
+                                <button
+                                    title={p.isGoalkeeper ? "Goleiro — clique para mudar para linha nesta partida" : "Linha — clique para mudar para goleiro nesta partida"}
+                                    className="text-base leading-none cursor-pointer hover:opacity-70 transition-opacity"
+                                    onClick={() => onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper)}
+                                >
+                                    {p.isGoalkeeper ? "🧤" : "⚽"}
+                                </button>
+                            ) : (
+                                p.isGoalkeeper && <span title="Goleiro" className="text-base leading-none">🧤</span>
                             )}
                             {isMe && (
                                 <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
