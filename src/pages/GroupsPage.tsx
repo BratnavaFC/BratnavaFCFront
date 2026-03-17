@@ -6,6 +6,9 @@ import { GroupInvitesApi, GroupsApi, PlayersApi, UsersApi } from "../api/endpoin
 import { useAccountStore } from "../auth/accountStore";
 import { Check, Loader2, Pencil, Plus, Search, UserPlus, X } from "lucide-react";
 import { isGodMode } from "../auth/guards";
+import { useGroupIcons } from "../hooks/useGroupIcons";
+import { IconRenderer } from "../components/IconRenderer";
+import { resolveIcon } from "../lib/groupIcons";
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -492,6 +495,7 @@ export default function GroupsPage() {
     const active         = useAccountStore((s) => s.getActive());
     const isGroupAdmin   = useAccountStore((s) => s.isGroupAdmin);
     const activeGroupId  = active?.activeGroupId ?? "";
+    const _icons         = useGroupIcons(activeGroupId || null);
     const activePlayerId = active?.activePlayerId ?? "";
 
     const isGod = isGodMode();
@@ -605,7 +609,7 @@ export default function GroupsPage() {
                                             <div className="flex items-center justify-between gap-1 min-w-0">
                                                 <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
                                                     <span className="truncate">{p.name}</span>
-                                                    {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
+                                                    <span className="shrink-0"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} /></span>
                                                 </div>
                                                 <div className="flex items-center gap-0.5 shrink-0">
                                                     {isMe && (
@@ -671,7 +675,7 @@ export default function GroupsPage() {
                                                 <div className="flex items-center justify-between gap-1 min-w-0">
                                                     <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
                                                         <span className="truncate">{p.name}</span>
-                                                        {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
+                                                        <span className="shrink-0"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} /></span>
                                                     </div>
                                                     <div className="flex items-center gap-0.5 shrink-0">
                                                         {canEdit && (
@@ -719,7 +723,7 @@ export default function GroupsPage() {
                                                 <div className="flex items-center justify-between gap-1 min-w-0">
                                                     <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
                                                         <span className="truncate">{p.name}</span>
-                                                        {p.isGoalkeeper && <span className="shrink-0">🧤</span>}
+                                                        <span className="shrink-0"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} /></span>
                                                     </div>
                                                     <div className="flex items-center gap-0.5 shrink-0">
                                                         <button

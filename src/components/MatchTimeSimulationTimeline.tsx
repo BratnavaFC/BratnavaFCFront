@@ -1,4 +1,8 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
+import { useAccountStore } from "../auth/accountStore";
+import { useGroupIcons } from "../hooks/useGroupIcons";
+import { IconRenderer } from "./IconRenderer";
+import { resolveIcon } from "../lib/groupIcons";
 
 type GoalDto = {
     goalId: string;
@@ -161,6 +165,8 @@ export function MatchTimeSimulationTimeline({
     autoPlay = true,
 }: Props) {
     const SIM_DURATION_MS = durationMs;
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
 
     const inferredStart = useMemo(() => inferStartMinOfDayFromGoals(goals ?? []), [goals]);
 
@@ -403,7 +409,7 @@ export function MatchTimeSimulationTimeline({
                                     {/* puck */}
                                     <div className={puckClass(c)} style={puckStyle(c)}>
                                         <span className="absolute inset-[3px] rounded-full" style={innerRingStyle(c)} />
-                                        <span className="relative text-sm">⚽</span>
+                                        <span className="relative text-sm"><IconRenderer value={resolveIcon(_icons, 'goal')} size={14} /></span>
                                     </div>
 
                                     {/* tooltip */}

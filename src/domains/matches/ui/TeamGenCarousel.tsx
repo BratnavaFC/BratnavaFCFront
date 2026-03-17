@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react";
 import type { PlayerInMatchDto, PlayerWeightDto, TeamOptionDto } from "../matchTypes";
 import { cls, fmtWeight } from "../matchUtils";
+import { useAccountStore } from "../../../auth/accountStore";
+import { useGroupIcons } from "../../../hooks/useGroupIcons";
+import { IconRenderer } from "../../../components/IconRenderer";
+import { resolveIcon } from "../../../lib/groupIcons";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -54,6 +58,9 @@ export function TeamGenCarousel({
     onMoveToTeam?: (playerId: string, team: "A" | "B") => void;
     onSwapInOption?: (playerAId: string, playerBId: string) => void;
 }) {
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
+
     const safeIdx = Math.max(0, Math.min(selectedIndex, options.length - 1));
     const opt = options[safeIdx];
 
@@ -187,11 +194,9 @@ export function TeamGenCarousel({
                                     )}
                                 >
                                     {playerName}
-                                    {isGk && (
-                                        <span title="Goleiro" className="ml-1 text-xs">
-                                            🧤
-                                        </span>
-                                    )}
+                                    <span title={isGk ? "Goleiro" : "Jogador"} className="ml-1 text-xs">
+                                        <IconRenderer value={resolveIcon(_icons, isGk ? 'goalkeeper' : 'player')} size={13} />
+                                    </span>
                                 </span>
                                 {adminView && (
                                     <span className="text-xs font-mono text-slate-400 shrink-0">

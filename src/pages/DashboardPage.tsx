@@ -7,6 +7,9 @@ import { useAccountStore } from '../auth/accountStore';
 import { extractApiError } from '../lib/apiError';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
 import { Calendar, MapPin, RefreshCw, Star, Clock } from 'lucide-react';
+import { useGroupIcons } from '../hooks/useGroupIcons';
+import { IconRenderer } from '../components/IconRenderer';
+import { resolveIcon } from '../lib/groupIcons';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -417,6 +420,7 @@ function TeamBlock({ color, label, count }: { color?: TeamColor | null; label: s
 function RecentMatchCard({ match, playerId, groupId }: { match: MatchDetails; playerId: string; groupId: string }) {
   const nav     = useNavigate();
   const dates   = formatDate(match.playedAt);
+  const _icons  = useGroupIcons(groupId);
   const found   = getPlayerInMatch(match, playerId);
   if (!found) return null;
 
@@ -456,8 +460,8 @@ function RecentMatchCard({ match, playerId, groupId }: { match: MatchDetails; pl
         )}
 
         {/* Goals & assists */}
-        {goals > 0   && <span className="text-xs text-slate-500">⚽ {goals}</span>}
-        {assists > 0 && <span className="text-xs text-slate-500">🅰️ {assists}</span>}
+        {goals > 0   && <span className="flex items-center gap-0.5 text-xs text-slate-500"><IconRenderer value={resolveIcon(_icons, 'goal')} size={12} />{" "}{goals}</span>}
+        {assists > 0 && <span className="flex items-center gap-0.5 text-xs text-slate-500"><IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{assists}</span>}
 
         {/* MVP */}
         {isMvp && (

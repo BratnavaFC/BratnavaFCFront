@@ -13,11 +13,13 @@ import {
     Pencil,
     Play,
     RefreshCw,
-    Trophy,
 } from "lucide-react";
 import { extractApiError } from "../lib/apiError";
 import useAccountStore from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
+import { useGroupIcons } from "../hooks/useGroupIcons";
+import { IconRenderer } from "../components/IconRenderer";
+import { resolveIcon } from "../lib/groupIcons";
 
 /* ===================== helpers ===================== */
 
@@ -286,6 +288,9 @@ export function MatchTimeSimulationTimeline({
 }: SimulationProps) {
     const SIM_DURATION_MS = durationMs;
 
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
+
     const inferredStart = useMemo(() => inferStartMinOfDayFromGoals(goals ?? []), [goals]);
 
     const timeline = useMemo(() => {
@@ -468,7 +473,7 @@ export function MatchTimeSimulationTimeline({
                                             : undefined,
                                     }}
                                 >
-                                    ⚽
+                                    <IconRenderer value={resolveIcon(_icons, 'goal')} size={16} />
                                 </div>
                             </div>
                         );
@@ -529,6 +534,7 @@ export function MatchTimeSimulationTimeline({
 export default function MatchDetailsPage() {
     const nav = useNavigate();
     const { groupId, matchId } = useParams<{ groupId: string; matchId: string }>();
+    const _icons = useGroupIcons(groupId);
 
     const [data, setData] = useState<any>(null);
     const [goalsTab, setGoalsTab] = useState<"gols" | "teamA" | "teamB" | "timeline">("gols");
@@ -814,7 +820,7 @@ export default function MatchDetailsPage() {
                         const heroTeamLabel = heroMvpTeam === 1 ? aName : heroMvpTeam === 2 ? bName : "";
                         return (
                             <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-400/10 border border-amber-400/20 px-4 py-2.5">
-                                <Trophy size={15} className="text-amber-400 shrink-0" />
+                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-400 shrink-0" }} />
                                 <span className="text-sm font-semibold text-amber-300">
                                     MVP: {heroMvpName}
                                 </span>
@@ -876,7 +882,7 @@ export default function MatchDetailsPage() {
                                     >
                                         {p.isGoalkeeper && (
                                             <span title="Goleiro" className="text-base leading-none shrink-0">
-                                                🧤
+                                                <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={15} />
                                             </span>
                                         )}
                                         <span className="text-sm text-slate-800 truncate flex-1">
@@ -884,7 +890,7 @@ export default function MatchDetailsPage() {
                                         </span>
                                         {p.isMvp && (
                                             <span title="MVP" className="shrink-0">
-                                                <Trophy size={13} className="text-amber-400" />
+                                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={13} lucideProps={{ className: "text-amber-400" }} />
                                             </span>
                                         )}
                                     </li>
@@ -916,7 +922,7 @@ export default function MatchDetailsPage() {
                                     >
                                         {p.isGoalkeeper && (
                                             <span title="Goleiro" className="text-base leading-none shrink-0">
-                                                🧤
+                                                <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={15} />
                                             </span>
                                         )}
                                         <span className="text-sm text-slate-800 truncate flex-1">
@@ -924,7 +930,7 @@ export default function MatchDetailsPage() {
                                         </span>
                                         {p.isMvp && (
                                             <span title="MVP" className="shrink-0">
-                                                <Trophy size={13} className="text-amber-400" />
+                                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={13} lucideProps={{ className: "text-amber-400" }} />
                                             </span>
                                         )}
                                     </li>
@@ -1031,7 +1037,7 @@ export default function MatchDetailsPage() {
                                                         setEditIsOwnGoal(false);
                                                     }}
                                                 >
-                                                    {p.isGoalkeeper ? "🧤 " : ""}{p.playerName}
+                                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}{p.playerName}
                                                 </button>
                                             ))}
                                         </div>
@@ -1057,7 +1063,7 @@ export default function MatchDetailsPage() {
                                                         setEditIsOwnGoal(false);
                                                     }}
                                                 >
-                                                    {p.isGoalkeeper ? "🧤 " : ""}{p.playerName}
+                                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}{p.playerName}
                                                 </button>
                                             ))}
                                         </div>
@@ -1107,7 +1113,7 @@ export default function MatchDetailsPage() {
                                                                 )
                                                             }
                                                         >
-                                                            {p.isGoalkeeper ? "🧤 " : ""}{p.playerName}
+                                                            <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}{p.playerName}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -1157,7 +1163,7 @@ export default function MatchDetailsPage() {
                                 <GoalDot team={g.team} />
                                 <div className="min-w-0 flex-1">
                                     <div className="text-sm font-medium text-slate-900 truncate">
-                                        ⚽ {g.scorerName ?? "—"}
+                                        <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{g.scorerName ?? "—"}
                                         {g.isOwnGoal && (
                                             <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
                                         )}
@@ -1289,7 +1295,7 @@ export default function MatchDetailsPage() {
                             const cardTeamName = cardTeam === 1 ? aName : cardTeam === 2 ? bName : (mvpPlayerTeamName ?? "");
                             if (!cardName) return (
                                 <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
-                                    <Trophy size={28} className="mx-auto text-slate-300 mb-2" />
+                                    <IconRenderer value={resolveIcon(_icons, 'mvp')} size={28} lucideProps={{ className: "mx-auto text-slate-300 mb-2" }} />
                                     <div className="text-sm text-slate-400">MVP não definido</div>
                                 </div>
                             );
@@ -1297,7 +1303,7 @@ export default function MatchDetailsPage() {
                                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 border border-amber-200 shrink-0">
-                                            <Trophy size={20} className="text-amber-500" />
+                                            <IconRenderer value={resolveIcon(_icons, 'mvp')} size={20} lucideProps={{ className: "text-amber-500" }} />
                                         </div>
                                         <div>
                                             <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">
@@ -1329,7 +1335,7 @@ export default function MatchDetailsPage() {
                                             <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
                                                 <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 truncate flex items-center gap-1.5 shrink-0">
                                                     {isWinner && (
-                                                        <Trophy size={11} className="text-amber-400 shrink-0" />
+                                                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} lucideProps={{ className: "text-amber-400 shrink-0" }} />
                                                     )}
                                                     {vc.votedForName}
                                                 </div>

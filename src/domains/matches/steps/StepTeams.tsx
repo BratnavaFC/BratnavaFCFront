@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
 import { ArrowLeftRight, Check, Play, RefreshCw, Shuffle } from "lucide-react";
+import { useAccountStore } from "../../../auth/accountStore";
+import { useGroupIcons } from "../../../hooks/useGroupIcons";
+import { IconRenderer } from "../../../components/IconRenderer";
+import { resolveIcon } from "../../../lib/groupIcons";
 import type {
     ColorMode,
     PlayerInMatchDto,
@@ -219,6 +223,9 @@ export function StepTeams({
     onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
     onAssignUnassigned: (playerId: string, team: "A" | "B") => Promise<void>;
 }) {
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
+
     const byPlayerId = useMemo(() => {
         const m = new Map<string, PlayerInMatchDto>();
         for (const p of allPlayers) if (p?.playerId) m.set(p.playerId, p);
@@ -406,10 +413,10 @@ export function StepTeams({
                                             className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 transition-colors"
                                             onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
                                         >
-                                            {p.isGoalkeeper ? "🧤" : "⚽"}
+                                            <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
                                         </button>
                                     ) : (
-                                        p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>
+                                        <span title={p.isGoalkeeper ? "Goleiro" : "Jogador"} className="shrink-0 text-xs"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} /></span>
                                     )}
                                     {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
@@ -481,10 +488,10 @@ export function StepTeams({
                                             className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 transition-colors"
                                             onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
                                         >
-                                            {p.isGoalkeeper ? "🧤" : "⚽"}
+                                            <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
                                         </button>
                                     ) : (
-                                        p.isGoalkeeper && <span title="Goleiro" className="shrink-0 text-xs">🧤</span>
+                                        <span title={p.isGoalkeeper ? "Goleiro" : "Jogador"} className="shrink-0 text-xs"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} /></span>
                                     )}
                                     {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
@@ -527,7 +534,7 @@ export function StepTeams({
                                         </span>
                                         <span className="truncate flex-1 text-sm font-medium text-slate-900">
                                             {p.playerName}
-                                            {p.isGoalkeeper && <span title="Goleiro" className="ml-1 text-xs">🧤</span>}
+                                            <span title={p.isGoalkeeper ? "Goleiro" : "Jogador"} className="ml-1 text-xs"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} /></span>
                                         </span>
                                         <button
                                             onClick={() => onAssignUnassigned(p.playerId, "A")}

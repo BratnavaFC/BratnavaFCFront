@@ -1,7 +1,11 @@
-import { Check, Trophy } from "lucide-react";
+import { Check } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto, VoteCountDto, VoteDto } from "../matchTypes";
 import { cls } from "../matchUtils";
 import { GoalTracker } from "./GoalTracker";
+import { useAccountStore } from "../../../auth/accountStore";
+import { useGroupIcons } from "../../../hooks/useGroupIcons";
+import { IconRenderer } from "../../../components/IconRenderer";
+import { resolveIcon } from "../../../lib/groupIcons";
 
 export function StepPost({
     admin,
@@ -80,6 +84,9 @@ export function StepPost({
     teamBName?: string;
     teamBHex?: string;
 }) {
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
+
     // ── Non-admin read-only view (with own vote) ────────────────────────────
     if (!admin) {
         const scoreText =
@@ -116,7 +123,7 @@ export function StepPost({
                 {/* Voting section */}
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex items-center gap-2 mb-3">
-                        <Trophy size={15} className="text-amber-500 shrink-0" />
+                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
                         <div className="font-semibold text-slate-900 text-sm">Seu voto MVP</div>
                     </div>
 
@@ -155,7 +162,7 @@ export function StepPost({
                                                 )}
                                                 onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
                                             >
-                                                {p.isGoalkeeper ? "🧤 " : ""}
+                                                <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
                                                 {p.playerName}
                                             </button>
                                         );
@@ -247,7 +254,7 @@ export function StepPost({
                 {/* MVP voting */}
                 <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex items-center gap-2 mb-1">
-                        <Trophy size={15} className="text-amber-500 shrink-0" />
+                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
                         <div className="font-semibold text-slate-900">Votar MVP</div>
                     </div>
                     <div className="text-xs text-slate-500">
@@ -326,7 +333,7 @@ export function StepPost({
                                                 )}
                                                 onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
                                             >
-                                                {p.isGoalkeeper ? "🧤 " : ""}
+                                                <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
                                                 {p.playerName}
                                             </button>
                                         );

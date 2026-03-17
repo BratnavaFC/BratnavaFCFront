@@ -2,6 +2,10 @@ import { useState } from "react";
 import { ChevronUp, ChevronDown, X } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto } from "../matchTypes";
 import { cls } from "../matchUtils";
+import { useAccountStore } from "../../../auth/accountStore";
+import { useGroupIcons } from "../../../hooks/useGroupIcons";
+import { IconRenderer } from "../../../components/IconRenderer";
+import { resolveIcon } from "../../../lib/groupIcons";
 
 function normalizeHex(v: string): string {
     const s = (v ?? "").trim();
@@ -72,6 +76,9 @@ export function GoalTracker({
     const [isOwnGoal, setIsOwnGoal] = useState(false);
     const [time, setTime] = useState<string>(() => getCurrentHHmm());
 
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
+
     const teamA = participants.filter((p) => p.team === 1);
     const teamB = participants.filter((p) => p.team === 2);
 
@@ -123,7 +130,7 @@ export function GoalTracker({
                 style={isSelected ? {} : { borderLeftColor: tColor, borderLeftWidth: "3px" }}
                 onClick={() => (isSelected ? clearScorer() : selectScorer(p.playerId))}
             >
-                {p.isGoalkeeper ? "🧤 " : ""}
+                <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
                 {p.playerName}
             </button>
         );
@@ -148,7 +155,7 @@ export function GoalTracker({
             >
                 <div className="min-w-0">
                     <div className="font-medium text-slate-900 truncate text-sm">
-                        ⚽ {g.scorerName}
+                        <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{g.scorerName}
                         {g.isOwnGoal && (
                             <span className="ml-1 text-xs font-normal text-orange-500">
                                 (C)
@@ -156,7 +163,7 @@ export function GoalTracker({
                         )}
                         {g.assistName ? (
                             <span className="text-slate-500">
-                                {" "}• 🤝 {g.assistName}
+                                {" "}• <IconRenderer value={resolveIcon(_icons, 'assist')} size={13} />{" "}{g.assistName}
                             </span>
                         ) : null}
                     </div>
@@ -260,8 +267,8 @@ export function GoalTracker({
                     {/* Scorer selecionado */}
                     <div className="text-xs text-slate-500">Marcou o gol:</div>
                     <div className="font-semibold text-slate-900">
-                        ⚽ {scorer.playerName}
-                        {scorer.isGoalkeeper ? " 🧤" : ""}
+                        <IconRenderer value={resolveIcon(_icons, 'goal')} size={15} />{" "}{scorer.playerName}
+                        {" "}<IconRenderer value={resolveIcon(_icons, scorer.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />
                     </div>
 
                     {/* Toggle gol contra */}
@@ -303,7 +310,7 @@ export function GoalTracker({
                                         )}
                                         onClick={() => toggleAssist(p.playerId)}
                                     >
-                                        {p.isGoalkeeper ? "🧤 " : ""}
+                                        <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
                                         {p.playerName}
                                     </button>
                                 ))}
@@ -324,7 +331,12 @@ export function GoalTracker({
                             disabled={!time.trim() || addingGoal}
                             onClick={confirm}
                         >
-                            {addingGoal ? "Adicionando..." : isOwnGoal ? "Adicionar gol contra ⚽" : "Adicionar gol ⚽"}
+                            {addingGoal ? "Adicionando..." : (
+                                <span className="flex items-center gap-1">
+                                    {isOwnGoal ? "Adicionar gol contra" : "Adicionar gol"}
+                                    {" "}<IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />
+                                </span>
+                            )}
                         </button>
                     </div>
                 </div>

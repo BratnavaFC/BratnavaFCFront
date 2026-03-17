@@ -8,6 +8,13 @@ import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
 import { extractApiError } from '../lib/apiError';
 import { isGodMode } from '../auth/guards';
+import { IconPicker } from '../components/IconPicker';
+import { IconRenderer } from '../components/IconRenderer';
+import { invalidateGroupIcons } from '../hooks/useGroupIcons';
+import {
+    GOAL_OPTIONS, GOALKEEPER_OPTIONS, ASSIST_OPTIONS,
+    OWN_GOAL_OPTIONS, MVP_OPTIONS, PLAYER_OPTIONS, DEFAULT_ICONS,
+} from '../lib/groupIcons';
 
 const DAY_OPTIONS = [
     { value: '', label: 'Sem padrão' },
@@ -268,6 +275,14 @@ export default function GroupSettingsPage() {
     const [defaultDayOfWeek, setDefaultDayOfWeek]     = useState<string>('');
     const [defaultKickoffTime, setDefaultKickoffTime] = useState('');
 
+    // ── ícones ─────────────────────────────────────────────────────
+    const [goalIcon,       setGoalIcon]       = useState<string | null>(null);
+    const [goalkeeperIcon, setGoalkeeperIcon] = useState<string | null>(null);
+    const [assistIcon,     setAssistIcon]     = useState<string | null>(null);
+    const [ownGoalIcon,    setOwnGoalIcon]    = useState<string | null>(null);
+    const [mvpIcon,        setMvpIcon]        = useState<string | null>(null);
+    const [playerIcon,     setPlayerIcon]     = useState<string | null>(null);
+
     // ── status ─────────────────────────────────────────────────────
     const [isPersisted, setIsPersisted] = useState(false);
     const [loading, setLoading]         = useState(false);
@@ -303,6 +318,12 @@ export default function GroupSettingsPage() {
                     gs.defaultKickoffTime ? gs.defaultKickoffTime.slice(0, 5) : ''
                 );
                 setIsPersisted(gs.isPersisted ?? false);
+                setGoalIcon(gs.goalIcon ?? null);
+                setGoalkeeperIcon(gs.goalkeeperIcon ?? null);
+                setAssistIcon(gs.assistIcon ?? null);
+                setOwnGoalIcon(gs.ownGoalIcon ?? null);
+                setMvpIcon(gs.mvpIcon ?? null);
+                setPlayerIcon(gs.playerIcon ?? null);
             }
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao carregar configurações.'));
@@ -368,9 +389,16 @@ export default function GroupSettingsPage() {
                 defaultPlaceName: defaultPlaceName.trim() || null,
                 defaultDayOfWeek: defaultDayOfWeek !== '' ? Number(defaultDayOfWeek) : null,
                 defaultKickoffTime: defaultKickoffTime ? `${defaultKickoffTime}:00` : null,
+                goalIcon,
+                goalkeeperIcon,
+                assistIcon,
+                ownGoalIcon,
+                mvpIcon,
+                playerIcon,
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
+            invalidateGroupIcons(groupId);
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao salvar configurações.'));
         } finally {
@@ -539,6 +567,107 @@ export default function GroupSettingsPage() {
 
                     </div>
                 )}
+            </Section>
+
+            {/* ── Ícones da patota ─────────────────────────────── */}
+            <Section title="Ícones da patota">
+                <p className="text-sm text-slate-500 mb-4">
+                    Escolha os ícones exibidos em toda a aplicação para esta patota.
+                    Clique em um ícone para selecioná-lo e depois salve as configurações acima.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    {/* Gol */}
+                    <div className="card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl leading-none">
+                                <IconRenderer value={goalIcon ?? DEFAULT_ICONS.goalIcon} size={20} />
+                            </span>
+                            <span className="font-semibold text-slate-900 text-sm">Gol</span>
+                        </div>
+                        <IconPicker
+                            options={GOAL_OPTIONS}
+                            value={goalIcon}
+                            onChange={setGoalIcon}
+                        />
+                    </div>
+
+                    {/* Goleiro */}
+                    <div className="card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl leading-none">
+                                <IconRenderer value={goalkeeperIcon ?? DEFAULT_ICONS.goalkeeperIcon} size={20} />
+                            </span>
+                            <span className="font-semibold text-slate-900 text-sm">Goleiro</span>
+                        </div>
+                        <IconPicker
+                            options={GOALKEEPER_OPTIONS}
+                            value={goalkeeperIcon}
+                            onChange={setGoalkeeperIcon}
+                        />
+                    </div>
+
+                    {/* Assistência */}
+                    <div className="card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl leading-none">
+                                <IconRenderer value={assistIcon ?? DEFAULT_ICONS.assistIcon} size={20} />
+                            </span>
+                            <span className="font-semibold text-slate-900 text-sm">Assistência</span>
+                        </div>
+                        <IconPicker
+                            options={ASSIST_OPTIONS}
+                            value={assistIcon}
+                            onChange={setAssistIcon}
+                        />
+                    </div>
+
+                    {/* Gol contra */}
+                    <div className="card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl leading-none">
+                                <IconRenderer value={ownGoalIcon ?? DEFAULT_ICONS.ownGoalIcon} size={20} />
+                            </span>
+                            <span className="font-semibold text-slate-900 text-sm">Gol contra</span>
+                        </div>
+                        <IconPicker
+                            options={OWN_GOAL_OPTIONS}
+                            value={ownGoalIcon}
+                            onChange={setOwnGoalIcon}
+                        />
+                    </div>
+
+                    {/* MVP */}
+                    <div className="card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl leading-none">
+                                <IconRenderer value={mvpIcon ?? DEFAULT_ICONS.mvpIcon} size={20} />
+                            </span>
+                            <span className="font-semibold text-slate-900 text-sm">MVP</span>
+                        </div>
+                        <IconPicker
+                            options={MVP_OPTIONS}
+                            value={mvpIcon}
+                            onChange={setMvpIcon}
+                        />
+                    </div>
+
+                    {/* Jogador */}
+                    <div className="card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl leading-none">
+                                <IconRenderer value={playerIcon ?? DEFAULT_ICONS.playerIcon} size={20} />
+                            </span>
+                            <span className="font-semibold text-slate-900 text-sm">Jogador</span>
+                        </div>
+                        <IconPicker
+                            options={PLAYER_OPTIONS}
+                            value={playerIcon}
+                            onChange={setPlayerIcon}
+                        />
+                    </div>
+
+                </div>
             </Section>
 
             {/* ── Administradores ──────────────────────────────── */}

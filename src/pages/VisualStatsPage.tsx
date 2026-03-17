@@ -11,9 +11,11 @@ import {
     Medal,
     Search,
     Shield,
-    Trophy,
     Users,
 } from "lucide-react";
+import { useGroupIcons } from "../hooks/useGroupIcons";
+import { IconRenderer } from "../components/IconRenderer";
+import { resolveIcon } from "../lib/groupIcons";
 
 /* ===================== DTOs ===================== */
 
@@ -226,6 +228,7 @@ export default function VisualStatsPage() {
     const navigate = useNavigate();
     const active = useAccountStore((s) => s.getActive());
     const activeGroupId = active?.activeGroupId;
+    const _icons = useGroupIcons(groupId ?? activeGroupId);
     const isGroupAdm = !!activeGroupId && (active?.groupAdminIds?.includes(activeGroupId) ?? false);
     const isGod = isGodMode();
 
@@ -423,9 +426,9 @@ export default function VisualStatsPage() {
                                         <th className="px-4 py-2.5 text-center w-24">V / E / D</th>
                                         <th className="px-4 py-2.5 text-left min-w-[130px]">Win Rate</th>
                                         <th className="px-4 py-2.5 text-right w-14">MVP</th>
-                                        <th className="px-4 py-2.5 text-right w-12" title="Gols">⚽</th>
-                                        <th className="px-4 py-2.5 text-right w-12" title="Assistências">🅰️</th>
-                                        <th className="px-4 py-2.5 text-right w-12" title="Gols contra">🚩</th>
+                                        <th className="px-4 py-2.5 text-right w-12" title="Gols"><IconRenderer value={resolveIcon(_icons, 'goal')} size={13} /></th>
+                                        <th className="px-4 py-2.5 text-right w-12" title="Assistências"><IconRenderer value={resolveIcon(_icons, 'assist')} size={13} /></th>
+                                        <th className="px-4 py-2.5 text-right w-12" title="Gols contra"><IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} /></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
@@ -462,14 +465,14 @@ export default function VisualStatsPage() {
                                                         <div className="flex items-center gap-2">
                                                             {p.isGoalkeeper && (
                                                                 <span className="text-sm leading-none shrink-0" title="Goleiro">
-                                                                    🧤
+                                                                    <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={13} />
                                                                 </span>
                                                             )}
                                                             <span className="font-semibold text-slate-900 truncate">
                                                                 {p.name}
                                                             </span>
                                                             {p.mvps > 0 && (
-                                                                <Trophy size={11} className="text-amber-400 shrink-0" />
+                                                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} lucideProps={{ className: "text-amber-400 shrink-0" }} />
                                                             )}
                                                             {inactive && (
                                                                 <span className="text-[10px] text-slate-400 shrink-0">
@@ -515,7 +518,7 @@ export default function VisualStatsPage() {
                                                     <td className="px-4 py-2.5 text-right tabular-nums">
                                                         {p.mvps > 0 ? (
                                                             <span className="inline-flex items-center gap-1 text-amber-500 font-semibold text-xs">
-                                                                <Trophy size={11} />{p.mvps}
+                                                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />{p.mvps}
                                                             </span>
                                                         ) : (
                                                             <span className="text-slate-300 text-xs">—</span>
@@ -683,7 +686,7 @@ export default function VisualStatsPage() {
                                         {/* Name + sub-info */}
                                         <div className="flex-1 min-w-0">
                                             <div className={cx("text-sm font-semibold truncate", active ? "text-white" : "text-slate-900")}>
-                                                {p.isGoalkeeper ? "🧤 " : ""}{p.name}
+                                                {p.isGoalkeeper ? <><IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={13} />{" "}</> : null}{p.name}
                                             </div>
                                             <div className={cx("text-[11px] tabular-nums", active ? "text-slate-400" : "text-slate-400")}>
                                                 {p.gamesPlayed}j · {p.wins}V{p.ties}E{p.losses}D
@@ -761,22 +764,22 @@ export default function VisualStatsPage() {
                                                     </span>
                                                     {selectedPlayer.mvps > 0 && (
                                                         <span className="inline-flex items-center gap-1 text-amber-500 font-semibold">
-                                                            <Trophy size={11} /> {selectedPlayer.mvps} MVP{selectedPlayer.mvps > 1 ? "s" : ""}
+                                                            <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />{" "}{selectedPlayer.mvps} MVP{selectedPlayer.mvps > 1 ? "s" : ""}
                                                         </span>
                                                     )}
                                                     {(selectedPlayer.goals || 0) > 0 && (
-                                                        <span className="tabular-nums text-slate-600">
-                                                            ⚽ {selectedPlayer.goals}
+                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600">
+                                                            <IconRenderer value={resolveIcon(_icons, 'goal')} size={12} />{selectedPlayer.goals}
                                                         </span>
                                                     )}
                                                     {(selectedPlayer.assists || 0) > 0 && (
-                                                        <span className="tabular-nums text-slate-600">
-                                                            🅰️ {selectedPlayer.assists}
+                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600">
+                                                            <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{selectedPlayer.assists}
                                                         </span>
                                                     )}
                                                     {(selectedPlayer.ownGoals || 0) > 0 && (
-                                                        <span className="tabular-nums text-red-500">
-                                                            🚩 {selectedPlayer.ownGoals} GC
+                                                        <span className="inline-flex items-center gap-1 tabular-nums text-red-500">
+                                                            <IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={12} />{selectedPlayer.ownGoals} GC
                                                         </span>
                                                     )}
                                                 </div>

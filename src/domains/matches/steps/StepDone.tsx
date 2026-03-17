@@ -1,4 +1,8 @@
-import { RefreshCw, Trophy } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { useAccountStore } from "../../../auth/accountStore";
+import { useGroupIcons } from "../../../hooks/useGroupIcons";
+import { IconRenderer } from "../../../components/IconRenderer";
+import { resolveIcon } from "../../../lib/groupIcons";
 
 export function StepDone({
     admin,
@@ -14,6 +18,8 @@ export function StepDone({
     onReload: () => void;
 }) {
     const hasScore = scoreA != null && scoreB != null;
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
 
     return (
         <div className="card overflow-hidden p-0">
@@ -57,7 +63,7 @@ export function StepDone({
                 {/* MVP */}
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <div className="flex items-center gap-2 mb-1">
-                        <Trophy size={16} className="text-amber-500 shrink-0" />
+                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={16} lucideProps={{ className: "text-amber-500 shrink-0" }} />
                         <span className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                             MVP
                         </span>

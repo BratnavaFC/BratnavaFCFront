@@ -2,6 +2,10 @@ import { useMemo } from "react";
 import { Check, X } from "lucide-react";
 import type { PlayerInMatchDto } from "../matchTypes";
 import { cls, canUserActOnPlayer } from "../matchUtils";
+import { useAccountStore } from "../../../auth/accountStore";
+import { useGroupIcons } from "../../../hooks/useGroupIcons";
+import { IconRenderer } from "../../../components/IconRenderer";
+import { resolveIcon } from "../../../lib/groupIcons";
 
 const VARIANT_META = {
     accepted: {
@@ -46,6 +50,8 @@ export function InviteList({
     onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
 }) {
     const vm = VARIANT_META[variant];
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons = useGroupIcons(_groupId);
 
     // Logged-in user always appears first; then split regular vs guests
     const { regularItems, guestItems } = useMemo(() => {
@@ -89,10 +95,10 @@ export function InviteList({
                                     className="text-base leading-none cursor-pointer hover:opacity-70 transition-opacity"
                                     onClick={() => onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper)}
                                 >
-                                    {p.isGoalkeeper ? "🧤" : "⚽"}
+                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={15} />
                                 </button>
                             ) : (
-                                p.isGoalkeeper && <span title="Goleiro" className="text-base leading-none">🧤</span>
+                                p.isGoalkeeper && <span title="Goleiro" className="text-base leading-none"><IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={15} /></span>
                             )}
                             {isMe && (
                                 <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
