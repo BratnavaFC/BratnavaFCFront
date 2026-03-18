@@ -2,6 +2,7 @@
 import { Toaster } from 'sonner';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
+import GroupAdminRoute from './routes/GroupAdminRoute';
 import Layout from './layout/Layout';
 
 import LoginPage from './pages/LoginPage';
@@ -46,9 +47,9 @@ export default function App() {
                 <Route
                     path="settings"
                     element={
-                        <AdminRoute>
+                        <GroupAdminRoute>
                             <GroupSettingsPage />
-                        </AdminRoute>
+                        </GroupAdminRoute>
                     }
                 />
 

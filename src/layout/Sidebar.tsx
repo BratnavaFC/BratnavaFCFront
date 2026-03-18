@@ -13,10 +13,10 @@ type Item = { to: string; label: string; icon: any; badge?: number; end?: boolea
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const active = useAccountStore((s) => s.getActive());
-    const isAdminOrGod = !!active && active.roles.includes("GodMode");
+    const isAdminOrGod = !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode"));
     const isGod = isGodMode();
     const isGroupAdm = !!active?.activeGroupId &&
-        (active?.groupAdminIds?.includes(active.activeGroupId) ?? false);
+        (isAdminOrGod || (active?.groupAdminIds?.includes(active.activeGroupId) ?? false));
     const pendingCount = useInviteStore((s) => s.pendingCount);
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
 
