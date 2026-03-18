@@ -380,11 +380,9 @@ export function TeamGenCarousel({
                                         </span>
                                         <span className="truncate flex-1 text-sm font-medium text-slate-900">
                                             {playerName}
-                                            {isGk && (
-                                                <span title="Goleiro" className="ml-1 text-xs">
-                                                    🧤
-                                                </span>
-                                            )}
+                                            <span className="ml-1 text-xs">
+                                                <IconRenderer value={resolveIcon(_icons, isGk ? 'goalkeeper' : 'player')} size={13} />
+                                            </span>
                                         </span>
                                         {adminView && (
                                             <span className="text-xs font-mono text-amber-600 shrink-0">

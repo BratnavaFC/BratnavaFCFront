@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { TeamGenApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
@@ -397,11 +397,11 @@ export default function VisualStatsPage() {
                                         { k: "winrate",  label: "Win Rate" },
                                         { k: "games",    label: "Jogos" },
                                         { k: "mvps",     label: "MVPs" },
-                                        { k: "goals",    label: "⚽ Gols" },
-                                        { k: "assists",  label: "🅰️ Assists" },
-                                        { k: "owngoals", label: "🚩 GC" },
+                                        { k: "goals",    label: <><IconRenderer value={resolveIcon(_icons, 'goal')} size={13} />{" "}Gols</> },
+                                        { k: "assists",  label: <><IconRenderer value={resolveIcon(_icons, 'assist')} size={13} />{" "}Assists</> },
+                                        { k: "owngoals", label: <><IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} />{" "}GC</> },
                                         { k: "name",     label: "Nome" },
-                                    ] as { k: SortKey; label: string }[]
+                                    ] as { k: SortKey; label: React.ReactNode }[]
                                 ).map(({ k, label }) => (
                                     <SortChip
                                         key={k}
@@ -636,11 +636,11 @@ export default function VisualStatsPage() {
                                     [
                                         { k: "winrate",  label: "WR" },
                                         { k: "games",    label: "Jogos" },
-                                        { k: "goals",    label: "⚽" },
-                                        { k: "assists",  label: "🅰️" },
-                                        { k: "owngoals", label: "🚩" },
+                                        { k: "goals",    label: <IconRenderer value={resolveIcon(_icons, 'goal')} size={13} /> },
+                                        { k: "assists",  label: <IconRenderer value={resolveIcon(_icons, 'assist')} size={13} /> },
+                                        { k: "owngoals", label: <IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} /> },
                                         { k: "name",     label: "Nome" },
-                                    ] as { k: SortKey; label: string }[]
+                                    ] as { k: SortKey; label: React.ReactNode }[]
                                 ).map(({ k, label }) => (
                                     <SortChip key={k} active={sortKey === k} dir="desc" onClick={() => setSortKey(k)}>
                                         {label}

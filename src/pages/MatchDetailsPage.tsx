@@ -1170,7 +1170,7 @@ export default function MatchDetailsPage() {
                                     </div>
                                     {g.assistName && (
                                         <div className="text-xs text-slate-500 truncate">
-                                            🅰️ {g.assistName}
+                                            <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{g.assistName}
                                         </div>
                                     )}
                                 </div>
@@ -1253,14 +1253,14 @@ export default function MatchDetailsPage() {
                                                     <span className="text-slate-400 text-xs mr-1">
                                                         #{t.idx}
                                                     </span>
-                                                    ⚽ {t.scorerName ?? "—"}
+                                                    <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{t.scorerName ?? "—"}
                                                     {t.isOwnGoal && (
                                                         <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
                                                     )}
                                                 </div>
                                                 {t.assistName && (
                                                     <div className="text-xs text-slate-500">
-                                                        🅰️ {t.assistName}
+                                                        <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{t.assistName}
                                                     </div>
                                                 )}
                                             </div>

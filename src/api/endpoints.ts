@@ -133,3 +133,22 @@ export const TeamGenApi = {
   generate: (dto: TeamGenerationRequestDto) => http.post(`/api/TeamGeneration/generate`, dto),
   visualStats: (groupId: string) => http.get(`/api/TeamGeneration/visual-stats/${groupId}`),
 };
+
+export const CalendarApi = {
+  events:         (groupId: string, start: string, end: string) =>
+                    http.get(`/api/Calendar/group/${groupId}?start=${start}&end=${end}`),
+  createEvent:    (groupId: string, dto: any) =>
+                    http.post(`/api/Calendar/group/${groupId}/events`, dto),
+  updateEvent:    (groupId: string, id: string, dto: any) =>
+                    http.put(`/api/Calendar/group/${groupId}/events/${id}`, dto),
+  deleteEvent:    (groupId: string, id: string) =>
+                    http.delete(`/api/Calendar/group/${groupId}/events/${id}`),
+  categories:     (groupId: string) =>
+                    http.get(`/api/Calendar/group/${groupId}/categories`),
+  createCategory: (groupId: string, dto: any) =>
+                    http.post(`/api/Calendar/group/${groupId}/categories`, dto),
+  updateCategory: (groupId: string, id: string, dto: any) =>
+                    http.put(`/api/Calendar/group/${groupId}/categories/${id}`, dto),
+  deleteCategory: (groupId: string, id: string) =>
+                    http.delete(`/api/Calendar/group/${groupId}/categories/${id}`),
+};

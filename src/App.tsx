@@ -18,6 +18,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import GodModeAdminPage from './pages/admin/GodModeAdminPage';
 import GodModeRoute from './routes/GodModeRoute';
 import VisualStatsPage from "./pages/VisualStatsPage";
+import CalendarPage from './pages/CalendarPage';
 
 export default function App() {
     return (
@@ -42,6 +43,14 @@ export default function App() {
                 <Route path="matches" element={<MatchesPage />} />
                 <Route path="history" element={<HistoryPage />} />
                 <Route path="history/:groupId/:matchId" element={<MatchDetailsPage />} />
+                <Route
+                    path="calendar"
+                    element={
+                        <GroupAdminRoute>
+                            <CalendarPage />
+                        </GroupAdminRoute>
+                    }
+                />
                 <Route path="groups/:groupId/visual-stats" element={<VisualStatsPage />} />
 
                 <Route

@@ -273,8 +273,8 @@ export function MatchTimeSimulationTimeline({
         const mm = String(g.minute).padStart(2, "0");
         const teamLabel = g.team === 1 ? "Time A" : g.team === 2 ? "Time B" : "—";
         return {
-            title: `⚽ ${g.scorerName}${g.teamGoalNo ? ` (#${g.teamGoalNo})` : ""}`,
-            assist: g.assistName ? `🤝 Assist: ${g.assistName}` : null,
+            title: <><IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{g.scorerName}{g.teamGoalNo ? ` (#${g.teamGoalNo})` : ""}</>,
+            assist: g.assistName ? <><IconRenderer value={resolveIcon(_icons, 'assist')} size={14} />{" "}{g.assistName}</> : null,
             minute: `${mm}'`,
             clock: g.time ?? "--:--",
             teamLabel,

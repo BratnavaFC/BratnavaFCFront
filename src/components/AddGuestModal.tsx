@@ -1,6 +1,10 @@
 // src/components/AddGuestModal.tsx
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Plus, X } from "lucide-react";
+import { useAccountStore } from "../auth/accountStore";
+import { useGroupIcons } from "../hooks/useGroupIcons";
+import { IconRenderer } from "./IconRenderer";
+import { resolveIcon } from "../lib/groupIcons";
 
 // ─── StarRating ───────────────────────────────────────────────────────────────
 
@@ -55,6 +59,8 @@ export function AddGuestModal({
     const [loading, setLoading]           = useState(false);
     const [err, setErr]                   = useState<string | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
+    const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
+    const _icons   = useGroupIcons(_groupId);
 
     useEffect(() => {
         if (open) {
@@ -147,7 +153,7 @@ export function AddGuestModal({
                                 disabled={loading}
                                 className="h-4 w-4 rounded border-slate-300 accent-slate-900"
                             />
-                            <span className="text-sm font-medium text-slate-700">Goleiro 🧤</span>
+                            <span className="text-sm font-medium text-slate-700 inline-flex items-center gap-1">Goleiro <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={14} /></span>
                         </label>
 
                         <div className="space-y-1">

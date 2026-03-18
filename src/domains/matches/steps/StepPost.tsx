@@ -304,7 +304,7 @@ export function StepPost({
                                                 setVoteVotedMpId("");
                                             }}
                                         >
-                                            {p.isGoalkeeper ? "🧤 " : ""}
+                                            <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
                                             {p.playerName}
                                         </button>
                                     );

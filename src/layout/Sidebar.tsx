@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
-    LayoutDashboard, Users, Palette, CalendarDays, History, Settings, BarChart3, Shield, ShieldAlert,
+    LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, Shield, ShieldAlert,
     Menu, X,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
@@ -34,6 +34,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/team-colors", label: "Cores",         icon: Palette },
         { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
         { to: "/app/history",     label: "Histórico",     icon: History },
+        ...(isGroupAdm || isGod ? [{ to: "/app/calendar", label: "Calendário", icon: CalendarCheck }] : []),
         ...(isGroupAdm || isGod ? [{
             to: active?.activeGroupId ? `/app/groups/${active.activeGroupId}/visual-stats` : "/app",
             label: "Visual Stats",
