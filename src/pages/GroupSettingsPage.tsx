@@ -257,14 +257,17 @@ export default function GroupSettingsPage() {
     const active = useAccountStore((s) => s.getActive());
     const groupId = active?.activeGroupId;
     const currentUserId = active?.userId;
-    const isGroupAdm = !!groupId && (active?.groupAdminIds?.includes(groupId) ?? false);
+    const _roles = active?.roles ?? [];
     const isGod = isGodMode();
+    const isGlobalAdmin = _roles.includes('Admin') || _roles.includes('GodMode');
+    const isGroupAdm = isGlobalAdmin ||
+        (!!groupId && (active?.groupAdminIds?.includes(groupId) ?? false));
 
     useEffect(() => {
-        if (!isGroupAdm && !isGod) {
+        if (!isGroupAdm) {
             nav('/app', { replace: true });
         }
-    }, [isGroupAdm, isGod, nav]);
+    }, [isGroupAdm, nav]);
 
     // ── player limits ──────────────────────────────────────────────
     const [minPlayers, setMinPlayers] = useState(5);
