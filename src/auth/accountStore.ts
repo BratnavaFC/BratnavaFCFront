@@ -15,6 +15,7 @@ export type Account = {
     activeGroupId?: string | null;  // group selecionado no app
     activePlayerId?: string | null; // jogador/perfil selecionado
     groupAdminIds?: string[];       // IDs das patotas onde o usuário é admin
+    groupFinanceiroIds?: string[];  // IDs das patotas onde o usuário é financeiro
 };
 
 type AccountState = {
@@ -26,6 +27,7 @@ type AccountState = {
     hasRole: (role: string) => boolean;
     isAdmin: () => boolean;
     isGroupAdmin: (groupId: string) => boolean;
+    isGroupFinanceiro: (groupId: string) => boolean;
 
     // mutations
     upsertAccount: (acc: Account) => void;
@@ -73,6 +75,14 @@ export const useAccountStore = create<AccountState>()(
                 if (!acc) return false;
                 if (acc.roles.includes("Admin") || acc.roles.includes("GodMode")) return true;
                 return acc.groupAdminIds?.includes(groupId) ?? false;
+            },
+
+            isGroupFinanceiro: (groupId: string) => {
+                if (!groupId) return false;
+                const acc = get().getActive();
+                if (!acc) return false;
+                if (acc.roles.includes("GodMode")) return true;
+                return acc.groupFinanceiroIds?.includes(groupId) ?? false;
             },
 
             // ========================

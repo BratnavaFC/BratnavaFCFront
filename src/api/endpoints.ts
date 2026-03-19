@@ -49,6 +49,9 @@ export const GroupsApi = {
   reactivate: (groupId: string) => http.post(`/api/Groups/${groupId}/reactivate`),
   addAdmin: (groupId: string, userId: string) => http.post(`/api/Groups/${groupId}/admins`, { userId }),
   removeAdmin: (groupId: string, userId: string) => http.delete(`/api/Groups/${groupId}/admins/${userId}`),
+  addFinanceiro: (groupId: string, userId: string) => http.post(`/api/Groups/${groupId}/financeiros`, { userId }),
+  removeFinanceiro: (groupId: string, userId: string) => http.delete(`/api/Groups/${groupId}/financeiros/${userId}`),
+  listByFinanceiro: (financeiroId: string) => http.get(`/api/Groups/financeiro/${financeiroId}`),
   leaveAsCreator: (groupId: string, dto: { transferToUserId?: string; promoteAndTransferUserId?: string; deleteGroup?: boolean }) =>
     http.post(`/api/Groups/${groupId}/leave-creator`, dto),
 };

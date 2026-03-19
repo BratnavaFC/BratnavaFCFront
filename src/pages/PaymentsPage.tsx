@@ -560,13 +560,13 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function PaymentsPage() {
-    const active        = useAccountStore(s => s.getActive());
-    const isGroupAdm    = useAccountStore(s => s.isGroupAdmin);
-    const groupId       = active?.activeGroupId ?? '';
-    const activePlayerId = active?.activePlayerId ?? '';
-    const isAdmin     = !!(active && (
-        active.roles.includes('Admin') || active.roles.includes('GodMode') ||
-        (active.activeGroupId && isGroupAdm(active.activeGroupId))
+    const active             = useAccountStore(s => s.getActive());
+    const isGroupFinanceiro  = useAccountStore(s => s.isGroupFinanceiro);
+    const groupId            = active?.activeGroupId ?? '';
+    const activePlayerId     = active?.activePlayerId ?? '';
+    const isAdmin = !!(active && (
+        active.roles.includes('GodMode') ||
+        (active.activeGroupId && isGroupFinanceiro(active.activeGroupId))
     ));
 
     const [paymentMode, setPaymentMode] = useState<number>(0); // 0=Monthly, 1=PerGame

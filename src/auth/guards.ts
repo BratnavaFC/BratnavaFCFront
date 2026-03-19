@@ -23,3 +23,7 @@ export function isGodMode(): boolean {
 export function isGroupAdmin(groupId: string): boolean {
     return useAccountStore.getState().isGroupAdmin(groupId);
 }
+
+export function isGroupFinanceiro(groupId: string): boolean {
+    return useAccountStore.getState().isGroupFinanceiro(groupId);
+}

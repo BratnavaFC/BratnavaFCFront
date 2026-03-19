@@ -208,6 +208,12 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                 updateActive({ groupAdminIds: ids });
             })
             .catch(() => {});
+        GroupsApi.listByFinanceiro(userId)
+            .then((res) => {
+                const ids = (res.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                updateActive({ groupFinanceiroIds: ids });
+            })
+            .catch(() => {});
     }, [active?.userId]);
 
     function handlePlayerChange(playerId: string) {

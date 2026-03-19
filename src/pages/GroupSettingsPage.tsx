@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShieldOff, ShieldPlus, Search, Check, X, AlertTriangle } from 'lucide-react';
+import { Loader2, ShieldOff, ShieldPlus, Search, Check, X, AlertTriangle, Wallet } from 'lucide-react';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
@@ -42,6 +42,8 @@ type GroupDetailDto = {
     createdByUserId?: string | null;
     adminIds: string[];
     adminUsers?: AdminUser[];
+    financeiroIds: string[];
+    financeiroUsers?: AdminUser[];
 };
 
 type UserResult = {
@@ -243,6 +245,170 @@ function AddAdminModal({
     );
 }
 
+// ─── AddFinanceiroModal ───────────────────────────────────────────────────────
+
+function AddFinanceiroModal({
+    open,
+    onClose,
+    groupId,
+    groupName,
+    existingFinanceiroUserIds,
+    onAdded,
+}: {
+    open: boolean;
+    onClose: () => void;
+    groupId: string;
+    groupName: string;
+    existingFinanceiroUserIds: Set<string>;
+    onAdded: () => void;
+}) {
+    const [query, setQuery]         = useState('');
+    const [results, setResults]     = useState<UserResult[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [added, setAdded]         = useState<Set<string>>(new Set());
+    const [adding, setAdding]       = useState<Record<string, boolean>>({});
+    const [addErr, setAddErr]       = useState<Record<string, string>>({});
+    const [searchErr, setSearchErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (open) {
+            setQuery('');
+            setResults([]);
+            setAdded(new Set());
+            setAdding({});
+            setAddErr({});
+            setSearchErr(null);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        const q = query.trim();
+        if (q.length < 2) { setResults([]); setSearchErr(null); return; }
+        const timer = setTimeout(async () => {
+            setSearching(true);
+            setSearchErr(null);
+            try {
+                const res = await UsersApi.list({ search: q, pageSize: 8 });
+                setResults(res.data?.items ?? []);
+            } catch {
+                setSearchErr('Erro ao buscar usuários.');
+                setResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    async function handleAdd(user: UserResult) {
+        setAdding((prev) => ({ ...prev, [user.id]: true }));
+        setAddErr((prev) => { const n = { ...prev }; delete n[user.id]; return n; });
+        try {
+            await GroupsApi.addFinanceiro(groupId, user.id);
+            setAdded((prev) => new Set(prev).add(user.id));
+            onAdded();
+        } catch (e) {
+            const msg = extractApiError(e, 'Erro ao adicionar financeiro.');
+            setAddErr((prev) => ({ ...prev, [user.id]: msg }));
+        } finally {
+            setAdding((prev) => { const n = { ...prev }; delete n[user.id]; return n; });
+        }
+    }
+
+    if (!open) return null;
+
+    const q = query.trim();
+    const showResults = q.length >= 2;
+
+    return (
+        <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border overflow-hidden flex flex-col max-h-[85vh]">
+                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                                <Wallet size={17} />
+                            </div>
+                            <div>
+                                <div className="text-base font-semibold text-slate-900">Adicionar financeiro</div>
+                                <div className="text-xs text-slate-500 truncate max-w-[220px]">{groupName}</div>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center" aria-label="Fechar" type="button">
+                            <X size={18} />
+                        </button>
+                    </div>
+                    <div className="px-5 pt-4 pb-3 shrink-0">
+                        <div className="relative">
+                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            <input
+                                className="input w-full pl-9 pr-9"
+                                placeholder="Buscar por nome ou username..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                autoFocus
+                            />
+                            {searching && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin pointer-events-none" />}
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2">
+                        {!showResults ? (
+                            <p className="text-sm text-slate-400 text-center py-6">
+                                {q.length === 1 ? 'Continue digitando...' : 'Digite para buscar usuários.'}
+                            </p>
+                        ) : searchErr ? (
+                            <p className="text-sm text-rose-500 text-center py-6">{searchErr}</p>
+                        ) : searching ? null : results.length === 0 ? (
+                            <p className="text-sm text-slate-400 text-center py-6">Nenhum usuário encontrado para "{query}".</p>
+                        ) : (
+                            results.map((u) => {
+                                const isAlready = existingFinanceiroUserIds.has(u.id);
+                                const isAdded   = added.has(u.id);
+                                const isAdding  = !!adding[u.id];
+                                const err       = addErr[u.id];
+                                return (
+                                    <div key={u.id} className="space-y-1">
+                                        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                                            <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                                {initials(u)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-semibold text-slate-900 truncate">{fullName(u)}</div>
+                                                <div className="text-xs text-slate-400">@{u.userName}</div>
+                                            </div>
+                                            {isAlready ? (
+                                                <span className="text-xs font-medium text-slate-400 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 shrink-0">Já é financeiro</span>
+                                            ) : isAdded ? (
+                                                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 shrink-0">
+                                                    <Check size={13} /> Adicionado
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="text-xs px-3 py-1.5 shrink-0 flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors disabled:opacity-50"
+                                                    disabled={isAdding}
+                                                    onClick={() => handleAdd(u)}
+                                                >
+                                                    {isAdding
+                                                        ? <><Loader2 size={12} className="animate-spin" /> Adicionando...</>
+                                                        : <><Wallet size={13} /> Financeiro</>
+                                                    }
+                                                </button>
+                                            )}
+                                        </div>
+                                        {err && <p className="text-xs text-rose-500 px-1">{err}</p>}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Tipos de confirmação ─────────────────────────────────────────────────────
 
 type ConfirmState = {
@@ -303,6 +469,10 @@ export default function GroupSettingsPage() {
     const [removingId, setRemovingId]   = useState<string | null>(null);
     const [addAdminOpen, setAddAdminOpen] = useState(false);
 
+    // ── financeiros ────────────────────────────────────────────────
+    const [removingFinanceiroId, setRemovingFinanceiroId] = useState<string | null>(null);
+    const [addFinanceiroOpen, setAddFinanceiroOpen]       = useState(false);
+
     // ── confirmação ────────────────────────────────────────────────
     const [confirm, setConfirm]             = useState<ConfirmState | null>(null);
     const [confirmLoading, setConfirmLoading] = useState(false);
@@ -357,28 +527,27 @@ export default function GroupSettingsPage() {
                 raw.adminUsers.length > 0 &&
                 raw.adminUsers.some((u) => u.firstName || u.lastName || u.userName);
 
+            const fetchUsers = async (ids: string[]): Promise<AdminUser[]> =>
+                Promise.all(ids.map(async (id) => {
+                    try {
+                        const r = await UsersApi.get(id);
+                        const u = r.data as UserResult;
+                        return { userId: id, userName: u.userName ?? null, firstName: u.firstName ?? null, lastName: u.lastName ?? null } satisfies AdminUser;
+                    } catch {
+                        return { userId: id } satisfies AdminUser;
+                    }
+                }));
+
             if (hasNames) {
-                setGroup(raw);
+                const finIds = raw.financeiroIds ?? [];
+                const finUsers = await fetchUsers(finIds);
+                setGroup({ ...raw, financeiroUsers: finUsers });
             } else {
-                const ids = raw.adminIds ?? [];
-                const fetched = await Promise.all(
-                    ids.map(async (id) => {
-                        try {
-                            const r = await UsersApi.get(id);
-                            const u = r.data as UserResult;
-                            return {
-                                userId: id,
-                                userName: u.userName ?? null,
-                                firstName: u.firstName ?? null,
-                                lastName: u.lastName ?? null,
-                            } satisfies AdminUser;
-                        } catch {
-                            // Se falhar, retorna objeto sem nome (será exibido como "Admin")
-                            return { userId: id } satisfies AdminUser;
-                        }
-                    })
-                );
-                setGroup({ ...raw, adminUsers: fetched });
+                const [adminUsers, finUsers] = await Promise.all([
+                    fetchUsers(raw.adminIds ?? []),
+                    fetchUsers(raw.financeiroIds ?? []),
+                ]);
+                setGroup({ ...raw, adminUsers, financeiroUsers: finUsers });
             }
         } catch {
             // silencioso — seção exibirá estado vazio
@@ -438,6 +607,25 @@ export default function GroupSettingsPage() {
         });
     }
 
+    function handleRemoveFinanceiro(userId: string, displayName: string) {
+        if (!groupId) return;
+        setConfirm({
+            label: `Remover "${displayName}" como financeiro desta patota?`,
+            onConfirm: async () => {
+                setRemovingFinanceiroId(userId);
+                try {
+                    await GroupsApi.removeFinanceiro(groupId, userId);
+                    toast.success(`${displayName} removido dos financeiros.`);
+                    await loadGroup();
+                } catch (e) {
+                    toast.error(extractApiError(e, 'Erro ao remover financeiro.'));
+                } finally {
+                    setRemovingFinanceiroId(null);
+                }
+            },
+        });
+    }
+
     async function runConfirm() {
         if (!confirm) return;
         setConfirmLoading(true);
@@ -470,8 +658,10 @@ export default function GroupSettingsPage() {
 
     // adminUsers é sempre populado por loadGroup (com dados buscados do backend)
     const adminList: AdminUser[] = group?.adminUsers ?? [];
-
     const existingAdminUserIds = new Set<string>(group?.adminIds ?? []);
+
+    const financeiroList: AdminUser[] = group?.financeiroUsers ?? [];
+    const existingFinanceiroUserIds = new Set<string>(group?.financeiroIds ?? []);
 
     return (
         <div className="space-y-6">
@@ -826,6 +1016,85 @@ export default function GroupSettingsPage() {
                 groupId={groupId}
                 groupName={group?.name ?? ''}
                 existingAdminUserIds={existingAdminUserIds}
+                onAdded={loadGroup}
+            />
+
+            {/* ── Financeiros ──────────────────────────────────── */}
+            <Section
+                title="Financeiros"
+                right={
+                    <button
+                        type="button"
+                        className="btn btn-secondary flex items-center gap-1.5 text-sm"
+                        onClick={() => setAddFinanceiroOpen(true)}
+                    >
+                        <Wallet size={15} />
+                        <span className="hidden sm:inline">Adicionar financeiro</span>
+                    </button>
+                }
+            >
+                {loadingAdmins ? (
+                    <div className="muted flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin" /> Carregando…
+                    </div>
+                ) : financeiroList.length === 0 ? (
+                    <div className="muted">Nenhum financeiro cadastrado.</div>
+                ) : (
+                    <div className="space-y-2">
+                        {financeiroList.map((fin) => {
+                            const isCurrentUser  = fin.userId === currentUserId;
+                            const isRemoving     = removingFinanceiroId === fin.userId;
+                            const displayName    = fullName(fin);
+                            return (
+                                <div
+                                    key={fin.userId}
+                                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                                >
+                                    <div className="h-9 w-9 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                        {initials(fin)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5">
+                                            {displayName}
+                                            {isCurrentUser && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal">
+                                                    Você
+                                                </span>
+                                            )}
+                                        </div>
+                                        {fin.userName && (
+                                            <div className="text-xs text-slate-400">@{fin.userName}</div>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        title={`Remover ${displayName} dos financeiros`}
+                                        disabled={isRemoving}
+                                        onClick={() => handleRemoveFinanceiro(fin.userId, displayName)}
+                                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                    >
+                                        {isRemoving
+                                            ? <><Loader2 size={12} className="animate-spin" /> Removendo…</>
+                                            : <><ShieldOff size={13} /> Remover</>
+                                        }
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+                <p className="mt-3 text-xs text-slate-400">
+                    Financeiros podem gerenciar pagamentos, mensalidades e cobranças extras. Admins não têm acesso automático — devem ser adicionados explicitamente.
+                </p>
+            </Section>
+
+            {/* ── Modal adicionar financeiro ─────────────────────── */}
+            <AddFinanceiroModal
+                open={addFinanceiroOpen}
+                onClose={() => setAddFinanceiroOpen(false)}
+                groupId={groupId}
+                groupName={group?.name ?? ''}
+                existingFinanceiroUserIds={existingFinanceiroUserIds}
                 onAdded={loadGroup}
             />
 

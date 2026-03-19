@@ -5,7 +5,7 @@ import { AddGuestModal, StarRating } from "../components/AddGuestModal";
 import { GroupInvitesApi, GroupsApi, PaymentsApi, PlayersApi, UsersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { AlertCircle, Check, CheckCircle2, ChevronDown, Loader2, LogOut, Pencil, Plus, Search, UserPlus, X } from "lucide-react";
-import { isGodMode } from "../auth/guards";
+import { isGodMode, isGroupFinanceiro } from "../auth/guards";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
@@ -944,6 +944,7 @@ export default function GroupsPage() {
         : null;
     const activePlayerId = myPlayerInExpandedGroup?.playerId ?? "";
     const isAdminOfGroup = isGroupAdmin(expandedGroupId ?? "");
+    const isFinanceiroOfGroup = isGroupFinanceiro(expandedGroupId ?? "");
 
     // ── Icons ligados ao grupo expandido ──
     const _icons = useGroupIcons(expandedGroupId || null);
@@ -1002,7 +1003,7 @@ export default function GroupsPage() {
 
     async function loadPaymentData() {
         if (!expandedGroupId) { setPaymentMap(new Map()); return; }
-        if (!isGroupAdmin(expandedGroupId) && !isGodMode()) {
+        if (!isGroupFinanceiro(expandedGroupId) && !isGodMode()) {
             setPaymentMap(new Map());
             return;
         }
@@ -1159,8 +1160,8 @@ export default function GroupsPage() {
                                             </div>
                                         )}
 
-                                        {/* payment badge — admin only */}
-                                        {(isAdminOfGroup || isGod) && (() => {
+                                        {/* payment badge — financeiro only */}
+                                        {(isFinanceiroOfGroup || isGod) && (() => {
                                             const pmt = paymentMap.get(p.id);
                                             if (!pmt) return null;
                                             const total = pmt.pendingMonths + pmt.pendingExtras;
