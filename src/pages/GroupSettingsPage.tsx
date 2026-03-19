@@ -278,6 +278,11 @@ export default function GroupSettingsPage() {
     const [defaultDayOfWeek, setDefaultDayOfWeek]     = useState<string>('');
     const [defaultKickoffTime, setDefaultKickoffTime] = useState('');
 
+    // ── pagamento ──────────────────────────────────────────────────
+    /** 0 = Monthly, 1 = PerGame */
+    const [paymentMode, setPaymentMode] = useState<number>(0);
+    const [monthlyFee,  setMonthlyFee]  = useState<string>('');
+
     // ── ícones ─────────────────────────────────────────────────────
     const [goalIcon,       setGoalIcon]       = useState<string | null>(null);
     const [goalkeeperIcon, setGoalkeeperIcon] = useState<string | null>(null);
@@ -327,6 +332,8 @@ export default function GroupSettingsPage() {
                 setOwnGoalIcon(gs.ownGoalIcon ?? null);
                 setMvpIcon(gs.mvpIcon ?? null);
                 setPlayerIcon(gs.playerIcon ?? null);
+                setPaymentMode(gs.paymentMode ?? 0);
+                setMonthlyFee(gs.monthlyFee != null ? String(gs.monthlyFee) : '');
             }
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao carregar configurações.'));
@@ -398,6 +405,8 @@ export default function GroupSettingsPage() {
                 ownGoalIcon,
                 mvpIcon,
                 playerIcon,
+                paymentMode,
+                monthlyFee: paymentMode === 0 && monthlyFee !== '' ? parseFloat(monthlyFee) : null,
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
@@ -535,6 +544,58 @@ export default function GroupSettingsPage() {
                                     onChange={(e) => setDefaultKickoffTime(e.target.value)}
                                 />
                             </Field>
+                        </div>
+
+                        {/* ── Pagamento ──────────────────────────────────── */}
+                        <div className="card p-4 space-y-4">
+                            <div className="font-semibold text-slate-900">💰 Pagamento</div>
+
+                            <Field label="Tipo de cobrança">
+                                <div className="flex gap-3">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="paymentMode"
+                                            value="0"
+                                            checked={paymentMode === 0}
+                                            onChange={() => setPaymentMode(0)}
+                                            className="accent-slate-900"
+                                        />
+                                        <span className="text-sm font-medium text-slate-800">Mensal</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="paymentMode"
+                                            value="1"
+                                            checked={paymentMode === 1}
+                                            onChange={() => setPaymentMode(1)}
+                                            className="accent-slate-900"
+                                        />
+                                        <span className="text-sm font-medium text-slate-800">Por jogo</span>
+                                    </label>
+                                </div>
+                            </Field>
+
+                            {paymentMode === 0 && (
+                                <Field label="Valor da mensalidade (R$)">
+                                    <input
+                                        className="input"
+                                        type="number"
+                                        min={0}
+                                        step={0.01}
+                                        placeholder="Ex: 50.00 (deixe vazio para desativar)"
+                                        value={monthlyFee}
+                                        onChange={(e) => setMonthlyFee(e.target.value)}
+                                    />
+                                </Field>
+                            )}
+
+                            <p className="text-xs text-slate-400">
+                                {paymentMode === 0
+                                    ? 'Modo mensal: jogadores com conta vinculada (não convidados) são cobrados uma vez por mês. O valor é lançado ao encerrar uma partida.'
+                                    : 'Modo por jogo: ao encerrar cada partida o admin define o valor do jogo e cria a cobrança para os jogadores participantes.'}
+                            </p>
                         </div>
 
                         {/* ── Ações ──────────────────────────────────────── */}

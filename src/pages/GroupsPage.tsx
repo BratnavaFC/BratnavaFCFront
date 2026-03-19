@@ -2,9 +2,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Section } from "../components/Section";
 import { AddGuestModal, StarRating } from "../components/AddGuestModal";
-import { GroupInvitesApi, GroupsApi, PlayersApi, UsersApi } from "../api/endpoints";
+import { GroupInvitesApi, GroupsApi, PaymentsApi, PlayersApi, UsersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { Check, Loader2, Pencil, Plus, Search, UserPlus, X } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Loader2, Pencil, Plus, Search, UserPlus, X } from "lucide-react";
 import { isGodMode } from "../auth/guards";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
@@ -507,6 +507,9 @@ export default function GroupsPage() {
     const [addGuestOpen, setAddGuestOpen] = useState(false);
     const [editPlayer, setEditPlayer]     = useState<PlayerDto | null>(null);
 
+    // payment badges: playerId → { pendingMonths, pendingExtras }
+    const [paymentMap, setPaymentMap] = useState<Map<string, { pendingMonths: number; pendingExtras: number }>>(new Map());
+
     function loadGroup() {
         if (!activeGroupId) { setGroup(null); return; }
         setLoading(true);
@@ -517,12 +520,62 @@ export default function GroupsPage() {
             .finally(() => setLoading(false));
     }
 
-    useEffect(() => {
-        loadGroup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeGroupId]);
+    async function loadPaymentData() {
+        if (!activeGroupId) return;
+        if (!isGroupAdmin(activeGroupId) && !isGodMode()) {
+            setPaymentMap(new Map());
+            return;
+        }
+        const year = new Date().getFullYear();
+        try {
+            const [gridRes, extraRes] = await Promise.all([
+                PaymentsApi.getMonthlyGrid(activeGroupId, year),
+                PaymentsApi.getExtraCharges(activeGroupId),
+            ]);
+            const grid: any     = gridRes.data;
+            const extras: any[] = extraRes.data ?? [];
+            const hasMonthlyFee = !!(grid?.monthlyFee && grid.monthlyFee > 0);
+            const now           = new Date();
+            const currentMonth  = now.getMonth() + 1;
+
+            const map = new Map<string, { pendingMonths: number; pendingExtras: number }>();
+            for (const row of (grid?.players ?? []) as any[]) {
+                // O backend já filtra os meses antes da entrada do jogador,
+                // mas garantimos aqui também: só contar meses do ano atual
+                // e a partir do joinedMonth (caso o backend retorne mais).
+                const joinedYear  = row.joinedYear  ?? 0;
+                const joinedMonth = row.joinedMonth ?? 1;
+                const pendingMonths = hasMonthlyFee
+                    ? ((row.months ?? []) as any[]).filter((c: any) => {
+                          if (c.month > currentMonth) return false;
+                          if (joinedYear === year && c.month < joinedMonth) return false;
+                          return c.status === 0;
+                      }).length
+                    : 0;
+                map.set(row.playerId, { pendingMonths, pendingExtras: 0 });
+            }
+            for (const charge of extras) {
+                if (charge.isCancelled) continue;
+                for (const payment of (charge.payments ?? []) as any[]) {
+                    if (payment.status !== 0) continue;
+                    const entry = map.get(payment.playerId);
+                    if (entry) entry.pendingExtras += 1;
+                    else map.set(payment.playerId, { pendingMonths: 0, pendingExtras: 1 });
+                }
+            }
+            setPaymentMap(new Map(map));
+        } catch {
+            // silencioso
+        }
+    }
 
     const isAdminOfGroup  = isGroupAdmin(activeGroupId);
+
+    useEffect(() => {
+        loadGroup();
+        loadPaymentData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeGroupId, isAdminOfGroup, activePlayerId]);
     const activePlayers   = group?.players?.filter((p) => p.status === 1 && !p.isGuest) ?? [];
     const guestPlayers    = group?.players?.filter((p) => p.status === 1 && p.isGuest) ?? [];
     // inactive players only visible to admin/god
@@ -642,6 +695,29 @@ export default function GroupsPage() {
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* payment badge */}
+                                            {(() => {
+                                                const pmt = paymentMap.get(p.id);
+                                                if (!pmt) return null;
+                                                const total = pmt.pendingMonths + pmt.pendingExtras;
+                                                if (total === 0) {
+                                                    return (
+                                                        <div className="flex items-center gap-1 mt-0.5">
+                                                            <CheckCircle2 size={11} className="text-emerald-500" />
+                                                            <span className="text-[10px] text-emerald-600">Em dia</span>
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                        <AlertCircle size={11} className="text-red-500" />
+                                                        <span className="text-[10px] text-red-600 font-medium">
+                                                            {total} pendência{total !== 1 ? 's' : ''}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* star rating — admin only */}
                                             {p.isGuest && p.guestStarRating != null && (isAdminOfGroup || isGod) && (

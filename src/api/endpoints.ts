@@ -152,3 +152,41 @@ export const CalendarApi = {
   deleteCategory: (groupId: string, id: string) =>
                     http.delete(`/api/Calendar/group/${groupId}/categories/${id}`),
 };
+
+export const PaymentsApi = {
+  // Mensalidades
+  getMonthlyGrid:     (groupId: string, year: number) =>
+                        http.get(`/api/groups/${groupId}/payments/monthly/${year}`),
+  upsertMonthly:      (groupId: string, dto: any) =>
+                        http.put(`/api/groups/${groupId}/payments/monthly`, dto),
+  initiateMonthly:    (groupId: string, year: number, month: number) =>
+                        http.post(`/api/groups/${groupId}/payments/monthly/${year}/${month}/initiate`),
+  isMonthInitiated:   (groupId: string, year: number, month: number) =>
+                        http.get(`/api/groups/${groupId}/payments/monthly/${year}/${month}/is-initiated`),
+  getMonthlyProof:    (groupId: string, playerId: string, year: number, month: number) =>
+                        http.get(`/api/groups/${groupId}/payments/monthly/${year}/${month}/${playerId}/proof`),
+
+  // Cobranças extras
+  getExtraCharges:           (groupId: string) =>
+                               http.get(`/api/groups/${groupId}/payments/extra-charges`),
+  createExtraCharge:         (groupId: string, dto: any) =>
+                               http.post(`/api/groups/${groupId}/payments/extra-charges`, dto),
+  cancelExtraCharge:         (groupId: string, chargeId: string) =>
+                               http.delete(`/api/groups/${groupId}/payments/extra-charges/${chargeId}`),
+  bulkDiscountExtraCharge:   (groupId: string, chargeId: string, dto: any) =>
+                               http.post(`/api/groups/${groupId}/payments/extra-charges/${chargeId}/bulk-discount`, dto),
+  upsertExtraChargePayment:  (groupId: string, chargeId: string, playerId: string, dto: any) =>
+                               http.put(`/api/groups/${groupId}/payments/extra-charges/${chargeId}/players/${playerId}`, dto),
+  getExtraChargeProof:       (groupId: string, chargeId: string, playerId: string) =>
+                               http.get(`/api/groups/${groupId}/payments/extra-charges/${chargeId}/${playerId}/proof`),
+
+  // Resumo
+  getMySummary:         (groupId: string) =>
+                          http.get(`/api/groups/${groupId}/payments/my`),
+  getSummaryForPlayer:  (groupId: string, playerId: string) =>
+                          http.get(`/api/groups/${groupId}/payments/summary/${playerId}`),
+  getMyMonthlyRow:      (groupId: string, year: number) =>
+                          http.get(`/api/groups/${groupId}/payments/monthly/${year}/me`),
+  getMyExtraCharges:    (groupId: string) =>
+                          http.get(`/api/groups/${groupId}/payments/extra-charges/me`),
+};

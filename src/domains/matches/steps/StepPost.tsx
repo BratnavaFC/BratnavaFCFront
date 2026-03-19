@@ -1,4 +1,5 @@
-import { Check } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, CreditCard, Loader2 } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto, VoteCountDto, VoteDto } from "../matchTypes";
 import { cls } from "../matchUtils";
 import { GoalTracker } from "./GoalTracker";
@@ -6,6 +7,176 @@ import { useAccountStore } from "../../../auth/accountStore";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
 import { resolveIcon } from "../../../lib/groupIcons";
+import { PaymentsApi } from "../../../api/endpoints";
+import { toast } from "sonner";
+
+// ── Payment section (admin only) ────────────────────────────────────────────
+
+function PaymentSection({
+    paymentMode,
+    groupId,
+    matchDate,
+    participantPlayerIds,
+}: {
+    paymentMode: number;
+    groupId: string;
+    matchDate?: string;
+    participantPlayerIds: string[];
+}) {
+    const [gameAmount, setGameAmount] = useState("");
+    const [creatingCharge, setCreatingCharge] = useState(false);
+
+    // Monthly mode state
+    const [isInitiated, setIsInitiated] = useState<boolean | null>(null);
+    const [initiating, setInitiating] = useState(false);
+
+    useEffect(() => {
+        if (paymentMode !== 0 || !groupId || !matchDate) return;
+        const d = new Date(matchDate);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        PaymentsApi.isMonthInitiated(groupId, year, month)
+            .then(res => setIsInitiated(res.data?.isInitiated ?? false))
+            .catch(() => setIsInitiated(false));
+    }, [paymentMode, groupId, matchDate]);
+
+    // PerGame mode
+    if (paymentMode === 1) {
+        const handleCreateCharge = async () => {
+            const amount = parseFloat(gameAmount.replace(",", "."));
+            if (!amount || amount <= 0) {
+                toast.error("Informe um valor válido para o jogo.");
+                return;
+            }
+            if (participantPlayerIds.length === 0) {
+                toast.error("Sem jogadores para cobrar.");
+                return;
+            }
+            const dateLabel = matchDate
+                ? new Date(matchDate).toLocaleDateString("pt-BR")
+                : "—";
+            setCreatingCharge(true);
+            try {
+                await PaymentsApi.createExtraCharge(groupId, {
+                    name: `Jogo — ${dateLabel}`,
+                    amount,
+                    playerIds: participantPlayerIds,
+                });
+                toast.success("Cobrança do jogo criada com sucesso!");
+                setGameAmount("");
+            } catch {
+                toast.error("Erro ao criar cobrança do jogo.");
+            } finally {
+                setCreatingCharge(false);
+            }
+        };
+
+        return (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center gap-2 mb-3">
+                    <CreditCard size={15} className="text-indigo-500 shrink-0" />
+                    <div className="font-semibold text-slate-900">Cobrança do jogo</div>
+                </div>
+                <div className="text-xs text-slate-500 mb-3">
+                    Crie uma cobrança para os {participantPlayerIds.length} jogadores desta partida.
+                </div>
+                <div className="flex items-end gap-3">
+                    <label className="block flex-1 max-w-[160px]">
+                        <div className="label">Valor (R$)</div>
+                        <input
+                            className="input h-9 text-sm"
+                            value={gameAmount}
+                            onChange={e => setGameAmount(e.target.value)}
+                            placeholder="0,00"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                        />
+                    </label>
+                    <button
+                        className={cls(
+                            "btn btn-primary",
+                            (creatingCharge || !gameAmount) && "opacity-50 pointer-events-none"
+                        )}
+                        disabled={creatingCharge || !gameAmount}
+                        onClick={handleCreateCharge}
+                    >
+                        {creatingCharge ? (
+                            <><Loader2 size={14} className="animate-spin mr-1" />Criando...</>
+                        ) : (
+                            "Criar cobrança"
+                        )}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Monthly mode
+    const handleInitiateMonthly = async () => {
+        if (!matchDate || !groupId) return;
+        const d = new Date(matchDate);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        setInitiating(true);
+        try {
+            const res = await PaymentsApi.initiateMonthly(groupId, year, month);
+            const { created, skipped } = res.data ?? {};
+            toast.success(`Mensalidade lançada! ${created} novo(s), ${skipped} já existia(m).`);
+            setIsInitiated(true);
+        } catch {
+            toast.error("Erro ao lançar mensalidade.");
+        } finally {
+            setInitiating(false);
+        }
+    };
+
+    const dateLabel = matchDate
+        ? new Date(matchDate).toLocaleString("pt-BR", { month: "long", year: "numeric" })
+        : "—";
+
+    return (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <CreditCard size={15} className="text-indigo-500 shrink-0" />
+                <div className="font-semibold text-slate-900">Mensalidade</div>
+            </div>
+            <div className="text-xs text-slate-500 mb-3">
+                Lança cobranças de mensalidade para todos os mensalistas — {dateLabel}.
+            </div>
+
+            {isInitiated === null ? (
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <Loader2 size={14} className="animate-spin" /> Verificando...
+                </div>
+            ) : isInitiated ? (
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5">
+                    <Check size={14} className="text-emerald-600 shrink-0" />
+                    <span className="text-sm font-medium text-emerald-800">
+                        Mensalidade já lançada para este mês
+                    </span>
+                </div>
+            ) : (
+                <button
+                    className={cls(
+                        "btn btn-primary",
+                        initiating && "opacity-50 pointer-events-none"
+                    )}
+                    disabled={initiating}
+                    onClick={handleInitiateMonthly}
+                >
+                    {initiating ? (
+                        <><Loader2 size={14} className="animate-spin mr-1" />Lançando...</>
+                    ) : (
+                        "Lançar mensalidade do mês"
+                    )}
+                </button>
+            )}
+        </div>
+    );
+}
+
+// ── StepPost ─────────────────────────────────────────────────────────────────
 
 export function StepPost({
     admin,
@@ -47,6 +218,11 @@ export function StepPost({
     teamAHex,
     teamBName,
     teamBHex,
+
+    // payment
+    paymentMode,
+    groupId,
+    matchDate,
 }: {
     admin: boolean;
     currentMvpName: string;
@@ -83,6 +259,10 @@ export function StepPost({
     teamAHex?: string;
     teamBName?: string;
     teamBHex?: string;
+
+    paymentMode?: number;
+    groupId?: string;
+    matchDate?: string;
 }) {
     const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
     const _icons = useGroupIcons(_groupId);
@@ -214,6 +394,13 @@ export function StepPost({
     const eligibleVoters = participants.filter(
         (p) => !votedMatchPlayerIds.has(p.matchPlayerId)
     );
+
+    // Player IDs for payment charge (non-guest participants with a playerId)
+    const participantPlayerIds = participants
+        .map(p => p.playerId)
+        .filter((id): id is string => !!id);
+
+    const showPaymentSection = paymentMode != null && groupId;
 
     return (
         <div className="space-y-4">
@@ -474,6 +661,16 @@ export function StepPost({
                         teamBHex={teamBHex}
                     />
                 </div>
+
+                {/* Payment section */}
+                {showPaymentSection && (
+                    <PaymentSection
+                        paymentMode={paymentMode!}
+                        groupId={groupId!}
+                        matchDate={matchDate}
+                        participantPlayerIds={participantPlayerIds}
+                    />
+                )}
             </div>
         </div>
     );

@@ -19,6 +19,7 @@ import GodModeAdminPage from './pages/admin/GodModeAdminPage';
 import GodModeRoute from './routes/GodModeRoute';
 import VisualStatsPage from "./pages/VisualStatsPage";
 import CalendarPage from './pages/CalendarPage';
+import PaymentsPage from './pages/PaymentsPage';
 
 export default function App() {
     return (
@@ -52,6 +53,7 @@ export default function App() {
                     }
                 />
                 <Route path="groups/:groupId/visual-stats" element={<VisualStatsPage />} />
+                <Route path="payments" element={<PaymentsPage />} />
 
                 <Route
                     path="settings"

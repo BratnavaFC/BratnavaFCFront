@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Section } from "../../components/Section";
 import useAccountStore from "../../auth/accountStore";
-import { GroupInvitesApi, UsersApi } from "../../api/endpoints";
+import { GroupInvitesApi, UsersApi, PaymentsApi } from "../../api/endpoints";
 import { useInviteStore } from "../../stores/inviteStore";
 import { extractApiError } from "../../lib/apiError";
 import {
@@ -19,6 +19,8 @@ import {
     Bell,
     UserCheck,
     UserX,
+    CheckCircle2,
+    AlertCircle,
 } from "lucide-react";
 
 type Status = 1 | 2; // 1 Active, 2 Inactive
@@ -545,6 +547,7 @@ export default function AdminUsersPage() {
     const active = useAccountStore((s) => s.getActive());
     const isAdminOrGod = useMemo(() => !!active && active.roles.includes("GodMode"), [active]);
     const myUserId = active?.userId ?? null;
+    const activeGroupId = active?.activeGroupId ?? null;
 
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
 
@@ -592,6 +595,23 @@ export default function AdminUsersPage() {
             setInviteActionErr(e?.response?.data?.error ?? e?.response?.data?.message ?? "Erro ao recusar convite.");
         } finally {
             setRejectingId(null);
+        }
+    }
+
+    // Payment summary (user view)
+    const [myPaymentSummary,        setMyPaymentSummary]        = useState<any>(null);
+    const [myPaymentSummaryLoading, setMyPaymentSummaryLoading] = useState(false);
+
+    async function loadMyPaymentSummary() {
+        if (!activeGroupId) return;
+        setMyPaymentSummaryLoading(true);
+        try {
+            const res = await PaymentsApi.getMySummary(activeGroupId);
+            setMyPaymentSummary(res.data ?? null);
+        } catch {
+            // silencioso
+        } finally {
+            setMyPaymentSummaryLoading(false);
         }
     }
 
@@ -682,13 +702,15 @@ export default function AdminUsersPage() {
     }
 
     useEffect(() => {
-        if (isAdminOrGod) loadAdminList();
-        else {
+        if (isAdminOrGod) {
+            loadAdminList();
+        } else {
             loadMyProfile();
             loadInvites();
+            loadMyPaymentSummary();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAdminOrGod, page, pageSize, includeInactive, debouncedSearch, myUserId]);
+    }, [isAdminOrGod, page, pageSize, includeInactive, debouncedSearch, myUserId, activeGroupId]);
 
     function openEdit(u: UserListItemDto) {
         setEditUser(u);
@@ -837,6 +859,7 @@ export default function AdminUsersPage() {
                                                     {roleLabel(u.role)}
                                                 </span>
                                             </div>
+
                                         </div>
                                     );
                                 })}
@@ -977,6 +1000,52 @@ export default function AdminUsersPage() {
                                     <Input value={myUser.inactivatedAt ? fmtDate(myUser.inactivatedAt) : "-"} disabled />
                                 </Field>
                             </div>
+                        </div>
+                    )}
+
+                    {/* ── Minhas pendências ── */}
+                    {activeGroupId && (
+                        <div className="rounded-2xl border bg-white overflow-hidden">
+                            <div className="px-5 py-4 border-b flex items-center gap-3">
+                                <AlertCircle size={16} className="text-slate-500" />
+                                <span className="text-sm font-semibold text-slate-900">Pagamentos</span>
+                            </div>
+                            {myPaymentSummaryLoading ? (
+                                <div className="p-5 flex items-center gap-2 text-sm text-slate-600">
+                                    <Loader2 size={15} className="animate-spin" /> Carregando...
+                                </div>
+                            ) : !myPaymentSummary || (myPaymentSummary.isUpToDate && (myPaymentSummary.pendingExtraCharges?.length ?? 0) === 0) ? (
+                                <div className="p-5 flex items-center gap-2">
+                                    <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-semibold text-emerald-800">Em dia 🎉</p>
+                                        <p className="text-xs text-slate-400 mt-0.5">Nenhum pagamento pendente nesta patota.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-5 space-y-2">
+                                    {(myPaymentSummary.pendingMonthsCount ?? 0) > 0 && (
+                                        <div className="flex items-center gap-2">
+                                            <AlertCircle size={15} className="text-red-500 shrink-0" />
+                                            <span className="text-sm text-red-800">
+                                                <span className="font-semibold">{myPaymentSummary.pendingMonthsCount}</span>{' '}
+                                                {myPaymentSummary.pendingMonthsCount === 1 ? 'mensalidade pendente' : 'mensalidades pendentes'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {(myPaymentSummary.pendingExtraCharges ?? []).map((c: any) => (
+                                        <div key={c.chargeId} className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <AlertCircle size={14} className="text-amber-500 shrink-0" />
+                                                <span className="text-sm text-amber-900 font-medium truncate">{c.chargeName}</span>
+                                            </div>
+                                            <span className="text-sm font-semibold text-amber-900 shrink-0">
+                                                R$ {(c.finalAmount ?? c.amount ?? 0).toFixed(2).replace('.', ',')}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 

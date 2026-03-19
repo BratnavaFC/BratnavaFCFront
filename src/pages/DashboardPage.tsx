@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Section } from '../components/Section';
-import { PlayersApi, MatchesApi } from '../api/endpoints';
+import { PlayersApi, MatchesApi, PaymentsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
 import { extractApiError } from '../lib/apiError';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
-import { Calendar, MapPin, RefreshCw, Star, Clock } from 'lucide-react';
+import { Calendar, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
@@ -160,6 +160,9 @@ export default function DashboardPage() {
   const [recentMatches, setRecentMatches] = useState<MatchDetails[]>([]);
   const [recentLoading, setRecentLoading] = useState(false);
 
+  const [paymentSummary,        setPaymentSummary]        = useState<any>(null);
+  const [paymentSummaryLoading, setPaymentSummaryLoading] = useState(false);
+
   const selectedPlayer = useMemo(() => myPlayers.find(p => p.playerId === selectedPlayerId), [myPlayers, selectedPlayerId]);
 
   // ── load players for active group ──────────────────────────────────────────
@@ -226,8 +229,22 @@ export default function DashboardPage() {
     }
   }
 
+  // ── load payment summary ───────────────────────────────────────────────────
+  async function loadPaymentSummary() {
+    if (!groupId) return;
+    setPaymentSummaryLoading(true);
+    try {
+      const res = await PaymentsApi.getMySummary(groupId);
+      setPaymentSummary(res.data ?? null);
+    } catch {
+      // silencioso — summary é best-effort
+    } finally {
+      setPaymentSummaryLoading(false);
+    }
+  }
+
   // ── effects ────────────────────────────────────────────────────────────────
-  useEffect(() => { loadPlayers(); loadCurrentMatch(); /* eslint-disable-next-line */ }, [groupId]);
+  useEffect(() => { loadPlayers(); loadCurrentMatch(); loadPaymentSummary(); /* eslint-disable-next-line */ }, [groupId, selectedPlayerId]);
   useEffect(() => { loadRecentMatches(); /* eslint-disable-next-line */ }, [groupId, selectedPlayerId]);
 
   // ── render ─────────────────────────────────────────────────────────────────
@@ -267,6 +284,8 @@ export default function DashboardPage() {
           <CurrentMatchCard match={currentMatch} playerId={selectedPlayerId} />
         )}
       </Section>
+
+      {/* ── Minhas pendências — oculto até liberação para jogadores ── */}
 
       {/* ── Últimas partidas ── */}
       <Section

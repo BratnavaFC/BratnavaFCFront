@@ -1032,6 +1032,10 @@ export default function MatchesPage() {
             teamAHex:  (current as any)?.teamAColor?.hexValue ?? "",
             teamBName: (current as any)?.teamBColor?.name ?? "Time B",
             teamBHex:  (current as any)?.teamBColor?.hexValue ?? "",
+
+            paymentMode: (groupSettings as any)?.paymentMode ?? 0,
+            groupId: groupId ?? undefined,
+            matchDate: (current as any)?.playedAt ?? undefined,
         };
     }, [
         (current as any)?.computedMvp?.playerName,
@@ -1044,6 +1048,7 @@ export default function MatchesPage() {
         (current as any)?.teamAColor?.hexValue,
         (current as any)?.teamBColor?.name,
         (current as any)?.teamBColor?.hexValue,
+        (current as any)?.playedAt,
         participants,
         scoreA,
         scoreB,
@@ -1055,6 +1060,8 @@ export default function MatchesPage() {
         removingGoal,
         activePlayerId,
         participants,
+        groupSettings,
+        groupId,
     ]);
 
     const playingGoalProps = useMemo(() => ({
