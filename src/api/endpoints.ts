@@ -49,6 +49,8 @@ export const GroupsApi = {
   reactivate: (groupId: string) => http.post(`/api/Groups/${groupId}/reactivate`),
   addAdmin: (groupId: string, userId: string) => http.post(`/api/Groups/${groupId}/admins`, { userId }),
   removeAdmin: (groupId: string, userId: string) => http.delete(`/api/Groups/${groupId}/admins/${userId}`),
+  leaveAsCreator: (groupId: string, dto: { transferToUserId?: string; promoteAndTransferUserId?: string; deleteGroup?: boolean }) =>
+    http.post(`/api/Groups/${groupId}/leave-creator`, dto),
 };
 
 export const GroupSettingsApi = {
@@ -65,6 +67,7 @@ export const PlayersApi = {
   reactivate: (playerId: string) => http.post(`/api/Players/${playerId}/reactivate`),
   mine: () => http.get("/api/Players/mine"),
   byUser: (userId: string) => http.get(`/api/Players/by-user/${userId}`),
+  leaveGroup: (playerId: string) => http.post(`/api/Players/${playerId}/leave`),
 };
 
 export const TeamColorApi = {
