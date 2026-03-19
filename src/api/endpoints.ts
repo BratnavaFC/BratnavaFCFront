@@ -133,8 +133,9 @@ export const GroupInvitesApi = {
 };
 
 export const TeamGenApi = {
-  generate: (dto: TeamGenerationRequestDto) => http.post(`/api/TeamGeneration/generate`, dto),
+  generate:    (dto: TeamGenerationRequestDto) => http.post(`/api/TeamGeneration/generate`, dto),
   visualStats: (groupId: string) => http.get(`/api/TeamGeneration/visual-stats/${groupId}`),
+  spotlight:   (groupId: string) => http.get(`/api/TeamGeneration/spotlight/${groupId}`),
 };
 
 export const CalendarApi = {

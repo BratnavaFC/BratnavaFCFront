@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, Shield, ShieldAlert,
-    Menu, X, CreditCard,
+    Menu, X, CreditCard, Presentation,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -37,6 +37,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         ...(isGroupAdm || isGod ? [{ to: "/app/calendar",  label: "Calendário",  icon: CalendarCheck }] : []),
         // Pagamentos: visível apenas para admins
         ...(isGroupAdm || isGod ? [{ to: "/app/payments", label: "Pagamentos", icon: CreditCard }] : []),
+        ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight", icon: Presentation }] : []),
         ...(isGroupAdm || isGod ? [{
             to: active?.activeGroupId ? `/app/groups/${active.activeGroupId}/visual-stats` : "/app",
             label: "Visual Stats",
