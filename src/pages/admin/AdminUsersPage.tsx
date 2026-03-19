@@ -1003,52 +1003,6 @@ export default function AdminUsersPage() {
                         </div>
                     )}
 
-                    {/* ── Minhas pendências ── */}
-                    {activeGroupId && (
-                        <div className="rounded-2xl border bg-white overflow-hidden">
-                            <div className="px-5 py-4 border-b flex items-center gap-3">
-                                <AlertCircle size={16} className="text-slate-500" />
-                                <span className="text-sm font-semibold text-slate-900">Pagamentos</span>
-                            </div>
-                            {myPaymentSummaryLoading ? (
-                                <div className="p-5 flex items-center gap-2 text-sm text-slate-600">
-                                    <Loader2 size={15} className="animate-spin" /> Carregando...
-                                </div>
-                            ) : !myPaymentSummary || (myPaymentSummary.isUpToDate && (myPaymentSummary.pendingExtraCharges?.length ?? 0) === 0) ? (
-                                <div className="p-5 flex items-center gap-2">
-                                    <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-emerald-800">Em dia 🎉</p>
-                                        <p className="text-xs text-slate-400 mt-0.5">Nenhum pagamento pendente nesta patota.</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="p-5 space-y-2">
-                                    {(myPaymentSummary.pendingMonthsCount ?? 0) > 0 && (
-                                        <div className="flex items-center gap-2">
-                                            <AlertCircle size={15} className="text-red-500 shrink-0" />
-                                            <span className="text-sm text-red-800">
-                                                <span className="font-semibold">{myPaymentSummary.pendingMonthsCount}</span>{' '}
-                                                {myPaymentSummary.pendingMonthsCount === 1 ? 'mensalidade pendente' : 'mensalidades pendentes'}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {(myPaymentSummary.pendingExtraCharges ?? []).map((c: any) => (
-                                        <div key={c.chargeId} className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <AlertCircle size={14} className="text-amber-500 shrink-0" />
-                                                <span className="text-sm text-amber-900 font-medium truncate">{c.chargeName}</span>
-                                            </div>
-                                            <span className="text-sm font-semibold text-amber-900 shrink-0">
-                                                R$ {(c.finalAmount ?? c.amount ?? 0).toFixed(2).replace('.', ',')}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
                     {/* ── Convites pendentes ── */}
                     <div className="rounded-2xl border bg-white overflow-hidden">
                         <div className="px-5 py-4 border-b flex items-center gap-3">
