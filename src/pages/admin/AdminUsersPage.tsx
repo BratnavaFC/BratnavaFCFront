@@ -961,69 +961,13 @@ export default function AdminUsersPage() {
                         </div>
                     )}
 
-                    {/* ── Pagamentos ── (visível apenas para administradores por enquanto) */}
-                    {isAdminOrGod && activeGroupId && (
-                        <div className="card p-0 overflow-hidden shadow-sm">
-                            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
-                                <div className="h-8 w-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                                    <CreditCard size={15} />
-                                </div>
-                                <div>
-                                    <div className="font-semibold text-slate-900 text-sm">Pagamentos</div>
-                                    <div className="text-xs text-slate-400">Status nesta patota</div>
-                                </div>
-                            </div>
-                            {myPaymentSummaryLoading ? (
-                                <div className="p-6 flex items-center gap-2 text-slate-400">
-                                    <Loader2 size={15} className="animate-spin" /> Carregando...
-                                </div>
-                            ) : !myPaymentSummary || (myPaymentSummary.isUpToDate && (myPaymentSummary.pendingExtraCharges?.length ?? 0) === 0) ? (
-                                <div className="p-6 flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                        <CheckCircle2 size={20} className="text-emerald-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-emerald-800">Em dia 🎉</p>
-                                        <p className="text-xs text-slate-400 mt-0.5">Nenhum pagamento pendente nesta patota.</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="p-6 space-y-2">
-                                    {(myPaymentSummary.pendingMonthsCount ?? 0) > 0 && (
-                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 border border-rose-100">
-                                            <AlertCircle size={14} className="text-rose-500 shrink-0" />
-                                            <span className="text-sm text-rose-800">
-                                                <span className="font-semibold">{myPaymentSummary.pendingMonthsCount}</span>{' '}
-                                                {myPaymentSummary.pendingMonthsCount === 1 ? 'mensalidade pendente' : 'mensalidades pendentes'}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {(myPaymentSummary.pendingExtraCharges ?? []).map((c: any) => (
-                                        <div key={c.chargeId} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <AlertCircle size={13} className="text-amber-500 shrink-0" />
-                                                <span className="text-sm text-amber-900 font-medium truncate">{c.chargeName}</span>
-                                            </div>
-                                            <span className="text-sm font-semibold text-amber-900 shrink-0">
-                                                R$ {(c.finalAmount ?? c.amount ?? 0).toFixed(2).replace('.', ',')}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* ── Convites ── */}
-                    <div className="card p-0 overflow-hidden shadow-sm">
-                        <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
-                            <div className="h-8 w-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
-                                <Bell size={15} />
-                            </div>
-                            <div className="flex-1">
-                                <div className="font-semibold text-slate-900 text-sm">Convites de patota</div>
-                                <div className="text-xs text-slate-400">Aceite ou recuse convites pendentes</div>
-                            </div>
+                    {/* ── Convites pendentes ── */}
+                    <div className="rounded-2xl border bg-white overflow-hidden">
+                        <div className="px-5 py-4 border-b flex items-center gap-3">
+                            <Bell size={16} className="text-slate-500" />
+                            <span className="text-sm font-semibold text-slate-900">
+                                Convites de patota
+                            </span>
                             {invites.length > 0 && (
                                 <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold">
                                     {invites.length}

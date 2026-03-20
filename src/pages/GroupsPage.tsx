@@ -965,7 +965,7 @@ export default function GroupsPage() {
         [activePlayers, activePlayerId]);
 
     const existingUserIds = new Set(
-        (group?.players ?? []).map((p) => p.userId).filter((id): id is string => !!id)
+        (group?.players ?? []).filter((p) => !p.isGuest).map((p) => p.userId).filter((id): id is string => !!id)
     );
 
     // ── Funções ──
