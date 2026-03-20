@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo } from "react";
 import { X, Palette } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
-import { Field } from "../components/Field";
-import { UniformPreview } from "../domains/teamcolors/UniformPreview";
+import { Field } from "../Field";
+import { UniformPreview } from "../../domains/teamcolors/UniformPreview";
 
 type Props = {
     open: boolean;

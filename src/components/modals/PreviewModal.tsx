@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
-import { UniformPreview } from "../domains/teamcolors/UniformPreview";
+import { UniformPreview } from "../../domains/teamcolors/UniformPreview";
 
 type Props = {
     open: boolean;

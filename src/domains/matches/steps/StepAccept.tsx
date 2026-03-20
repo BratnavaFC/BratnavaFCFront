@@ -3,7 +3,7 @@ import { UserPlus } from "lucide-react";
 import type { PlayerInMatchDto } from "../matchTypes";
 import { InviteList } from "../ui/InviteList";
 import { cls } from "../matchUtils";
-import { AddGuestModal } from "../../../components/AddGuestModal";
+import { AddGuestModal } from "../../../components/modals/AddGuestModal";
 
 // ── StepAccept ───────────────────────────────────────────────────────────────
 

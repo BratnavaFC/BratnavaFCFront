@@ -1,10 +1,10 @@
-// src/components/AddGuestModal.tsx
+// src/components/modals/AddGuestModal.tsx
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Plus, X } from "lucide-react";
-import { useAccountStore } from "../auth/accountStore";
-import { useGroupIcons } from "../hooks/useGroupIcons";
-import { IconRenderer } from "./IconRenderer";
-import { resolveIcon } from "../lib/groupIcons";
+import { useAccountStore } from "../../auth/accountStore";
+import { useGroupIcons } from "../../hooks/useGroupIcons";
+import { IconRenderer } from "../IconRenderer";
+import { resolveIcon } from "../../lib/groupIcons";
 
 // ─── StarRating ───────────────────────────────────────────────────────────────
 
@@ -61,6 +61,14 @@ export function AddGuestModal({
     const nameRef = useRef<HTMLInputElement>(null);
     const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
     const _icons   = useGroupIcons(_groupId);
+
+    // ESC key handler
+    useEffect(() => {
+        if (!open) return;
+        const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [open, onClose]);
 
     useEffect(() => {
         if (open) {

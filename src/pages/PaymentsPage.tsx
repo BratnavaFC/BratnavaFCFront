@@ -6,6 +6,10 @@ import {
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PaymentsApi, GroupSettingsApi } from '../api/endpoints';
+import MonthlyPaymentModal from '../components/modals/MonthlyPaymentModal';
+import CreateExtraChargeModal from '../components/modals/CreateExtraChargeModal';
+import ExtraPaymentModal from '../components/modals/ExtraPaymentModal';
+import BulkExtraDiscountModal from '../components/modals/BulkExtraDiscountModal';
 
 // ── Tipos locais ──────────────────────────────────────────────────────────────
 interface MonthlyCell {
@@ -29,433 +33,6 @@ interface ExtraCharge {
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 const cls = (...c: (string|false|undefined)[]) => c.filter(Boolean).join(' ');
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function fileToBase64(file: File): Promise<string> {
-    return new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onload  = () => res((reader.result as string).split(',')[1]);
-        reader.onerror = rej;
-        reader.readAsDataURL(file);
-    });
-}
-
-// ── Modal de pagamento mensal ─────────────────────────────────────────────────
-interface MonthlyModalProps {
-    groupId: string; row: PlayerRow; month: number; isAdmin: boolean;
-    onClose(): void; onSaved(): void;
-}
-function MonthlyPaymentModal({ groupId, row, month, isAdmin, onClose, onSaved }: MonthlyModalProps) {
-    const cell   = (row.months ?? []).find(c => c.month === month);
-    const isPaid = cell?.status === 1;
-    const [discount, setDiscount]   = useState(String(cell?.discount ?? 0));
-    const [discReason, setDiscReason] = useState(cell?.discountReason ?? '');
-    const [file, setFile]           = useState<File | null>(null);
-    const [saving, setSaving]       = useState(false);
-
-    async function submit(status: 0 | 1) {
-        setSaving(true);
-        try {
-            let proofBase64: string | undefined;
-            let proofFileName: string | undefined;
-            let proofMimeType: string | undefined;
-            if (file) {
-                proofBase64   = await fileToBase64(file);
-                proofFileName = file.name;
-                proofMimeType = file.type;
-            }
-            await PaymentsApi.upsertMonthly(groupId, {
-                playerId: row.playerId,
-                year: new Date().getFullYear(),
-                month,
-                status,
-                discount: isAdmin ? parseFloat(discount) || 0 : undefined,
-                discountReason: isAdmin ? discReason || undefined : undefined,
-                proofBase64, proofFileName, proofMimeType,
-            });
-            toast.success(status === 1 ? 'Marcado como pago!' : 'Marcado como pendente');
-            onSaved();
-            onClose();
-        } catch { toast.error('Erro ao salvar pagamento'); }
-        finally { setSaving(false); }
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">
-                    {row.playerName} — {MONTHS[month-1]}
-                </h3>
-                <p className="text-sm text-slate-500 mb-4">
-                    Valor: <span className="font-semibold">R$ {(cell?.amount ?? 0).toFixed(2)}</span>
-                    {(cell?.discount ?? 0) > 0 && <> · Desconto: <span className="text-green-600 font-semibold">R$ {cell!.discount.toFixed(2)}</span></>}
-                </p>
-
-                {isAdmin && (
-                    <div className="space-y-3 mb-4">
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Desconto (R$)</label>
-                            <input type="number" min="0" step="0.01"
-                                value={discount} onChange={e => setDiscount(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Motivo do desconto</label>
-                            <input type="text" value={discReason} onChange={e => setDiscReason(e.target.value)}
-                                placeholder="Opcional"
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                        </div>
-                    </div>
-                )}
-
-                <div className="mb-5">
-                    <label className="text-xs font-medium text-slate-600 block mb-1">
-                        Comprovante {isAdmin ? '(opcional)' : '(opcional)'}
-                    </label>
-                    <input type="file" accept="image/*,application/pdf"
-                        onChange={e => setFile(e.target.files?.[0] ?? null)}
-                        className="block w-full text-sm text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-                    {cell?.hasProof && <p className="text-xs text-slate-400 mt-1">Comprovante já enviado: {cell.proofFileName}</p>}
-                </div>
-
-                <div className="flex gap-2">
-                    {!isPaid && (
-                        <button onClick={() => submit(1)} disabled={saving}
-                            className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                            {saving ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle2 size={14}/>}
-                            Marcar como pago
-                        </button>
-                    )}
-                    {isPaid && isAdmin && (
-                        <button onClick={() => submit(0)} disabled={saving}
-                            className="flex-1 bg-rose-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                            {saving ? <Loader2 size={14} className="animate-spin"/> : <XCircle size={14}/>}
-                            Marcar pendente
-                        </button>
-                    )}
-                    {!isPaid && isAdmin && (
-                        <button onClick={() => submit(0)} disabled={saving}
-                            className="flex-1 border border-slate-200 text-slate-700 rounded-lg py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
-                            Só salvar desconto
-                        </button>
-                    )}
-                    <button onClick={onClose}
-                        className="px-4 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ── Modal criar cobrança extra ─────────────────────────────────────────────────
-interface CreateExtraChargeModalProps {
-    groupId: string; players: { id: string; name: string }[];
-    onClose(): void; onSaved(): void;
-}
-function CreateExtraChargeModal({ groupId, players, onClose, onSaved }: CreateExtraChargeModalProps) {
-    const [name, setName]         = useState('');
-    const [desc, setDesc]         = useState('');
-    const [amount, setAmount]     = useState('');
-    const [dueDate, setDueDate]   = useState('');
-    const [selected, setSelected] = useState<Set<string>>(new Set(players.map(p => p.id)));
-    const [saving, setSaving]     = useState(false);
-
-    function toggleAll() {
-        setSelected(selected.size === players.length ? new Set() : new Set(players.map(p => p.id)));
-    }
-
-    async function submit() {
-        if (!name.trim() || !amount) { toast.error('Nome e valor são obrigatórios'); return; }
-        if (selected.size === 0)     { toast.error('Selecione ao menos um jogador'); return; }
-        setSaving(true);
-        try {
-            await PaymentsApi.createExtraCharge(groupId, {
-                name: name.trim(), description: desc.trim() || undefined,
-                amount: parseFloat(amount),
-                dueDate: dueDate || undefined,
-                playerIds: [...selected],
-            });
-            toast.success('Cobrança criada!');
-            onSaved(); onClose();
-        } catch { toast.error('Erro ao criar cobrança'); }
-        finally { setSaving(false); }
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Nova cobrança extra</h3>
-                <div className="space-y-3 mb-4">
-                    <div>
-                        <label className="text-xs font-medium text-slate-600 block mb-1">Nome *</label>
-                        <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Churrasco da patota"
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                    </div>
-                    <div>
-                        <label className="text-xs font-medium text-slate-600 block mb-1">Descrição</label>
-                        <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Opcional"
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 resize-none" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Valor (R$) *</label>
-                            <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Vencimento</label>
-                            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-medium text-slate-600">Jogadores *</label>
-                        <button onClick={toggleAll} className="text-xs text-slate-500 hover:text-slate-800 underline">
-                            {selected.size === players.length ? 'Desmarcar todos' : 'Marcar todos'}
-                        </button>
-                    </div>
-                    <div className="border border-slate-200 rounded-lg max-h-44 overflow-y-auto divide-y divide-slate-100">
-                        {players.map(p => (
-                            <label key={p.id} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer">
-                                <input type="checkbox" checked={selected.has(p.id)}
-                                    onChange={() => {
-                                        const s = new Set(selected);
-                                        s.has(p.id) ? s.delete(p.id) : s.add(p.id);
-                                        setSelected(s);
-                                    }}
-                                    className="rounded border-slate-300 text-slate-900" />
-                                <span className="text-sm text-slate-700">{p.name}</span>
-                            </label>
-                        ))}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">{selected.size} de {players.length} selecionados</p>
-                </div>
-
-                <div className="flex gap-2">
-                    <button onClick={submit} disabled={saving}
-                        className="flex-1 bg-slate-900 text-white rounded-lg py-2 text-sm font-semibold hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                        {saving ? <Loader2 size={14} className="animate-spin"/> : <Plus size={14}/>}
-                        Criar cobrança
-                    </button>
-                    <button onClick={onClose} className="px-4 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ── Modal de pagamento de cobrança extra ──────────────────────────────────────
-interface ExtraPaymentModalProps {
-    groupId: string; charge: ExtraCharge; payment: ExtraChargePayment;
-    isAdmin: boolean; onClose(): void; onSaved(): void;
-}
-function ExtraPaymentModal({ groupId, charge, payment, isAdmin, onClose, onSaved }: ExtraPaymentModalProps) {
-    const isPaid = payment.status === 1;
-    const [discount, setDiscount]     = useState(String(payment.discount ?? 0));
-    const [discReason, setDiscReason] = useState(payment.discountReason ?? '');
-    const [file, setFile]             = useState<File | null>(null);
-    const [saving, setSaving]         = useState(false);
-
-    async function submit(status: 0 | 1) {
-        setSaving(true);
-        try {
-            let proofBase64: string | undefined;
-            let proofFileName: string | undefined;
-            let proofMimeType: string | undefined;
-            if (file) {
-                proofBase64   = await fileToBase64(file);
-                proofFileName = file.name;
-                proofMimeType = file.type;
-            }
-            await PaymentsApi.upsertExtraChargePayment(groupId, charge.id, payment.playerId, {
-                status,
-                discount: isAdmin ? parseFloat(discount) || 0 : undefined,
-                discountReason: isAdmin ? discReason || undefined : undefined,
-                proofBase64, proofFileName, proofMimeType,
-            });
-            toast.success(status === 1 ? 'Marcado como pago!' : 'Marcado como pendente');
-            onSaved(); onClose();
-        } catch { toast.error('Erro ao salvar pagamento'); }
-        finally { setSaving(false); }
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">{payment.playerName}</h3>
-                <p className="text-sm text-slate-500 mb-4">
-                    {charge.name} · R$ {payment.amount.toFixed(2)}
-                    {payment.discount > 0 && <> · Desconto: <span className="text-green-600 font-semibold">R$ {payment.discount.toFixed(2)}</span></>}
-                </p>
-
-                {isAdmin && (
-                    <div className="space-y-3 mb-4">
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Desconto (R$)</label>
-                            <input type="number" min="0" step="0.01"
-                                value={discount} onChange={e => setDiscount(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Motivo do desconto</label>
-                            <input type="text" value={discReason} onChange={e => setDiscReason(e.target.value)} placeholder="Opcional"
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                        </div>
-                    </div>
-                )}
-
-                <div className="mb-5">
-                    <label className="text-xs font-medium text-slate-600 block mb-1">Comprovante (opcional)</label>
-                    <input type="file" accept="image/*,application/pdf"
-                        onChange={e => setFile(e.target.files?.[0] ?? null)}
-                        className="block w-full text-sm text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-                    {payment.hasProof && <p className="text-xs text-slate-400 mt-1">Já enviado: {payment.proofFileName}</p>}
-                </div>
-
-                <div className="flex gap-2">
-                    {!isPaid && (
-                        <button onClick={() => submit(1)} disabled={saving}
-                            className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                            {saving ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle2 size={14}/>}
-                            Marcar como pago
-                        </button>
-                    )}
-                    {isPaid && isAdmin && (
-                        <button onClick={() => submit(0)} disabled={saving}
-                            className="flex-1 bg-rose-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                            {saving ? <Loader2 size={14} className="animate-spin"/> : <XCircle size={14}/>}
-                            Marcar pendente
-                        </button>
-                    )}
-                    {!isPaid && isAdmin && (
-                        <button onClick={() => submit(0)} disabled={saving}
-                            className="flex-1 border border-slate-200 text-slate-700 rounded-lg py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
-                            Só desconto
-                        </button>
-                    )}
-                    <button onClick={onClose} className="px-4 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ── Modal desconto em massa (cobranças extras) ────────────────────────────────
-interface BulkExtraDiscountModalProps {
-    groupId: string; charge: ExtraCharge;
-    onClose(): void; onSaved(): void;
-}
-function BulkExtraDiscountModal({ groupId, charge, onClose, onSaved }: BulkExtraDiscountModalProps) {
-    const pendingPlayers = charge.payments.filter(p => p.status !== 1);
-    const [discount, setDiscount] = useState('');
-    const [reason, setReason]     = useState('');
-    const [selected, setSelected] = useState<Set<string>>(new Set(pendingPlayers.map(p => p.playerId)));
-    const [saving, setSaving]     = useState(false);
-    const allPlayers              = charge.payments;
-
-    function toggleAll() {
-        setSelected(selected.size === allPlayers.length ? new Set() : new Set(allPlayers.map(p => p.playerId)));
-    }
-
-    async function submit() {
-        if (!discount || parseFloat(discount) <= 0) { toast.error('Informe um valor de desconto'); return; }
-        if (selected.size === 0) { toast.error('Selecione ao menos um jogador'); return; }
-        setSaving(true);
-        try {
-            await PaymentsApi.bulkDiscountExtraCharge(groupId, charge.id, {
-                discount: parseFloat(discount),
-                discountReason: reason.trim() || undefined,
-                playerIds: [...selected],
-            });
-            toast.success(`Desconto aplicado para ${selected.size} jogador${selected.size !== 1 ? 'es' : ''}!`);
-            onSaved(); onClose();
-        } catch { toast.error('Erro ao aplicar desconto'); }
-        finally { setSaving(false); }
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">Desconto em massa</h3>
-                <p className="text-sm text-slate-500 mb-4">
-                    Cobrança: <span className="font-semibold text-slate-700">{charge.name}</span> · R$ {charge.amount.toFixed(2)}
-                </p>
-
-                <div className="space-y-3 mb-4">
-                    <div>
-                        <label className="text-xs font-medium text-slate-600 block mb-1">Desconto (R$) *</label>
-                        <input type="number" min="0.01" step="0.01" placeholder="0,00"
-                            value={discount} onChange={e => setDiscount(e.target.value)}
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                    </div>
-                    <div>
-                        <label className="text-xs font-medium text-slate-600 block mb-1">Motivo (opcional)</label>
-                        <input type="text" placeholder="Ex: Desconto de fidelidade"
-                            value={reason} onChange={e => setReason(e.target.value)}
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                    </div>
-                </div>
-
-                <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-medium text-slate-600">Jogadores *</label>
-                        <button onClick={toggleAll} className="text-xs text-slate-500 hover:text-slate-800 underline">
-                            {selected.size === allPlayers.length ? 'Desmarcar todos' : 'Marcar todos'}
-                        </button>
-                    </div>
-                    <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-slate-100">
-                        {allPlayers.map(p => (
-                            <label key={p.playerId} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer">
-                                <input type="checkbox" checked={selected.has(p.playerId)}
-                                    onChange={() => {
-                                        const s = new Set(selected);
-                                        s.has(p.playerId) ? s.delete(p.playerId) : s.add(p.playerId);
-                                        setSelected(s);
-                                    }}
-                                    className="rounded border-slate-300 text-slate-900" />
-                                <span className="flex-1 text-sm text-slate-700">{p.playerName}</span>
-                                <span className={cls(
-                                    'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
-                                    p.status === 1 ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'
-                                )}>
-                                    {p.status === 1 ? 'Pago' : 'Pendente'}
-                                </span>
-                            </label>
-                        ))}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">{selected.size} de {allPlayers.length} selecionados</p>
-                </div>
-
-                {discount && parseFloat(discount) > 0 && selected.size > 0 && (
-                    <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
-                        Aplicará <strong>R$ {parseFloat(discount).toFixed(2)}</strong> de desconto para{' '}
-                        <strong>{selected.size} jogador{selected.size !== 1 ? 'es' : ''}</strong>.
-                    </div>
-                )}
-
-                <div className="flex gap-2">
-                    <button onClick={submit} disabled={saving}
-                        className="flex-1 bg-slate-900 text-white rounded-lg py-2 text-sm font-semibold hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                        {saving ? <Loader2 size={14} className="animate-spin"/> : <DollarSign size={14}/>}
-                        Aplicar desconto
-                    </button>
-                    <button onClick={onClose} className="px-4 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 // ── Componente de card de cobrança extra (admin) ──────────────────────────────
 interface ChargeCardProps {
@@ -1094,6 +671,7 @@ export default function PaymentsPage() {
             {/* Modais */}
             {monthModal && (
                 <MonthlyPaymentModal
+                    open={true}
                     groupId={groupId}
                     row={monthModal.row}
                     month={monthModal.month}
@@ -1104,6 +682,7 @@ export default function PaymentsPage() {
             )}
             {bulkDiscountCharge && (
                 <BulkExtraDiscountModal
+                    open={true}
                     groupId={groupId}
                     charge={bulkDiscountCharge}
                     onClose={() => setBulkDiscountCharge(null)}
@@ -1112,6 +691,7 @@ export default function PaymentsPage() {
             )}
             {createModal && (
                 <CreateExtraChargeModal
+                    open={true}
                     groupId={groupId}
                     players={mensalistas}
                     onClose={() => setCreateModal(false)}
@@ -1120,6 +700,7 @@ export default function PaymentsPage() {
             )}
             {extraModal && (
                 <ExtraPaymentModal
+                    open={true}
                     groupId={groupId}
                     charge={extraModal.charge}
                     payment={extraModal.payment}
