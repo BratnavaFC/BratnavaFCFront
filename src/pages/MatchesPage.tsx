@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { RotateCcw } from "lucide-react";
-import { Section } from "../components/Section";
+import { CalendarDays, Loader2, RotateCcw } from "lucide-react";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
@@ -1095,79 +1094,104 @@ export default function MatchesPage() {
         return Number.isFinite(s) && s > 0; // > Created
     }, [admin, (current as any)?.status]);
 
-    return (
-        <div className="space-y-6">
-            <Section title="Partida">
-                {!groupId ? (
-                    <div className="muted">Selecione um Group no Dashboard.</div>
-                ) : (
-                    <div className="space-y-3">
-                        {admin && currentMatchId && (
-                            <div className="flex items-center justify-end gap-2">
-                                <button
-                                    type="button"
-                                    className={[
-                                        "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-colors",
-                                        canRewind
-                                            ? "bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700"
-                                            : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60",
-                                    ].join(" ")}
-                                    onClick={() => {
-                                        if (!canRewind) return;
-                                        rewindOneStep();
-                                    }}
-                                    disabled={!canRewind}
-                                    title={canRewind ? "Voltar uma etapa" : "Não é possível voltar neste status"}
-                                >
-                                    <RotateCcw size={14} />
-                                    Voltar etapa
-                                </button>
-                            </div>
-                        )}
+    const stepLabel = steps.find((s) => s.key === stepKey)?.title ?? "Em andamento";
 
-                        <MatchWizard
-                            admin={admin}
-                            stepKey={stepKey}
-                            steps={steps}
-                            current={current}
-                            loading={loading}
-                            maxPlayers={maxPlayers}
-                            acceptedCount={accepted.length}
-                            pendingCount={pending.length}
-                            acceptedOverLimit={acceptedOverLimit}
-                            placeName={placeName}
-                            setPlaceName={setPlaceName}
-                            playedAtDate={playedAtDate}
-                            setPlayedAtDate={setPlayedAtDate}
-                            playedAtTime={playedAtTime}
-                            setPlayedAtTime={setPlayedAtTime}
-                            canCreateMatch={canCreateMatch}
-                            creating={creating}
-                            onCreateMatch={createMatch}
-                            currentExistsInCreate={currentExistsInCreate}
-                            accepted={accepted}
-                            rejected={rejected}
-                            pending={pending}
-                            mutatingInvite={mutatingInvite}
-                            activePlayerId={activePlayerId}
-                            onAcceptInvite={acceptInvite}
-                            onRejectInvite={rejectInvite}
-                            onRefresh={refreshCurrent}
-                            onGoToMatchMaking={goToMatchMaking}
-                            onAddGuest={addGuestToMatch}
-                            onSetPlayerRole={setPlayerRole}
-                            teamsProps={teamsProps}
-                            onEndMatch={endMatch}
-                            onGoToPostGame={goToPostGame}
-                            postProps={postProps}
-                            playingGoalProps={playingGoalProps}
-                            onFinalize={finalizeMatch}
-                            onReloadDone={loadCurrent}
-                            finalizing={finalizing as any}
-                        />
+    return (
+        <div className="space-y-5">
+
+            {/* ── Header ── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                <div className="relative flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                            <CalendarDays size={26} />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black leading-tight">Partida</h1>
+                            <p className="text-sm text-white/50 mt-0.5">
+                                {loading
+                                    ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
+                                    : !groupId
+                                        ? "Selecione um grupo no Dashboard"
+                                        : !current
+                                            ? "Nenhuma partida em andamento"
+                                            : stepLabel}
+                            </p>
+                        </div>
                     </div>
-                )}
-            </Section>
+                    {admin && currentMatchId && (
+                        <button
+                            type="button"
+                            className={[
+                                "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors shrink-0",
+                                canRewind
+                                    ? "bg-amber-500/20 border-amber-400/30 text-amber-300 hover:bg-amber-500/30"
+                                    : "bg-white/5 border-white/10 text-white/30 cursor-not-allowed",
+                            ].join(" ")}
+                            onClick={() => { if (!canRewind) return; rewindOneStep(); }}
+                            disabled={!canRewind}
+                            title={canRewind ? "Voltar uma etapa" : "Não é possível voltar neste status"}
+                        >
+                            <RotateCcw size={14} />
+                            Voltar etapa
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Conteúdo ── */}
+            {!groupId ? (
+                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 shadow-sm">
+                    <CalendarDays size={36} className="opacity-30" />
+                    <span className="text-sm">Selecione um grupo no Dashboard.</span>
+                </div>
+            ) : (
+                <div className="card p-5 shadow-sm">
+                    <MatchWizard
+                        admin={admin}
+                        stepKey={stepKey}
+                        steps={steps}
+                        current={current}
+                        loading={loading}
+                        maxPlayers={maxPlayers}
+                        acceptedCount={accepted.length}
+                        pendingCount={pending.length}
+                        acceptedOverLimit={acceptedOverLimit}
+                        placeName={placeName}
+                        setPlaceName={setPlaceName}
+                        playedAtDate={playedAtDate}
+                        setPlayedAtDate={setPlayedAtDate}
+                        playedAtTime={playedAtTime}
+                        setPlayedAtTime={setPlayedAtTime}
+                        canCreateMatch={canCreateMatch}
+                        creating={creating}
+                        onCreateMatch={createMatch}
+                        currentExistsInCreate={currentExistsInCreate}
+                        accepted={accepted}
+                        rejected={rejected}
+                        pending={pending}
+                        mutatingInvite={mutatingInvite}
+                        activePlayerId={activePlayerId}
+                        onAcceptInvite={acceptInvite}
+                        onRejectInvite={rejectInvite}
+                        onRefresh={refreshCurrent}
+                        onGoToMatchMaking={goToMatchMaking}
+                        onAddGuest={addGuestToMatch}
+                        onSetPlayerRole={setPlayerRole}
+                        teamsProps={teamsProps}
+                        onEndMatch={endMatch}
+                        onGoToPostGame={goToPostGame}
+                        postProps={postProps}
+                        playingGoalProps={playingGoalProps}
+                        onFinalize={finalizeMatch}
+                        onReloadDone={loadCurrent}
+                        finalizing={finalizing as any}
+                    />
+                </div>
+            )}
         </div>
     );
 }

@@ -4,8 +4,8 @@ import { Section } from "../components/Section";
 import { AddGuestModal, StarRating } from "../components/AddGuestModal";
 import { GroupInvitesApi, GroupsApi, PaymentsApi, PlayersApi, UsersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { AlertCircle, Check, CheckCircle2, ChevronDown, Loader2, LogOut, Pencil, Plus, Search, UserPlus, X } from "lucide-react";
-import { isGodMode } from "../auth/guards";
+import { AlertCircle, Check, CheckCircle2, ChevronDown, Loader2, LogOut, Pencil, Plus, Search, UserPlus, Users2, X } from "lucide-react";
+import { isGodMode, isGroupFinanceiro } from "../auth/guards";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
@@ -944,6 +944,7 @@ export default function GroupsPage() {
         : null;
     const activePlayerId = myPlayerInExpandedGroup?.playerId ?? "";
     const isAdminOfGroup = isGroupAdmin(expandedGroupId ?? "");
+    const isFinanceiroOfGroup = isGroupFinanceiro(expandedGroupId ?? "");
 
     // ── Icons ligados ao grupo expandido ──
     const _icons = useGroupIcons(expandedGroupId || null);
@@ -1002,7 +1003,7 @@ export default function GroupsPage() {
 
     async function loadPaymentData() {
         if (!expandedGroupId) { setPaymentMap(new Map()); return; }
-        if (!isGroupAdmin(expandedGroupId) && !isGodMode()) {
+        if (!isGroupFinanceiro(expandedGroupId) && !isGodMode()) {
             setPaymentMap(new Map());
             return;
         }
@@ -1075,222 +1076,143 @@ export default function GroupsPage() {
     function GroupContent() {
         if (groupError) {
             return (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {groupError}
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 flex items-center gap-2">
+                    <AlertCircle size={15} className="shrink-0" /> {groupError}
                 </div>
             );
         }
         if (groupLoading) {
             return (
-                <div className="muted flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin" /> Carregando...
+                <div className="flex items-center gap-2 text-slate-400 py-6 justify-center">
+                    <Loader2 size={16} className="animate-spin" /> Carregando...
                 </div>
             );
         }
         if (!group) return null;
         if (activePlayers.length === 0 && inactivePlayers.length === 0) {
-            return <div className="muted">Nenhum jogador nesta patota.</div>;
+            return (
+                <div className="flex flex-col items-center gap-2 py-10 text-slate-400">
+                    <Users2 size={32} className="opacity-30" />
+                    <span className="text-sm">Nenhum jogador nesta patota.</span>
+                </div>
+            );
         }
+
+        function PlayerCard({ p, dim = false }: { p: PlayerDto; dim?: boolean }) {
+            const isMe = p.id === activePlayerId;
+            const canEdit = isAdminOfGroup || isGod || isMe;
+            const initials = p.name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+            const pmt = (isFinanceiroOfGroup || isGod) ? paymentMap.get(p.id) : undefined;
+            const pendingTotal = pmt ? pmt.pendingMonths + pmt.pendingExtras : 0;
+            return (
+                <div className={[
+                    "rounded-xl border bg-white p-3 flex flex-col gap-2 shadow-sm transition-all",
+                    dim ? "opacity-50" : "",
+                    isMe ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200",
+                ].join(" ")}>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`h-9 w-9 rounded-full text-xs font-bold flex items-center justify-center shrink-0 select-none ${isMe ? 'bg-emerald-600 text-white' : p.isGuest ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-700'}`}>
+                            {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1 min-w-0">
+                                <span className="text-sm font-semibold text-slate-900 truncate">{p.name}</span>
+                                <span className="shrink-0 leading-none">
+                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />
+                                </span>
+                            </div>
+                            {p.userName && <div className="text-[11px] text-slate-400 truncate">@{p.userName}</div>}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                            {isMe && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">Você</span>
+                            )}
+                            {canEdit && (
+                                <button type="button" onClick={() => setEditPlayer(p)}
+                                    className="h-6 w-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                    title="Editar jogador" aria-label="Editar jogador">
+                                    <Pencil size={11} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* star rating — admin only */}
+                    {p.isGuest && p.guestStarRating != null && (isAdminOfGroup || isGod) && (
+                        <div className="text-[12px] leading-none text-amber-400">
+                            {"★".repeat(p.guestStarRating)}
+                            <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
+                        </div>
+                    )}
+
+                    {/* payment badge */}
+                    {pmt && (
+                        pendingTotal === 0 ? (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-100 w-fit">
+                                <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+                                <span className="text-[10px] text-emerald-700 font-medium">Em dia</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-50 border border-rose-100 w-fit">
+                                <AlertCircle size={11} className="text-rose-500 shrink-0" />
+                                <span className="text-[10px] text-rose-700 font-medium">
+                                    {pendingTotal} pendência{pendingTotal !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        )
+                    )}
+                </div>
+            );
+        }
+
         return (
-            <div className="space-y-4">
-                {/* ── Jogadores Ativos ── */}
+            <div className="space-y-5">
+                {/* ── Mensalistas ── */}
                 {activePlayers.length === 0 ? (
-                    <div className="muted">Nenhum jogador ativo.</div>
+                    <div className="text-sm text-slate-400 italic">Nenhum mensalista ativo.</div>
                 ) : (
-                    <div className="space-y-2">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 pt-1">
-                            Mensalistas ({activePlayers.length})
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-md bg-emerald-500 flex items-center justify-center shrink-0">
+                                <Check size={11} className="text-white" />
+                            </div>
+                            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Mensalistas</span>
+                            <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">{activePlayers.length}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                            {sortedPlayers.map((p) => {
-                                const isMe = p.id === activePlayerId;
-                                const canEdit = isAdminOfGroup || isGod || isMe;
-                                return (
-                                    <div
-                                        key={p.id}
-                                        className={[
-                                            "group relative rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
-                                            isMe ? "border-emerald-400" : "border-slate-200",
-                                        ].join(" ")}
-                                    >
-                                        {/* name + badges row */}
-                                        <div className="flex items-center justify-between gap-1 min-w-0">
-                                            <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
-                                                <span className="truncate">{p.name}</span>
-                                                <span className="shrink-0"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} /></span>
-                                            </div>
-                                            <div className="flex items-center gap-0.5 shrink-0">
-                                                {isMe && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">
-                                                        Você
-                                                    </span>
-                                                )}
-                                                {canEdit && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEditPlayer(p)}
-                                                        className="ml-0.5 h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
-                                                        title="Editar jogador"
-                                                        aria-label="Editar jogador"
-                                                    >
-                                                        <Pencil size={11} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* secondary info row */}
-                                        <div className="flex items-center justify-between gap-1">
-                                            <span className="text-[11px] text-slate-400 truncate">
-                                                {p.userName ? `@${p.userName}` : ""}
-                                            </span>
-                                            {p.isGuest && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
-                                                    Convidado
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* star rating — admin only */}
-                                        {p.isGuest && p.guestStarRating != null && (isAdminOfGroup || isGod) && (
-                                            <div className="text-[11px] leading-none text-amber-400 mt-0.5">
-                                                {"★".repeat(p.guestStarRating)}
-                                                <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
-                                            </div>
-                                        )}
-
-                                        {/* payment badge — admin only */}
-                                        {(isAdminOfGroup || isGod) && (() => {
-                                            const pmt = paymentMap.get(p.id);
-                                            if (!pmt) return null;
-                                            const total = pmt.pendingMonths + pmt.pendingExtras;
-                                            if (total === 0) {
-                                                return (
-                                                    <div className="flex items-center gap-1 mt-0.5">
-                                                        <CheckCircle2 size={11} className="text-emerald-500" />
-                                                        <span className="text-[10px] text-emerald-600">Em dia</span>
-                                                    </div>
-                                                );
-                                            }
-                                            return (
-                                                <div className="flex items-center gap-1 mt-0.5">
-                                                    <AlertCircle size={11} className="text-red-500" />
-                                                    <span className="text-[10px] text-red-600 font-medium">
-                                                        {total} pendência{total !== 1 ? 's' : ''}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                );
-                            })}
+                            {sortedPlayers.map((p) => <PlayerCard key={p.id} p={p} />)}
                         </div>
                     </div>
                 )}
 
                 {/* ── Convidados ── */}
                 {guestPlayers.length > 0 && (
-                    <div className="space-y-2">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 pt-1">
-                            Convidados ({guestPlayers.length})
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-md bg-amber-400 flex items-center justify-center shrink-0">
+                                <UserPlus size={11} className="text-white" />
+                            </div>
+                            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Convidados</span>
+                            <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">{guestPlayers.length}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                            {guestPlayers.map((p) => {
-                                const canEdit = isAdminOfGroup || isGod;
-                                return (
-                                    <div
-                                        key={p.id}
-                                        className="relative rounded-lg border border-slate-200 px-3 py-2 bg-white flex flex-col gap-0.5"
-                                    >
-                                        {/* name + edit row */}
-                                        <div className="flex items-center justify-between gap-1 min-w-0">
-                                            <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
-                                                <span className="truncate">{p.name}</span>
-                                                <span className="shrink-0"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} /></span>
-                                            </div>
-                                            <div className="flex items-center gap-0.5 shrink-0">
-                                                {canEdit && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEditPlayer(p)}
-                                                        className="h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
-                                                        title="Editar jogador"
-                                                        aria-label="Editar jogador"
-                                                    >
-                                                        <Pencil size={11} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* star rating — admin only */}
-                                        {p.guestStarRating != null && (isAdminOfGroup || isGod) && (
-                                            <div className="text-[11px] leading-none text-amber-400 mt-0.5">
-                                                {"★".repeat(p.guestStarRating)}
-                                                <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {guestPlayers.map((p) => <PlayerCard key={p.id} p={p} />)}
                         </div>
                     </div>
                 )}
 
-                {/* ── Jogadores Inativos (admin only) ── */}
+                {/* ── Inativos (admin only) ── */}
                 {inactivePlayers.length > 0 && (
-                    <div className="space-y-2">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 pt-1">
-                            Jogadores Inativos ({inactivePlayers.length})
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-md bg-slate-400 flex items-center justify-center shrink-0">
+                                <X size={11} className="text-white" />
+                            </div>
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inativos</span>
+                            <span className="text-xs font-semibold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">{inactivePlayers.length}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                            {inactivePlayers.map((p) => {
-                                return (
-                                    <div
-                                        key={p.id}
-                                        className="relative rounded-lg border border-slate-200 px-3 py-2 bg-white flex flex-col gap-0.5 opacity-60"
-                                    >
-                                        {/* name + badges row */}
-                                        <div className="flex items-center justify-between gap-1 min-w-0">
-                                            <div className="text-sm font-semibold truncate flex items-center gap-1 min-w-0">
-                                                <span className="truncate">{p.name}</span>
-                                                <span className="shrink-0"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} /></span>
-                                            </div>
-                                            <div className="flex items-center gap-0.5 shrink-0">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setEditPlayer(p)}
-                                                    className="h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
-                                                    title="Editar jogador"
-                                                    aria-label="Editar jogador"
-                                                >
-                                                    <Pencil size={11} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* secondary info row */}
-                                        <div className="flex items-center justify-between gap-1">
-                                            <span className="text-[11px] text-slate-400 truncate">
-                                                {p.userName ? `@${p.userName}` : ""}
-                                            </span>
-                                            {p.isGuest && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700 leading-none shrink-0">
-                                                    Convidado
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* star rating — admin only */}
-                                        {p.isGuest && p.guestStarRating != null && (
-                                            <div className="text-[11px] leading-none text-amber-400 mt-0.5">
-                                                {"★".repeat(p.guestStarRating)}
-                                                <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {inactivePlayers.map((p) => <PlayerCard key={p.id} p={p} dim />)}
                         </div>
                     </div>
                 )}
@@ -1298,15 +1220,16 @@ export default function GroupsPage() {
         );
     }
 
-    // ── Botões de cabeçalho para 1 grupo ──
+    // ── Botões de cabeçalho (sobre fundo escuro) ──
+    const darkBtn = "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors";
     function HeaderButtons() {
         return (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
                 {(isAdminOfGroup || isGod) && (
                     <>
                         <button
                             type="button"
-                            className="btn btn-secondary flex items-center gap-1.5 text-sm"
+                            className={`${darkBtn} bg-white/10 border-white/20 text-white hover:bg-white/20`}
                             onClick={() => setAddGuestOpen(true)}
                         >
                             <Plus size={15} />
@@ -1314,7 +1237,7 @@ export default function GroupsPage() {
                         </button>
                         <button
                             type="button"
-                            className="btn btn-primary flex items-center gap-1.5 text-sm"
+                            className={`${darkBtn} bg-white text-slate-900 border-transparent hover:bg-slate-100`}
                             onClick={() => setInviteOpen(true)}
                         >
                             <UserPlus size={15} />
@@ -1325,18 +1248,17 @@ export default function GroupsPage() {
                 {!isAdminOfGroup && !isGod && activePlayerId && myPlayerInExpandedGroup && !myPlayerInExpandedGroup.isGuest && (
                     <button
                         type="button"
-                        className="btn flex items-center gap-1.5 text-sm text-rose-600 border border-rose-200 hover:bg-rose-50"
+                        className={`${darkBtn} bg-rose-500/20 border-rose-400/30 text-rose-300 hover:bg-rose-500/30`}
                         onClick={() => setLeaveConfirmOpen(true)}
                     >
                         <LogOut size={15} />
                         <span className="hidden sm:inline">Sair</span>
                     </button>
                 )}
-                {/* Sair — criador admin */}
                 {(isAdminOfGroup || isGod) && group?.createdByUserId === currentUserId && (
                     <button
                         type="button"
-                        className="btn flex items-center gap-1.5 text-sm text-rose-600 border border-rose-200 hover:bg-rose-50"
+                        className={`${darkBtn} bg-rose-500/20 border-rose-400/30 text-rose-300 hover:bg-rose-500/30`}
                         onClick={() => setCreatorLeaveOpen(true)}
                     >
                         <LogOut size={15} />
@@ -1348,75 +1270,112 @@ export default function GroupsPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             {/* Loading inicial */}
             {mineLoading ? (
-                <Section title="Patotas">
-                    <div className="muted flex items-center gap-2">
-                        <Loader2 size={14} className="animate-spin" /> Carregando...
+                <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white px-6 py-6 shadow-lg">
+                    <div className="flex items-center gap-3 text-white/60">
+                        <Loader2 size={18} className="animate-spin" />
+                        <span className="text-sm">Carregando patotas...</span>
                     </div>
-                </Section>
+                </div>
             ) : myGroups.length === 0 ? (
                 /* 0 grupos */
-                <Section title="Patotas">
-                    <div className="muted">Você não faz parte de nenhuma patota.</div>
-                </Section>
+                <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white px-6 py-10 shadow-lg flex flex-col items-center gap-3">
+                    <Users2 size={36} className="opacity-30" />
+                    <p className="text-white/50 text-sm">Você não faz parte de nenhuma patota.</p>
+                </div>
             ) : myGroups.length === 1 ? (
-                /* 1 grupo — layout totalmente expandido */
-                <Section
-                    title={group ? group.name : myGroups[0].groupName}
-                    right={
-                        groupLoading ? (
-                            <Loader2 size={16} className="animate-spin text-slate-400" />
-                        ) : group ? (
-                            <HeaderButtons />
-                        ) : null
-                    }
-                >
-                    <GroupContent />
-                </Section>
+                /* 1 grupo — layout expandido */
+                <div className="space-y-4">
+                    <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                            style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                        <div className="relative flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-xl font-black shrink-0 select-none">
+                                    {(group?.name ?? myGroups[0].groupName).charAt(0)}
+                                </div>
+                                <div className="min-w-0">
+                                    <h1 className="text-xl font-black leading-tight truncate">{group?.name ?? myGroups[0].groupName}</h1>
+                                    <p className="text-sm text-white/50 mt-0.5">
+                                        {groupLoading ? 'Carregando...' : group
+                                            ? `${activePlayers.length} mensalista${activePlayers.length !== 1 ? 's' : ''} · ${guestPlayers.length} convidado${guestPlayers.length !== 1 ? 's' : ''}`
+                                            : ''}
+                                    </p>
+                                </div>
+                            </div>
+                            {groupLoading
+                                ? <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />
+                                : group ? <HeaderButtons /> : null}
+                        </div>
+                    </div>
+                    <div className="card p-5 shadow-sm">
+                        <GroupContent />
+                    </div>
+                </div>
             ) : (
                 /* 2+ grupos — accordion */
-                <Section title="Patotas">
+                <div className="space-y-4">
+                    <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-5 overflow-hidden shadow-lg">
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                            style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                        <div className="relative flex items-center gap-4">
+                            <div className="h-11 w-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                                <Users2 size={22} />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-black leading-tight">Minhas Patotas</h1>
+                                <p className="text-sm text-white/50 mt-0.5">{myGroups.length} patotas</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         {myGroups.map(({ groupId, groupName }) => {
                             const isExpanded = expandedGroupId === groupId;
                             const isAdminHere = isGroupAdmin(groupId) || isGod;
                             const myPlayerHere = myPlayers.find(p => p.groupId === groupId);
                             return (
-                                <div key={groupId} className="border border-slate-200 rounded-xl overflow-hidden">
+                                <div key={groupId} className={["card p-0 overflow-hidden transition-shadow", isExpanded ? "shadow-md ring-1 ring-slate-900/10" : "shadow-sm"].join(" ")}>
                                     {/* Linha clicável */}
                                     <button
                                         type="button"
                                         onClick={() => toggleGroup(groupId)}
-                                        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+                                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors text-left"
                                     >
-                                        <span className="font-semibold text-slate-900 text-sm">{groupName}</span>
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className={["h-9 w-9 rounded-xl text-sm font-black flex items-center justify-center shrink-0 select-none transition-colors", isExpanded ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"].join(" ")}>
+                                                {groupName.charAt(0)}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="font-semibold text-slate-900 text-sm truncate">{groupName}</div>
+                                                {isAdminHere && (
+                                                    <div className="text-[11px] text-slate-400">Você administra</div>
+                                                )}
+                                            </div>
+                                        </div>
                                         <div className="flex items-center gap-2 shrink-0">
-                                            {/* Botões de ação — visíveis quando expandido */}
                                             {isExpanded && (
-                                                <div
-                                                    className="flex items-center gap-1.5"
-                                                    onClick={e => e.stopPropagation()}
-                                                >
+                                                <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                                                     {isAdminHere && (
                                                         <>
-                                                            <button type="button" className="btn btn-secondary flex items-center gap-1 text-xs px-2 py-1" onClick={() => setAddGuestOpen(true)}>
+                                                            <button type="button" className="btn btn-secondary flex items-center gap-1 text-xs px-2.5 py-1.5" onClick={() => setAddGuestOpen(true)}>
                                                                 <Plus size={13} /><span className="hidden sm:inline">Convidado</span>
                                                             </button>
-                                                            <button type="button" className="btn btn-primary flex items-center gap-1 text-xs px-2 py-1" onClick={() => setInviteOpen(true)}>
+                                                            <button type="button" className="btn btn-primary flex items-center gap-1 text-xs px-2.5 py-1.5" onClick={() => setInviteOpen(true)}>
                                                                 <UserPlus size={13} /><span className="hidden sm:inline">Convidar</span>
                                                             </button>
                                                         </>
                                                     )}
                                                     {!isAdminHere && myPlayerHere && !myPlayerHere.isGuest && (
-                                                        <button type="button" className="btn flex items-center gap-1 text-xs px-2 py-1 text-rose-600 border border-rose-200 hover:bg-rose-50" onClick={() => setLeaveConfirmOpen(true)}>
+                                                        <button type="button" className="btn flex items-center gap-1 text-xs px-2.5 py-1.5 text-rose-600 border border-rose-200 hover:bg-rose-50" onClick={() => setLeaveConfirmOpen(true)}>
                                                             <LogOut size={13} /><span className="hidden sm:inline">Sair</span>
                                                         </button>
                                                     )}
-                                                    {/* Sair — criador admin */}
                                                     {isAdminHere && group?.createdByUserId === currentUserId && (
-                                                        <button type="button" className="btn flex items-center gap-1 text-xs px-2 py-1 text-rose-600 border border-rose-200 hover:bg-rose-50" onClick={() => setCreatorLeaveOpen(true)}>
+                                                        <button type="button" className="btn flex items-center gap-1 text-xs px-2.5 py-1.5 text-rose-600 border border-rose-200 hover:bg-rose-50" onClick={() => setCreatorLeaveOpen(true)}>
                                                             <LogOut size={13} /><span className="hidden sm:inline">Sair</span>
                                                         </button>
                                                     )}
@@ -1424,14 +1383,14 @@ export default function GroupsPage() {
                                             )}
                                             <ChevronDown
                                                 size={16}
-                                                className={["text-slate-400 transition-transform", isExpanded ? "rotate-180" : ""].join(" ")}
+                                                className={["text-slate-400 transition-transform duration-200", isExpanded ? "rotate-180" : ""].join(" ")}
                                             />
                                         </div>
                                     </button>
 
                                     {/* Conteúdo expandido */}
                                     {isExpanded && (
-                                        <div className="border-t border-slate-200 px-4 py-4">
+                                        <div className="border-t border-slate-100 p-5">
                                             <GroupContent />
                                         </div>
                                     )}
@@ -1439,7 +1398,7 @@ export default function GroupsPage() {
                             );
                         })}
                     </div>
-                </Section>
+                </div>
             )}
 
             {/* Modais — sempre presentes */}

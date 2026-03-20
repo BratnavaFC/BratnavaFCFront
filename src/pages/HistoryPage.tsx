@@ -4,7 +4,7 @@ import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { useNavigate } from "react-router-dom";
-import { Calendar, ChevronLeft, ChevronRight, MapPin, RefreshCw } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { extractApiError } from "../lib/apiError";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -158,38 +158,49 @@ export default function HistoryPage() {
     }
 
     return (
-        <div className="space-y-4" ref={topRef}>
-            <Section title="Histórico">
-                {!groupId ? (
-                    <div className="text-sm text-slate-500 py-2">
-                        Selecione um grupo no Dashboard.
-                    </div>
-                ) : (
-                    <div className="max-w-3xl mx-auto space-y-4">
+        <div className="space-y-5" ref={topRef}>
 
-                        {/* ── Toolbar ──────────────────────────────── */}
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="text-sm text-slate-500">
-                                {loading ? (
-                                    <span className="italic">Carregando...</span>
-                                ) : (
-                                    <>
-                                        <span className="font-semibold text-slate-800">{total}</span>
-                                        {" "}partida{total !== 1 ? "s" : ""}
-                                    </>
-                                )}
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={loadHistory}
-                                disabled={loading}
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-                                Atualizar
-                            </button>
+            {/* ── Header ── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                <div className="relative flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                            <History size={26} />
                         </div>
+                        <div>
+                            <h1 className="text-2xl font-black leading-tight">Histórico</h1>
+                            <p className="text-sm text-white/50 mt-0.5">
+                                {loading
+                                    ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
+                                    : !groupId ? 'Selecione um grupo'
+                                    : `${total} partida${total !== 1 ? 's' : ''} registrada${total !== 1 ? 's' : ''}`}
+                            </p>
+                        </div>
+                    </div>
+                    {groupId && (
+                        <button
+                            type="button"
+                            onClick={loadHistory}
+                            disabled={loading}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                            Atualizar
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {!groupId ? (
+                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 shadow-sm">
+                    <Calendar size={36} className="opacity-30" />
+                    <span className="text-sm">Selecione um grupo no Dashboard.</span>
+                </div>
+            ) : (
+                <div className="max-w-3xl mx-auto space-y-4">
 
                         {/* ── Loading skeletons ────────────────────── */}
                         {loading && (
@@ -388,7 +399,6 @@ export default function HistoryPage() {
 
                     </div>
                 )}
-            </Section>
         </div>
     );
 }

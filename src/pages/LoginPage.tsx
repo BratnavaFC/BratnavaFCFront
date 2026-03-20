@@ -128,11 +128,15 @@ export default function LoginPage() {
             refreshToken,
         });
 
-        // Fetch groups where this user is admin and persist in store
+        // Fetch groups where this user is admin/financeiro and persist in store
         try {
-            const groupsRes = await GroupsApi.listByAdmin(userId);
-            const groupAdminIds = (groupsRes.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
-            useAccountStore.getState().updateActive({ groupAdminIds });
+            const [adminRes, finRes] = await Promise.all([
+                GroupsApi.listByAdmin(userId),
+                GroupsApi.listByFinanceiro(userId),
+            ]);
+            const groupAdminIds = (adminRes.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
+            const groupFinanceiroIds = (finRes.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
+            useAccountStore.getState().updateActive({ groupAdminIds, groupFinanceiroIds });
         } catch { /* non-critical */ }
 
         nav("/app");

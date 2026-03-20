@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import {
     CheckCircle2, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
-    Upload, Download, Loader2, DollarSign, Calendar, Users
+    Upload, Download, Loader2, CreditCard, DollarSign, Calendar, Users
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PaymentsApi, GroupSettingsApi } from '../api/endpoints';
@@ -559,13 +559,13 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function PaymentsPage() {
-    const active        = useAccountStore(s => s.getActive());
-    const isGroupAdm    = useAccountStore(s => s.isGroupAdmin);
-    const groupId       = active?.activeGroupId ?? '';
-    const activePlayerId = active?.activePlayerId ?? '';
-    const isAdmin     = !!(active && (
-        active.roles.includes('Admin') || active.roles.includes('GodMode') ||
-        (active.activeGroupId && isGroupAdm(active.activeGroupId))
+    const active             = useAccountStore(s => s.getActive());
+    const isGroupFinanceiro  = useAccountStore(s => s.isGroupFinanceiro);
+    const groupId            = active?.activeGroupId ?? '';
+    const activePlayerId     = active?.activePlayerId ?? '';
+    const isAdmin = !!(active && (
+        active.roles.includes('GodMode') ||
+        (active.activeGroupId && isGroupFinanceiro(active.activeGroupId))
     ));
 
     const [paymentMode, setPaymentMode] = useState<number>(0); // 0=Monthly, 1=PerGame
@@ -698,32 +698,42 @@ export default function PaymentsPage() {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            {/* Cabeçalho */}
-            <div className="flex-none border-b bg-white px-4 py-4 sm:px-6">
-                <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <DollarSign size={20} className="text-green-600" /> Pagamentos
-                </h1>
-                <p className="text-sm text-slate-500 mt-0.5">Controle de mensalidades e cobranças extras da patota</p>
-            </div>
+            {/* ── Header ── */}
+            <div className="relative flex-none bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-4 sm:px-6 py-4 sm:py-5 overflow-hidden shadow-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
 
-            {/* Abas */}
-            <div className="flex-none flex gap-1 px-4 sm:px-6 pt-4">
-                {paymentMode === 0 && (
-                    <button onClick={() => setTab('monthly')}
+                {/* Row 1: icon + title */}
+                <div className="relative flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                        <CreditCard size={20} />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-black leading-tight">Pagamentos</h1>
+                        <p className="text-xs text-white/50">Mensalidades e cobranças extras da patota</p>
+                    </div>
+                </div>
+
+                {/* Row 2: abas */}
+                <div className="relative flex gap-1">
+                    {paymentMode === 0 && (
+                        <button onClick={() => setTab('monthly')}
+                            className={cls(
+                                'px-4 py-1.5 rounded-lg text-xs font-semibold transition',
+                                tab === 'monthly' ? 'bg-white text-slate-900' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                            )}>
+                            📅 Mensalidades
+                        </button>
+                    )}
+                    <button onClick={() => setTab('extra')}
                         className={cls(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition',
-                            tab === 'monthly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                            'px-4 py-1.5 rounded-lg text-xs font-semibold transition',
+                            tab === 'extra' ? 'bg-white text-slate-900' : 'bg-white/10 text-white/80 hover:bg-white/20'
                         )}>
-                        📅 Mensalidades
+                        💰 Cobranças extras
                     </button>
-                )}
-                <button onClick={() => setTab('extra')}
-                    className={cls(
-                        'px-4 py-2 rounded-lg text-sm font-medium transition',
-                        tab === 'extra' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-                    )}>
-                    💰 Cobranças extras
-                </button>
+                </div>
             </div>
 
             {/* Conteúdo */}

@@ -49,6 +49,9 @@ export const GroupsApi = {
   reactivate: (groupId: string) => http.post(`/api/Groups/${groupId}/reactivate`),
   addAdmin: (groupId: string, userId: string) => http.post(`/api/Groups/${groupId}/admins`, { userId }),
   removeAdmin: (groupId: string, userId: string) => http.delete(`/api/Groups/${groupId}/admins/${userId}`),
+  addFinanceiro: (groupId: string, userId: string) => http.post(`/api/Groups/${groupId}/financeiros`, { userId }),
+  removeFinanceiro: (groupId: string, userId: string) => http.delete(`/api/Groups/${groupId}/financeiros/${userId}`),
+  listByFinanceiro: (financeiroId: string) => http.get(`/api/Groups/financeiro/${financeiroId}`),
   leaveAsCreator: (groupId: string, dto: { transferToUserId?: string; promoteAndTransferUserId?: string; deleteGroup?: boolean }) =>
     http.post(`/api/Groups/${groupId}/leave-creator`, dto),
 };
@@ -115,6 +118,7 @@ export const MatchesApi = {
   matchmaking: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   postgame: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/postgame`),
   history: (groupId: string, take: number, playerId?: string) => http.get(`/api/Matches/group/${groupId}/history`, { params: { take, ...(playerId ? { playerId } : {}) } }),
+  playerRecent: (groupId: string, playerId: string, take = 3) => http.get(`/api/Matches/group/${groupId}/player-recent`, { params: { playerId, take } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
     http.post(`/api/Matches/group/${groupId}/${matchId}/guests`, dto),
   setPlayerRole: (
@@ -133,8 +137,9 @@ export const GroupInvitesApi = {
 };
 
 export const TeamGenApi = {
-  generate: (dto: TeamGenerationRequestDto) => http.post(`/api/TeamGeneration/generate`, dto),
+  generate:    (dto: TeamGenerationRequestDto) => http.post(`/api/TeamGeneration/generate`, dto),
   visualStats: (groupId: string) => http.get(`/api/TeamGeneration/visual-stats/${groupId}`),
+  spotlight:   (groupId: string) => http.get(`/api/TeamGeneration/spotlight/${groupId}`),
 };
 
 export const CalendarApi = {

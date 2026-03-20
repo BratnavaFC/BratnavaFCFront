@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Section } from '../components/Section';
 import { PlayersApi, MatchesApi, PaymentsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
 import { extractApiError } from '../lib/apiError';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
-import { Calendar, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
@@ -157,8 +156,9 @@ export default function DashboardPage() {
   const [currentLoading,  setCurrentLoading]  = useState(false);
   const [noCurrentMatch,  setNoCurrentMatch]  = useState(false);
 
-  const [recentMatches, setRecentMatches] = useState<MatchDetails[]>([]);
+  const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [recentLoading, setRecentLoading] = useState(false);
+  const [recentDetails, setRecentDetails] = useState<Record<string, MatchDetails>>({});
 
   const [paymentSummary,        setPaymentSummary]        = useState<any>(null);
   const [paymentSummaryLoading, setPaymentSummaryLoading] = useState(false);
@@ -207,21 +207,11 @@ export default function DashboardPage() {
     if (!groupId || !selectedPlayerId) return;
     setRecentLoading(true);
     setRecentMatches([]);
+    setRecentDetails({});
     try {
-      // Backend filtra por jogador e retorna só as 3 últimas partidas finalizadas dele
-      const histRes = await MatchesApi.history(groupId, 3, selectedPlayerId);
-      const items: any[] = Array.isArray(histRes.data) ? histRes.data : [];
-
-      const settled = await Promise.allSettled(
-        items.map(m => MatchesApi.details(groupId, m.id ?? m.matchId))
-      );
-
-      const found: MatchDetails[] = settled
-        .filter(r => r.status === 'fulfilled')
-        .map(r => (r as PromiseFulfilledResult<any>).value.data)
-        .filter(Boolean);
-
-      setRecentMatches(found);
+      // Uma única chamada ao endpoint dedicado — retorna tudo já enriquecido
+      const res = await MatchesApi.playerRecent(groupId, selectedPlayerId, 3);
+      setRecentMatches(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       toast.error(extractApiError(e, 'Falha ao carregar histórico.'));
     } finally {
@@ -249,81 +239,111 @@ export default function DashboardPage() {
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+
+      {/* ── Header ── */}
+      <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
+        <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="relative flex items-center gap-4">
+          <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+            <LayoutDashboard size={26} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black leading-tight">Dashboard</h1>
+            <p className="text-sm text-white/50 mt-0.5">
+              {selectedPlayer ? selectedPlayer.playerName : groupId ? 'Selecione um jogador' : 'Selecione um grupo no Dashboard'}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* ── Partida atual ── */}
-      <Section
-        title="Partida atual"
-        right={
-          groupId ? (
+      <div className="card p-0 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-6 w-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <CalendarDays size={13} className="text-blue-600" />
+            </div>
+            <span className="text-sm font-semibold text-slate-800">Partida atual</span>
+          </div>
+          {groupId && (
             <button
               type="button"
               onClick={loadCurrentMatch}
               disabled={currentLoading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               <RefreshCw size={12} className={currentLoading ? 'animate-spin' : ''} />
               Atualizar
             </button>
-          ) : undefined
-        }
-      >
-        {!groupId ? (
-          <p className="text-sm text-slate-400 text-center py-8">Selecione uma patota para ver a partida atual.</p>
-        ) : currentLoading ? (
-          <div className="h-32 rounded-2xl bg-slate-100 animate-pulse" />
-        ) : noCurrentMatch || !currentMatch ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
-            <Calendar size={32} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-medium text-slate-500">Nenhuma partida em andamento</p>
-            <p className="text-xs text-slate-400 mt-1">
-              Inicie uma partida na seção <b>Partidas</b>.
-            </p>
-          </div>
-        ) : (
-          <CurrentMatchCard match={currentMatch} playerId={selectedPlayerId} />
-        )}
-      </Section>
-
-      {/* ── Minhas pendências — oculto até liberação para jogadores ── */}
+          )}
+        </div>
+        <div className="p-5">
+          {!groupId ? (
+            <p className="text-sm text-slate-400 text-center py-6">Selecione uma patota para ver a partida atual.</p>
+          ) : currentLoading ? (
+            <div className="h-32 rounded-2xl bg-slate-100 animate-pulse" />
+          ) : noCurrentMatch || !currentMatch ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
+              <Calendar size={32} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm font-medium text-slate-500">Nenhuma partida em andamento</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Inicie uma partida na seção <b>Partidas</b>.
+              </p>
+            </div>
+          ) : (
+            <CurrentMatchCard match={currentMatch} playerId={selectedPlayerId} />
+          )}
+        </div>
+      </div>
 
       {/* ── Últimas partidas ── */}
-      <Section
-        title={`Últimas partidas${selectedPlayer ? ` · ${selectedPlayer.playerName}` : ''}`}
-        right={
-          selectedPlayerId && groupId ? (
+      <div className="card p-0 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-6 w-6 rounded-lg bg-violet-500/10 flex items-center justify-center">
+              <History size={13} className="text-violet-600" />
+            </div>
+            <span className="text-sm font-semibold text-slate-800">
+              Últimas partidas{selectedPlayer ? ` · ${selectedPlayer.playerName}` : ''}
+            </span>
+          </div>
+          {selectedPlayerId && groupId && (
             <button
               type="button"
               onClick={loadRecentMatches}
               disabled={recentLoading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               <RefreshCw size={12} className={recentLoading ? 'animate-spin' : ''} />
               Atualizar
             </button>
-          ) : undefined
-        }
-      >
-        {!selectedPlayerId ? (
-          <p className="text-sm text-slate-400 text-center py-8">Selecione um jogador para ver suas últimas partidas.</p>
-        ) : recentLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />)}
-          </div>
-        ) : recentMatches.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
-            <Calendar size={32} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-medium text-slate-500">Nenhuma partida encontrada</p>
-            <p className="text-xs text-slate-400 mt-1">As últimas partidas do jogador aparecerão aqui.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {recentMatches.map(m => (
-              <RecentMatchCard key={m.matchId} match={m} playerId={selectedPlayerId} groupId={groupId ?? ''} />
-            ))}
-          </div>
-        )}
-      </Section>
+          )}
+        </div>
+        <div className="p-5">
+          {!selectedPlayerId ? (
+            <p className="text-sm text-slate-400 text-center py-6">Selecione um jogador para ver suas últimas partidas.</p>
+          ) : recentLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />)}
+            </div>
+          ) : recentMatches.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
+              <Calendar size={32} className="mx-auto text-slate-300 mb-2" />
+              <p className="text-sm font-medium text-slate-500">Nenhuma partida encontrada</p>
+              <p className="text-xs text-slate-400 mt-1">As últimas partidas do jogador aparecerão aqui.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentMatches.map(m => (
+                <RecentMatchCard key={m.matchId} match={m} groupId={groupId ?? ''} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
     </div>
   );
@@ -436,72 +456,109 @@ function TeamBlock({ color, label, count }: { color?: TeamColor | null; label: s
 
 // ─── RecentMatchCard ──────────────────────────────────────────────────────────
 
-function RecentMatchCard({ match, playerId, groupId }: { match: MatchDetails; playerId: string; groupId: string }) {
-  const nav     = useNavigate();
-  const dates   = formatDate(match.playedAt);
-  const _icons  = useGroupIcons(groupId);
-  const found   = getPlayerInMatch(match, playerId);
-  if (!found) return null;
+function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
+  const nav   = useNavigate();
+  const icons = useGroupIcons(groupId);
 
-  const { player, color } = found;
-  const outcome  = getOutcome(player.team, match.teamAGoals, match.teamBGoals);
-  const goals    = (match.goals ?? []).filter(g => g.scorerPlayerId === playerId).length;
-  const assists  = (match.goals ?? []).filter(g => g.assistPlayerId === playerId).length;
-  const isMvp    = match.computedMvp?.playerId === playerId;
-  const hasScore = typeof match.teamAGoals === 'number' && typeof match.teamBGoals === 'number';
+  // Campos diretos do PlayerRecentMatchDto
+  const matchId     = match?.matchId;
+  const dates       = formatDate(match?.playedAt);
+  const scoreA      = match?.teamAGoals ?? null;
+  const scoreB      = match?.teamBGoals ?? null;
+  const hasScore    = typeof scoreA === 'number' && typeof scoreB === 'number';
+  const playerTeam  = match?.playerTeam as 1 | 2 | null;    // 1=A / 2=B
+  const teamAHex    = normalizeHex(match?.teamAColorHex);
+  const teamAName   = match?.teamAColorName ?? 'Time A';
+  const teamBHex    = normalizeHex(match?.teamBColorHex);
+  const teamBName   = match?.teamBColorName ?? 'Time B';
+  const myHex       = playerTeam === 1 ? teamAHex  : playerTeam === 2 ? teamBHex  : null;
+  const myName      = playerTeam === 1 ? teamAName : playerTeam === 2 ? teamBName : null;
+  const goals       = match?.playerGoals   as number ?? 0;
+  const assists     = match?.playerAssists as number ?? 0;
+
+  const outcome: 'win' | 'loss' | 'draw' | null = (() => {
+    if (!hasScore || !playerTeam) return null;
+    const mine = playerTeam === 1 ? scoreA : scoreB;
+    const opp  = playerTeam === 1 ? scoreB : scoreA;
+    if (mine > opp) return 'win';
+    if (mine < opp) return 'loss';
+    return 'draw';
+  })();
+
+  const OUTCOME = {
+    win:  { label: 'Vitória', cls: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+    loss: { label: 'Derrota', cls: 'bg-rose-50 border-rose-200 text-rose-700' },
+    draw: { label: 'Empate',  cls: 'bg-slate-50 border-slate-200 text-slate-600' },
+  } as const;
+
   return (
     <button
-      className="w-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden flex items-center cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all"
-      onClick={() => nav(`/app/history/${groupId}/${match.matchId}`)}
+      className="w-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden flex items-stretch cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all"
+      onClick={() => nav(`/app/history/${groupId}/${matchId}`)}
     >
-      {/* Date */}
-      <div className="px-4 py-3 shrink-0 text-center min-w-[54px]">
+      {/* Accent strip — neutra */}
+      <div className="w-1 shrink-0 bg-slate-200" />
+
+      {/* Date box */}
+      <div className="flex flex-col items-center justify-center bg-slate-50 border-r border-slate-100 px-4 py-3 shrink-0 min-w-[58px]">
         <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{dates?.month ?? '—'}</div>
         <div className="text-xl font-extrabold text-slate-800 leading-none">{dates?.day ?? '—'}</div>
+        {dates?.time && <div className="text-[10px] text-slate-400 mt-0.5">{dates.time}</div>}
       </div>
-
-      {/* Divider */}
-      <div className="self-stretch w-px bg-slate-100 shrink-0" />
 
       {/* Info */}
-      <div className="flex flex-1 items-center gap-3 px-4 py-3 flex-wrap">
-        {/* Color dot + name */}
-        <div className="flex items-center gap-1.5">
-          <ColorDot hex={color?.hexValue} />
-          <span className="text-xs text-slate-600">{color?.name ?? `Time ${player.team === 1 ? 'A' : 'B'}`}</span>
+      <div className="flex flex-1 items-center gap-3 px-4 py-3 min-w-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+
+            {/* Cor do time do jogador */}
+            {myHex || myName ? (
+              <div className="flex items-center gap-1.5">
+                {myHex && <ColorDot hex={myHex} />}
+                <span className="text-[10px] text-slate-500 font-medium">{myName}</span>
+              </div>
+            ) : (teamAHex || teamBHex) ? (
+              <div className="flex items-center gap-1">
+                {teamAHex && <ColorDot hex={teamAHex} />}
+                <span className="text-[10px] text-slate-300 font-bold">vs</span>
+                {teamBHex && <ColorDot hex={teamBHex} />}
+              </div>
+            ) : null}
+
+            {/* Resultado */}
+            {outcome && (
+              <span className={`text-[10px] font-medium rounded-full border px-2 py-0.5 leading-none ${OUTCOME[outcome].cls}`}>
+                {OUTCOME[outcome].label}
+              </span>
+            )}
+
+            {/* Gols */}
+            {goals !== null && goals > 0 && (
+              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
+                <IconRenderer value={resolveIcon(icons, 'goal')} size={20} />
+                {goals}
+              </span>
+            )}
+
+            {/* Assistências */}
+            {assists !== null && assists > 0 && (
+              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
+                <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
+                {assists}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Outcome */}
-        {outcome && (
-          <span className={`text-[10px] font-medium rounded-full border px-2 py-0.5 ${OUTCOME_META[outcome].cls}`}>
-            {OUTCOME_META[outcome].label}
-          </span>
-        )}
-
-        {/* Goals & assists */}
-        {goals > 0   && <span className="flex items-center gap-0.5 text-xs text-slate-500"><IconRenderer value={resolveIcon(_icons, 'goal')} size={12} />{" "}{goals}</span>}
-        {assists > 0 && <span className="flex items-center gap-0.5 text-xs text-slate-500"><IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{assists}</span>}
-
-        {/* MVP */}
-        {isMvp && (
-          <span className="text-[10px] font-medium rounded-full border px-2 py-0.5 bg-yellow-50 text-yellow-700 border-yellow-200 inline-flex items-center gap-0.5">
-            <Star size={8} className="fill-yellow-500 text-yellow-500" /> MVP
-          </span>
+        {/* Placar */}
+        {hasScore && (
+          <div className="flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 shrink-0">
+            <span className="text-sm font-extrabold text-white tabular-nums leading-none">{scoreA}</span>
+            <span className="text-slate-500 text-xs mx-0.5">×</span>
+            <span className="text-sm font-extrabold text-white tabular-nums leading-none">{scoreB}</span>
+          </div>
         )}
       </div>
-
-      {/* Score */}
-      {hasScore && (
-        <div className="flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 mx-3 shrink-0">
-          <span className={`text-sm font-extrabold tabular-nums leading-none ${player.team === 1 ? 'text-white' : 'text-slate-500'}`}>
-            {match.teamAGoals}
-          </span>
-          <span className="text-slate-500 text-xs mx-0.5">×</span>
-          <span className={`text-sm font-extrabold tabular-nums leading-none ${player.team === 2 ? 'text-white' : 'text-slate-500'}`}>
-            {match.teamBGoals}
-          </span>
-        </div>
-      )}
     </button>
   );
 }
