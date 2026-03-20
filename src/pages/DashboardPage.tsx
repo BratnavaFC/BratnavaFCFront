@@ -214,7 +214,6 @@ export default function DashboardPage() {
       const histRes = await MatchesApi.history(groupId, 3, selectedPlayerId);
       const items: any[] = Array.isArray(histRes.data) ? histRes.data : [];
       setRecentMatches(items);
-      setRecentLoading(false);
 
       // Fase 2: detalhes em paralelo — enriquece com gols, assistências e time do jogador
       if (items.length > 0) {
@@ -232,6 +231,7 @@ export default function DashboardPage() {
       }
     } catch (e) {
       toast.error(extractApiError(e, 'Falha ao carregar histórico.'));
+    } finally {
       setRecentLoading(false);
     }
   }
@@ -565,10 +565,7 @@ function RecentMatchCard({ match, details, playerId, groupId }: {
       {/* Info */}
       <div className="flex flex-1 items-center gap-3 px-4 py-3 min-w-0">
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-slate-900 truncate">
-            {dates?.full ?? matchId}
-          </div>
-          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
 
             {/* Cor do time do jogador */}
             {myHex || myName ? (
@@ -594,7 +591,7 @@ function RecentMatchCard({ match, details, playerId, groupId }: {
             {/* Gols */}
             {goals !== null && goals > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
-                <IconRenderer value={resolveIcon(icons, 'goal')} size={11} />
+                <IconRenderer value={resolveIcon(icons, 'goal')} size={15} />
                 {goals}
               </span>
             )}
@@ -602,7 +599,7 @@ function RecentMatchCard({ match, details, playerId, groupId }: {
             {/* Assistências */}
             {assists !== null && assists > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
-                <IconRenderer value={resolveIcon(icons, 'assist')} size={11} />
+                <IconRenderer value={resolveIcon(icons, 'assist')} size={15} />
                 {assists}
               </span>
             )}
