@@ -21,6 +21,8 @@ import {
     UserX,
     CheckCircle2,
     AlertCircle,
+    CreditCard,
+    Users2,
 } from "lucide-react";
 
 type Status = 1 | 2; // 1 Active, 2 Inactive
@@ -723,169 +725,155 @@ export default function AdminUsersPage() {
     }
 
     return (
-        <Section
-            title={isAdminOrGod ? "Administração de usuários (paginado)" : "Meus dados"}
-            right={
-                <div className="flex items-center gap-2">
-                    <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                        {isAdminOrGod ? <Shield size={18} /> : <User size={18} />}
+        <div className="space-y-5">
+
+            {/* ── Header ── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                <div className="relative flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                        {isAdminOrGod ? <Users2 size={26} /> : <User size={26} />}
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-black leading-tight">
+                            {isAdminOrGod ? "Usuários" : (myUser ? fullName(myUser) : "Meu Perfil")}
+                        </h1>
+                        <p className="text-sm text-white/50 mt-0.5">
+                            {isAdminOrGod
+                                ? `${result?.total ?? 0} usuário${(result?.total ?? 0) !== 1 ? 's' : ''} encontrado${(result?.total ?? 0) !== 1 ? 's' : ''}`
+                                : myUser ? `@${myUser.userName} · ${roleLabel(myUser.role)}` : 'Carregando...'}
+                        </p>
                     </div>
                 </div>
-            }
-        >
+            </div>
+
             {isAdminOrGod ? (
                 // =========================
                 // ADMIN/GODMODE
                 // =========================
-                <div className="space-y-3">
-                    <div className="flex flex-col md:flex-row md:items-center gap-2">
-                        <div className="flex-1">
-                            <div className="relative">
-                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div className="space-y-4">
+                    <div className="card p-0 overflow-hidden shadow-sm">
+
+                        {/* Search + filters */}
+                        <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 border-b border-slate-100 bg-slate-50/80">
+                            <div className="flex-1 relative">
+                                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                 <input
                                     className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
                                     placeholder="Buscar por nome, usuário ou email..."
                                     value={search}
-                                    onChange={(e) => {
-                                        setPage(1);
-                                        setSearch(e.target.value);
-                                    }}
+                                    onChange={(e) => { setPage(1); setSearch(e.target.value); }}
                                 />
                             </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <label className="flex items-center gap-2 text-sm text-slate-700">
-                                <input
-                                    type="checkbox"
-                                    checked={includeInactive}
-                                    onChange={(e) => {
-                                        setPage(1);
-                                        setIncludeInactive(e.target.checked);
-                                    }}
-                                />
-                                Incluir inativos
-                            </label>
-
-                            <Select
-                                value={String(pageSize)}
-                                onChange={(v) => {
-                                    setPage(1);
-                                    setPageSize(Number(v));
-                                }}
-                            >
-                                <option value="10">10 / página</option>
-                                <option value="20">20 / página</option>
-                                <option value="50">50 / página</option>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <div className="rounded-2xl border bg-white overflow-hidden">
-                        <div className="px-4 py-3 border-b flex items-center justify-between">
-                            <div className="text-sm font-semibold text-slate-900">
-                                Lista de usuários
-                                <span className="ml-2 text-xs font-normal text-slate-500">
-                                    ({result?.total ?? 0})
-                                </span>
-                            </div>
-
-                            <div className="text-xs text-slate-500">
-                                Página {result?.page ?? page} de {totalPages}
+                            <div className="flex items-center gap-3 shrink-0">
+                                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeInactive}
+                                        onChange={(e) => { setPage(1); setIncludeInactive(e.target.checked); }}
+                                        className="accent-slate-900"
+                                    />
+                                    Incluir inativos
+                                </label>
+                                <Select value={String(pageSize)} onChange={(v) => { setPage(1); setPageSize(Number(v)); }}>
+                                    <option value="10">10 / pág.</option>
+                                    <option value="20">20 / pág.</option>
+                                    <option value="50">50 / pág.</option>
+                                </Select>
                             </div>
                         </div>
 
+                        {/* User list */}
                         {loading ? (
-                            <div className="p-6 flex items-center gap-2 text-sm text-slate-600">
-                                <Loader2 className="animate-spin" size={16} />
-                                Carregando...
+                            <div className="p-10 flex items-center justify-center gap-2 text-slate-400">
+                                <Loader2 size={16} className="animate-spin" /> Carregando...
                             </div>
                         ) : (result?.items?.length ?? 0) === 0 ? (
-                            <div className="p-6 text-sm text-slate-600">Nenhum usuário encontrado.</div>
+                            <div className="p-10 text-center text-sm text-slate-400">Nenhum usuário encontrado.</div>
                         ) : (
-                            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                                 {result!.items.map((u) => {
-                                    const isMe     = u.id === myUserId;
+                                    const isMe = u.id === myUserId;
                                     const isInativo = u.status === 2;
+                                    const initials = [u.firstName?.[0], u.lastName?.[0]].filter(Boolean).join('').toUpperCase() || u.userName?.[0]?.toUpperCase() || '?';
+                                    const avatarCls = isMe ? 'bg-emerald-600 text-white' : u.role === 3 ? 'bg-violet-600 text-white' : u.role === 2 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-700';
                                     return (
-                                        <div
-                                            key={u.id}
-                                            className={[
-                                                "relative rounded-lg border px-3 py-2 bg-white flex flex-col gap-0.5 transition-colors",
-                                                isInativo ? "border-slate-200 opacity-50" : isMe ? "border-emerald-400" : "border-slate-200",
-                                            ].join(" ")}
-                                        >
-                                            {/* name + badges row */}
-                                            <div className="flex items-center justify-between gap-1 min-w-0">
-                                                <div className="text-sm font-semibold text-slate-900 truncate min-w-0">
-                                                    <span className="truncate">{fullName(u)}</span>
+                                        <div key={u.id} className={[
+                                            "rounded-xl border bg-white p-3 flex flex-col gap-2 shadow-sm transition-all",
+                                            isInativo ? "opacity-50" : "",
+                                            isMe ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200",
+                                        ].join(" ")}>
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className={`h-9 w-9 rounded-full text-xs font-bold flex items-center justify-center shrink-0 select-none ${avatarCls}`}>
+                                                    {initials}
                                                 </div>
-                                                <div className="flex items-center gap-0.5 shrink-0">
-                                                    {isInativo && (
-                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-slate-100 border-slate-300 text-slate-500 leading-none">
-                                                            Inativo
-                                                        </span>
-                                                    )}
-                                                    {isMe && (
-                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">
-                                                            Você
-                                                        </span>
-                                                    )}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-semibold text-slate-900 truncate">{fullName(u)}</div>
+                                                    <div className="text-[11px] text-slate-400 truncate">
+                                                        {[u.userName && `@${u.userName}`, u.email].filter(Boolean).join(' · ')}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    {isMe && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none">Você</span>}
                                                     <button
                                                         type="button"
                                                         onClick={() => openEdit(u)}
-                                                        className="ml-0.5 h-5 w-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                        className="h-6 w-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                                                         title="Editar usuário"
-                                                        aria-label="Editar usuário"
                                                     >
                                                         <Pencil size={11} />
                                                     </button>
                                                 </div>
                                             </div>
-
-                                            {/* secondary info row */}
-                                            <div className="flex items-center justify-between gap-1">
-                                                <span className="text-[11px] text-slate-400 truncate">
-                                                    {[u.userName && `@${u.userName}`, u.email].filter(Boolean).join(" · ")}
-                                                </span>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
                                                 <span className={[
-                                                    "text-[10px] px-1.5 py-0.5 rounded-full border leading-none shrink-0",
-                                                    u.role === 3
-                                                        ? "bg-violet-50 border-violet-200 text-violet-700"
-                                                        : u.role === 2
-                                                            ? "bg-amber-50 border-amber-200 text-amber-700"
-                                                            : "bg-slate-50 border-slate-200 text-slate-600",
+                                                    "text-[10px] px-2 py-0.5 rounded-full border leading-none font-medium",
+                                                    u.role === 3 ? "bg-violet-50 border-violet-200 text-violet-700"
+                                                        : u.role === 2 ? "bg-amber-50 border-amber-200 text-amber-700"
+                                                        : "bg-slate-50 border-slate-200 text-slate-600",
                                                 ].join(" ")}>
                                                     {roleLabel(u.role)}
                                                 </span>
+                                                {isInativo && (
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-full border bg-rose-50 border-rose-200 text-rose-600 leading-none font-medium">
+                                                        Inativo
+                                                    </span>
+                                                )}
                                             </div>
-
                                         </div>
                                     );
                                 })}
                             </div>
                         )}
 
-                        <div className="px-4 py-3 border-t flex items-center justify-between">
+                        {/* Pagination footer */}
+                        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50/60">
                             <div className="text-xs text-slate-500">
-                                Mostrando {(result?.items?.length ?? 0)} de {result?.total ?? 0}
+                                Mostrando{' '}
+                                <span className="font-semibold text-slate-700">{result?.items?.length ?? 0}</span>
+                                {' '}de{' '}
+                                <span className="font-semibold text-slate-700">{result?.total ?? 0}</span>
+                                {' '}· Pág.{' '}
+                                <span className="font-semibold text-slate-700">{result?.page ?? page}</span>
+                                {' '}de{' '}
+                                <span className="font-semibold text-slate-700">{totalPages}</span>
                             </div>
-
                             <div className="flex items-center gap-2">
                                 <Button
                                     variant="secondary"
                                     disabled={(result?.page ?? page) <= 1 || loading}
                                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                    iconLeft={<ChevronLeft size={16} />}
+                                    iconLeft={<ChevronLeft size={15} />}
                                 >
                                     Anterior
                                 </Button>
-
                                 <Button
                                     variant="secondary"
                                     disabled={(result?.page ?? page) >= totalPages || loading}
                                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                    iconLeft={<ChevronRight size={16} />}
+                                    iconLeft={<ChevronRight size={15} />}
                                 >
                                     Próxima
                                 </Button>
@@ -907,136 +895,113 @@ export default function AdminUsersPage() {
                 // =========================
                 // USER
                 // =========================
-                <div className="space-y-3">
+                <div className="space-y-4">
                     {myLoading ? (
-                        <div className="rounded-2xl border bg-white p-6 flex items-center gap-2 text-sm text-slate-600">
-                            <Loader2 className="animate-spin" size={16} />
-                            Carregando...
+                        <div className="card p-10 flex items-center justify-center gap-2 text-slate-400 shadow-sm">
+                            <Loader2 size={16} className="animate-spin" /> Carregando...
                         </div>
                     ) : myError ? (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                            {myError}
+                        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 flex items-center gap-2">
+                            <AlertCircle size={15} className="shrink-0" /> {myError}
                         </div>
                     ) : !myUser ? (
-                        <div className="rounded-2xl border bg-white p-6 text-sm text-slate-600">
+                        <div className="card p-8 text-center text-sm text-slate-400 shadow-sm">
                             Não foi possível carregar seus dados.
                         </div>
                     ) : (
-                        <div className="rounded-2xl border bg-white overflow-hidden">
-                            <div className="px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                <div className="min-w-0">
-                                    <div className="text-base font-semibold text-slate-900">
-                                        {fullName(myUser)}
-                                    </div>
-                                    <div className="text-xs text-slate-500 truncate">
-                                        @{myUser.userName} • {myUser.email}
-                                    </div>
+                        /* ── Perfil ── */
+                        <div className="card p-0 overflow-hidden shadow-sm">
+                            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                                <div className="h-8 w-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
+                                    <User size={15} />
                                 </div>
-
+                                <div className="flex-1">
+                                    <div className="font-semibold text-slate-900 text-sm">Perfil</div>
+                                    <div className="text-xs text-slate-400">Seus dados pessoais</div>
+                                </div>
                                 <div className="flex gap-2 shrink-0">
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => {
-                                            setEditUser(myUser);
-                                            setEditOpen(true);
-                                        }}
-                                        iconLeft={<Pencil size={16} />}
+                                    <button
+                                        type="button"
+                                        onClick={() => { setEditUser(myUser); setEditOpen(true); }}
+                                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 transition shadow-sm"
                                     >
-                                        Alterar dados
-                                    </Button>
-
-                                    <Button
-                                        variant="primary"
+                                        <Pencil size={14} />
+                                        <span className="hidden sm:inline">Alterar dados</span>
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => setPassOpen(true)}
-                                        iconLeft={<KeyRound size={16} />}
+                                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 transition shadow-sm"
                                     >
-                                        Alterar senha
-                                    </Button>
+                                        <KeyRound size={14} />
+                                        <span className="hidden sm:inline">Alterar senha</span>
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <Field label="Primeiro nome">
-                                    <Input value={myUser.firstName ?? ""} disabled />
-                                </Field>
-
-                                <Field label="Sobrenome">
-                                    <Input value={myUser.lastName ?? ""} disabled />
-                                </Field>
-
-                                <Field label="Usuário">
-                                    <Input value={myUser.userName ?? ""} disabled />
-                                </Field>
-
-                                <Field label="Email">
-                                    <Input value={myUser.email ?? ""} disabled />
-                                </Field>
-
-                                <Field label="Telefone">
-                                    <Input value={(myUser.phone ?? "") as string} disabled />
-                                </Field>
-
-                                <Field label="Nascimento">
-                                    <Input value={myUser.birthDate ? fmtDate(myUser.birthDate) : "-"} disabled />
-                                </Field>
-
-                                <Field label="Role">
-                                    <Input value={roleLabel(myUser.role)} disabled />
-                                </Field>
-
-                                <Field label="Status">
-                                    <Input value={statusLabel(myUser.status)} disabled />
-                                </Field>
-
-                                <Field label="Criado em">
-                                    <Input value={myUser.createDate ? fmtDate(myUser.createDate) : "-"} disabled />
-                                </Field>
-
-                                <Field label="Atualizado em">
-                                    <Input value={myUser.updateDate ? fmtDate(myUser.updateDate) : "-"} disabled />
-                                </Field>
-
-                                <Field label="Inativado em">
-                                    <Input value={myUser.inactivatedAt ? fmtDate(myUser.inactivatedAt) : "-"} disabled />
-                                </Field>
+                            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                                {[
+                                    { label: 'Primeiro nome',  value: myUser.firstName },
+                                    { label: 'Sobrenome',      value: myUser.lastName },
+                                    { label: 'Usuário',        value: myUser.userName ? `@${myUser.userName}` : null },
+                                    { label: 'Email',          value: myUser.email },
+                                    { label: 'Telefone',       value: myUser.phone },
+                                    { label: 'Nascimento',     value: myUser.birthDate ? fmtDate(myUser.birthDate) : null },
+                                    { label: 'Role',           value: roleLabel(myUser.role) },
+                                    { label: 'Status',         value: statusLabel(myUser.status) },
+                                    { label: 'Criado em',      value: myUser.createDate ? fmtDate(myUser.createDate) : null },
+                                    { label: 'Atualizado em',  value: myUser.updateDate ? fmtDate(myUser.updateDate) : null },
+                                    { label: 'Inativado em',   value: myUser.inactivatedAt ? fmtDate(myUser.inactivatedAt) : null },
+                                ].map(({ label, value }) => (
+                                    <div key={label}>
+                                        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</div>
+                                        <div className="text-sm font-medium text-slate-900">{value || '—'}</div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
 
-                    {/* ── Minhas pendências ── */}
-                    {activeGroupId && (
-                        <div className="rounded-2xl border bg-white overflow-hidden">
-                            <div className="px-5 py-4 border-b flex items-center gap-3">
-                                <AlertCircle size={16} className="text-slate-500" />
-                                <span className="text-sm font-semibold text-slate-900">Pagamentos</span>
+                    {/* ── Pagamentos ── (visível apenas para administradores por enquanto) */}
+                    {isAdminOrGod && activeGroupId && (
+                        <div className="card p-0 overflow-hidden shadow-sm">
+                            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                                <div className="h-8 w-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                    <CreditCard size={15} />
+                                </div>
+                                <div>
+                                    <div className="font-semibold text-slate-900 text-sm">Pagamentos</div>
+                                    <div className="text-xs text-slate-400">Status nesta patota</div>
+                                </div>
                             </div>
                             {myPaymentSummaryLoading ? (
-                                <div className="p-5 flex items-center gap-2 text-sm text-slate-600">
+                                <div className="p-6 flex items-center gap-2 text-slate-400">
                                     <Loader2 size={15} className="animate-spin" /> Carregando...
                                 </div>
                             ) : !myPaymentSummary || (myPaymentSummary.isUpToDate && (myPaymentSummary.pendingExtraCharges?.length ?? 0) === 0) ? (
-                                <div className="p-5 flex items-center gap-2">
-                                    <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+                                <div className="p-6 flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                        <CheckCircle2 size={20} className="text-emerald-600" />
+                                    </div>
                                     <div>
                                         <p className="text-sm font-semibold text-emerald-800">Em dia 🎉</p>
                                         <p className="text-xs text-slate-400 mt-0.5">Nenhum pagamento pendente nesta patota.</p>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="p-5 space-y-2">
+                                <div className="p-6 space-y-2">
                                     {(myPaymentSummary.pendingMonthsCount ?? 0) > 0 && (
-                                        <div className="flex items-center gap-2">
-                                            <AlertCircle size={15} className="text-red-500 shrink-0" />
-                                            <span className="text-sm text-red-800">
+                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 border border-rose-100">
+                                            <AlertCircle size={14} className="text-rose-500 shrink-0" />
+                                            <span className="text-sm text-rose-800">
                                                 <span className="font-semibold">{myPaymentSummary.pendingMonthsCount}</span>{' '}
                                                 {myPaymentSummary.pendingMonthsCount === 1 ? 'mensalidade pendente' : 'mensalidades pendentes'}
                                             </span>
                                         </div>
                                     )}
                                     {(myPaymentSummary.pendingExtraCharges ?? []).map((c: any) => (
-                                        <div key={c.chargeId} className="flex items-center justify-between gap-2">
+                                        <div key={c.chargeId} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <AlertCircle size={14} className="text-amber-500 shrink-0" />
+                                                <AlertCircle size={13} className="text-amber-500 shrink-0" />
                                                 <span className="text-sm text-amber-900 font-medium truncate">{c.chargeName}</span>
                                             </div>
                                             <span className="text-sm font-semibold text-amber-900 shrink-0">
@@ -1049,73 +1014,62 @@ export default function AdminUsersPage() {
                         </div>
                     )}
 
-                    {/* ── Convites pendentes ── */}
-                    <div className="rounded-2xl border bg-white overflow-hidden">
-                        <div className="px-5 py-4 border-b flex items-center gap-3">
-                            <Bell size={16} className="text-slate-500" />
-                            <span className="text-sm font-semibold text-slate-900">
-                                Convites de patota
-                            </span>
+                    {/* ── Convites ── */}
+                    <div className="card p-0 overflow-hidden shadow-sm">
+                        <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                            <div className="h-8 w-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                                <Bell size={15} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="font-semibold text-slate-900 text-sm">Convites de patota</div>
+                                <div className="text-xs text-slate-400">Aceite ou recuse convites pendentes</div>
+                            </div>
                             {invites.length > 0 && (
-                                <span className="ml-auto inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold">
+                                <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold">
                                     {invites.length}
                                 </span>
                             )}
                         </div>
 
                         {inviteActionErr && (
-                            <div className="mx-5 mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                            <div className="mx-5 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
                                 {inviteActionErr}
                             </div>
                         )}
 
                         {invitesLoading ? (
-                            <div className="p-5 flex items-center gap-2 text-sm text-slate-600">
+                            <div className="p-6 flex items-center gap-2 text-slate-400">
                                 <Loader2 size={15} className="animate-spin" /> Carregando convites...
                             </div>
                         ) : invites.length === 0 ? (
-                            <div className="p-5 text-sm text-slate-400">
-                                Nenhum convite pendente.
-                            </div>
+                            <div className="p-6 text-sm text-slate-400">Nenhum convite pendente.</div>
                         ) : (
-                            <div className="divide-y">
+                            <div className="divide-y divide-slate-100">
                                 {invites.map((inv) => {
                                     const isAccepting = acceptingId === inv.id;
                                     const isRejecting = rejectingId === inv.id;
                                     const busy = isAccepting || isRejecting;
                                     return (
                                         <div key={inv.id} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-semibold text-slate-900 truncate">
-                                                    {inv.groupName}
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="h-10 w-10 rounded-xl bg-slate-100 text-slate-700 text-sm font-black flex items-center justify-center shrink-0 select-none">
+                                                    {inv.groupName?.charAt(0) ?? '?'}
                                                 </div>
-                                                {inv.guestPlayerName && (
-                                                    <div className="text-xs text-slate-500 mt-0.5">
-                                                        Perfil existente: <span className="font-medium text-slate-700">{inv.guestPlayerName}</span>
-                                                    </div>
-                                                )}
-                                                <div className="text-xs text-slate-400 mt-0.5">
-                                                    {new Date(inv.createDate).toLocaleDateString("pt-BR")}
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-semibold text-slate-900 truncate">{inv.groupName}</div>
+                                                    {inv.guestPlayerName && (
+                                                        <div className="text-xs text-slate-500">
+                                                            Perfil: <span className="font-medium text-slate-700">{inv.guestPlayerName}</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="text-xs text-slate-400">{new Date(inv.createDate).toLocaleDateString("pt-BR")}</div>
                                                 </div>
                                             </div>
-
                                             <div className="flex items-center gap-2 shrink-0">
-                                                <Button
-                                                    variant="primary"
-                                                    onClick={() => handleAccept(inv.id)}
-                                                    loading={isAccepting}
-                                                    disabled={busy}
-                                                    iconLeft={<UserCheck size={15} />}
-                                                >
+                                                <Button variant="primary" onClick={() => handleAccept(inv.id)} loading={isAccepting} disabled={busy} iconLeft={<UserCheck size={15} />}>
                                                     Aceitar
                                                 </Button>
-                                                <Button
-                                                    variant="danger"
-                                                    onClick={() => handleReject(inv.id)}
-                                                    loading={isRejecting}
-                                                    disabled={busy}
-                                                    iconLeft={<UserX size={15} />}
-                                                >
+                                                <Button variant="danger" onClick={() => handleReject(inv.id)} loading={isRejecting} disabled={busy} iconLeft={<UserX size={15} />}>
                                                     Recusar
                                                 </Button>
                                             </div>
@@ -1133,7 +1087,6 @@ export default function AdminUsersPage() {
                         canEditAdminFields={false}
                         onSaved={refreshAfterSave}
                     />
-
                 </div>
             )}
 
@@ -1144,6 +1097,6 @@ export default function AdminUsersPage() {
                     userId={myUserId}
                 />
             )}
-        </Section>
+        </div>
     );
 }

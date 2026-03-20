@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShieldOff, ShieldPlus, Search, Check, X, AlertTriangle, Wallet } from 'lucide-react';
+import { Loader2, ShieldOff, ShieldPlus, Shield, Search, Check, X, AlertTriangle, Wallet, Users, Settings, CalendarClock, CreditCard, AlertCircle, Save } from 'lucide-react';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
@@ -664,352 +664,373 @@ export default function GroupSettingsPage() {
     const existingFinanceiroUserIds = new Set<string>(group?.financeiroIds ?? []);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-10 max-w-5xl">
+
+            {/* ── Header ───────────────────────────────────────── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+                />
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                <div className="relative flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                        <Settings size={26} className="text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-black leading-tight tracking-tight">
+                            {group?.name ?? 'Configurações'}
+                        </h1>
+                        <p className="text-sm text-white/50 mt-0.5">Configure regras, ícones e gerencie a equipe da patota.</p>
+                    </div>
+                </div>
+            </div>
 
             {/* ── Configurações gerais ──────────────────────────── */}
-            <Section title="Configurações do Grupo">
+            <div className="card p-0 overflow-hidden shadow-sm">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                    <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                        <Settings size={14} />
+                    </div>
+                    <div>
+                        <div className="font-semibold text-slate-900 text-sm">Configurações gerais</div>
+                        <div className="text-xs text-slate-400">Regras de partidas e modo de cobrança</div>
+                    </div>
+                </div>
+                <div className="p-6">
                 {loading ? (
-                    <div className="muted">Carregando…</div>
+                    <div className="flex items-center gap-2 text-slate-400 py-4">
+                        <Loader2 size={16} className="animate-spin" /> Carregando…
+                    </div>
                 ) : (
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                        <div className="grid md:grid-cols-3 gap-4">
 
-                        {/* ── Jogadores ──────────────────────────────────── */}
-                        <div className="card p-4 space-y-4">
-                            <div className="font-semibold text-slate-900">Jogadores por partida</div>
-
-                            <Field label="Mínimo de jogadores">
-                                <input
-                                    className="input"
-                                    type="number"
-                                    min={2}
-                                    max={maxPlayers}
-                                    value={minPlayers}
-                                    onChange={(e) => setMinPlayers(Number(e.target.value))}
-                                />
-                            </Field>
-
-                            <Field label="Máximo de jogadores">
-                                <input
-                                    className="input"
-                                    type="number"
-                                    min={minPlayers}
-                                    value={maxPlayers}
-                                    onChange={(e) => setMaxPlayers(Number(e.target.value))}
-                                />
-                            </Field>
-                        </div>
-
-                        {/* ── Padrões de Partida ─────────────────────────── */}
-                        <div className="card p-4 space-y-4">
-                            <div className="font-semibold text-slate-900">Padrões de partida</div>
-
-                            <Field label="Local padrão">
-                                <input
-                                    className="input"
-                                    type="text"
-                                    placeholder="Ex: Boca Jrs"
-                                    maxLength={120}
-                                    value={defaultPlaceName}
-                                    onChange={(e) => setDefaultPlaceName(e.target.value)}
-                                />
-                            </Field>
-
-                            <Field label="Dia da semana padrão">
-                                <select
-                                    className="input"
-                                    value={defaultDayOfWeek}
-                                    onChange={(e) => setDefaultDayOfWeek(e.target.value)}
-                                >
-                                    {DAY_OPTIONS.map((o) => (
-                                        <option key={o.value} value={o.value}>{o.label}</option>
-                                    ))}
-                                </select>
-                            </Field>
-
-                            <Field label="Horário padrão">
-                                <input
-                                    className="input"
-                                    type="time"
-                                    value={defaultKickoffTime}
-                                    onChange={(e) => setDefaultKickoffTime(e.target.value)}
-                                />
-                            </Field>
-                        </div>
-
-                        {/* ── Pagamento ──────────────────────────────────── */}
-                        <div className="card p-4 space-y-4">
-                            <div className="font-semibold text-slate-900">💰 Pagamento</div>
-
-                            <Field label="Tipo de cobrança">
-                                <div className="flex gap-3">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="paymentMode"
-                                            value="0"
-                                            checked={paymentMode === 0}
-                                            onChange={() => setPaymentMode(0)}
-                                            className="accent-slate-900"
-                                        />
-                                        <span className="text-sm font-medium text-slate-800">Mensal</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="paymentMode"
-                                            value="1"
-                                            checked={paymentMode === 1}
-                                            onChange={() => setPaymentMode(1)}
-                                            className="accent-slate-900"
-                                        />
-                                        <span className="text-sm font-medium text-slate-800">Por jogo</span>
-                                    </label>
+                            {/* ── Jogadores ── */}
+                            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                        <Users size={17} />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">Jogadores</div>
+                                        <div className="text-xs text-slate-400">Por partida</div>
+                                    </div>
                                 </div>
-                            </Field>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Field label="Mínimo">
+                                        <input className="input" type="number" min={2} max={maxPlayers} value={minPlayers}
+                                            onChange={(e) => setMinPlayers(Number(e.target.value))} />
+                                    </Field>
+                                    <Field label="Máximo">
+                                        <input className="input" type="number" min={minPlayers} value={maxPlayers}
+                                            onChange={(e) => setMaxPlayers(Number(e.target.value))} />
+                                    </Field>
+                                </div>
+                            </div>
 
-                            {paymentMode === 0 && (
-                                <Field label="Valor da mensalidade (R$)">
-                                    <input
-                                        className="input"
-                                        type="number"
-                                        min={0}
-                                        step={0.01}
-                                        placeholder="Ex: 50.00 (deixe vazio para desativar)"
-                                        value={monthlyFee}
-                                        onChange={(e) => setMonthlyFee(e.target.value)}
-                                    />
-                                </Field>
-                            )}
+                            {/* ── Padrões de Partida ── */}
+                            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                                        <CalendarClock size={17} />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">Padrões</div>
+                                        <div className="text-xs text-slate-400">Local, dia e horário</div>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <Field label="Local padrão">
+                                        <input className="input" type="text" placeholder="Ex: Boca Jrs" maxLength={120}
+                                            value={defaultPlaceName} onChange={(e) => setDefaultPlaceName(e.target.value)} />
+                                    </Field>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Field label="Dia">
+                                            <select className="input" value={defaultDayOfWeek}
+                                                onChange={(e) => setDefaultDayOfWeek(e.target.value)}>
+                                                {DAY_OPTIONS.map((o) => (
+                                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                                ))}
+                                            </select>
+                                        </Field>
+                                        <Field label="Horário">
+                                            <input className="input" type="time" value={defaultKickoffTime}
+                                                onChange={(e) => setDefaultKickoffTime(e.target.value)} />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <p className="text-xs text-slate-400">
-                                {paymentMode === 0
-                                    ? 'Modo mensal: jogadores com conta vinculada (não convidados) são cobrados uma vez por mês. O valor é lançado ao encerrar uma partida.'
-                                    : 'Modo por jogo: ao encerrar cada partida o admin define o valor do jogo e cria a cobrança para os jogadores participantes.'}
-                            </p>
+                            {/* ── Pagamento ── */}
+                            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                        <CreditCard size={17} />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">Pagamento</div>
+                                        <div className="text-xs text-slate-400">Modo de cobrança</div>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[{ val: 0, label: 'Mensal' }, { val: 1, label: 'Por jogo' }].map(({ val, label }) => (
+                                            <label key={val} className={`flex items-center justify-center p-2.5 rounded-lg border-2 cursor-pointer transition-all text-sm font-medium select-none ${paymentMode === val ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
+                                                <input type="radio" name="paymentMode" value={val} checked={paymentMode === val}
+                                                    onChange={() => setPaymentMode(val)} className="sr-only" />
+                                                {label}
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {paymentMode === 0 && (
+                                        <Field label="Mensalidade (R$)">
+                                            <input className="input" type="number" min={0} step={0.01}
+                                                placeholder="Ex: 50.00" value={monthlyFee}
+                                                onChange={(e) => setMonthlyFee(e.target.value)} />
+                                        </Field>
+                                    )}
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        {paymentMode === 0
+                                            ? 'Cobrado mensalmente ao encerrar uma partida.'
+                                            : 'O financeiro define o valor ao encerrar cada partida.'}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* ── Ações ──────────────────────────────────────── */}
-                        <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center gap-3">
+                        {/* ── Salvar ── */}
+                        <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
                             <button
-                                className="btn btn-primary"
+                                className="btn btn-primary flex items-center gap-2 px-6"
                                 onClick={save}
                                 disabled={saving || loading}
                             >
-                                {saving ? 'Salvando…' : 'Salvar configurações'}
+                                {saving
+                                    ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
+                                    : <><Save size={15} /> Salvar configurações</>
+                                }
                             </button>
-
                             {msg && (
-                                <span className={`text-sm ${msg.ok ? 'text-emerald-700' : 'text-red-600'}`}>
-                                    {msg.text}
+                                <span className={`text-sm font-medium ${msg.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                                    {msg.ok ? '✓ ' : '✕ '}{msg.text}
                                 </span>
                             )}
-
                             {!isPersisted && !msg && (
-                                <span className="text-xs text-amber-600">
-                                    ⚠ Configurações ainda não salvas — usando valores padrão.
+                                <span className="text-xs text-amber-600 flex items-center gap-1">
+                                    <AlertCircle size={13} /> Usando valores padrão — salve para persistir.
                                 </span>
                             )}
                         </div>
-
-                        {/* ── Info ───────────────────────────────────────── */}
-                        <div className="md:col-span-2 card p-4 text-sm text-slate-600 space-y-1">
-                            <div className="font-semibold text-slate-800">Como funciona</div>
-                            <div>• <b>Local</b> e <b>Horário</b> são pré-preenchidos no formulário "Criar partida".</div>
-                            <div>• <b>Mínimo/Máximo de jogadores</b> controla a lista de aceitos na etapa de aceitação.</div>
-                            <div>• O <b>Horário</b> é salvo como TimeSpan no banco — formato <code>HH:mm</code> no formulário.</div>
-                        </div>
-
                     </div>
                 )}
-            </Section>
+                </div>
+            </div>
 
             {/* ── Ícones da patota ─────────────────────────────── */}
-            <Section title="Ícones da patota">
-                <p className="text-sm text-slate-500 mb-4">
-                    Escolha os ícones exibidos em toda a aplicação para esta patota.
-                    Clique em um ícone para selecioná-lo e depois salve as configurações acima.
-                </p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                    {/* Gol */}
-                    <div className="card p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl leading-none">
-                                <IconRenderer value={goalIcon ?? DEFAULT_ICONS.goalIcon} size={20} />
-                            </span>
-                            <span className="font-semibold text-slate-900 text-sm">Gol</span>
-                        </div>
-                        <IconPicker
-                            options={GOAL_OPTIONS}
-                            value={goalIcon}
-                            onChange={setGoalIcon}
-                        />
+            <div className="card p-0 overflow-hidden shadow-sm">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                    <div className="h-8 w-8 rounded-lg bg-violet-600 text-white flex items-center justify-center shrink-0 text-base leading-none">
+                        ⚽
                     </div>
-
-                    {/* Goleiro */}
-                    <div className="card p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl leading-none">
-                                <IconRenderer value={goalkeeperIcon ?? DEFAULT_ICONS.goalkeeperIcon} size={20} />
-                            </span>
-                            <span className="font-semibold text-slate-900 text-sm">Goleiro</span>
-                        </div>
-                        <IconPicker
-                            options={GOALKEEPER_OPTIONS}
-                            value={goalkeeperIcon}
-                            onChange={setGoalkeeperIcon}
-                        />
+                    <div>
+                        <div className="font-semibold text-slate-900 text-sm">Ícones da patota</div>
+                        <div className="text-xs text-slate-400">Personalize os ícones exibidos em toda a aplicação</div>
                     </div>
-
-                    {/* Assistência */}
-                    <div className="card p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl leading-none">
-                                <IconRenderer value={assistIcon ?? DEFAULT_ICONS.assistIcon} size={20} />
-                            </span>
-                            <span className="font-semibold text-slate-900 text-sm">Assistência</span>
-                        </div>
-                        <IconPicker
-                            options={ASSIST_OPTIONS}
-                            value={assistIcon}
-                            onChange={setAssistIcon}
-                        />
-                    </div>
-
-                    {/* Gol contra */}
-                    <div className="card p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl leading-none">
-                                <IconRenderer value={ownGoalIcon ?? DEFAULT_ICONS.ownGoalIcon} size={20} />
-                            </span>
-                            <span className="font-semibold text-slate-900 text-sm">Gol contra</span>
-                        </div>
-                        <IconPicker
-                            options={OWN_GOAL_OPTIONS}
-                            value={ownGoalIcon}
-                            onChange={setOwnGoalIcon}
-                        />
-                    </div>
-
-                    {/* MVP */}
-                    <div className="card p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl leading-none">
-                                <IconRenderer value={mvpIcon ?? DEFAULT_ICONS.mvpIcon} size={20} />
-                            </span>
-                            <span className="font-semibold text-slate-900 text-sm">MVP</span>
-                        </div>
-                        <IconPicker
-                            options={MVP_OPTIONS}
-                            value={mvpIcon}
-                            onChange={setMvpIcon}
-                        />
-                    </div>
-
-                    {/* Jogador */}
-                    <div className="card p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl leading-none">
-                                <IconRenderer value={playerIcon ?? DEFAULT_ICONS.playerIcon} size={20} />
-                            </span>
-                            <span className="font-semibold text-slate-900 text-sm">Jogador</span>
-                        </div>
-                        <IconPicker
-                            options={PLAYER_OPTIONS}
-                            value={playerIcon}
-                            onChange={setPlayerIcon}
-                        />
-                    </div>
-
                 </div>
-            </Section>
-
-            {/* ── Administradores ──────────────────────────────── */}
-            <Section
-                title="Administradores"
-                right={
-                    <button
-                        type="button"
-                        className="btn btn-secondary flex items-center gap-1.5 text-sm"
-                        onClick={() => setAddAdminOpen(true)}
-                    >
-                        <ShieldPlus size={15} />
-                        <span className="hidden sm:inline">Adicionar admin</span>
-                    </button>
-                }
-            >
-                {loadingAdmins ? (
-                    <div className="muted flex items-center gap-2">
-                        <Loader2 size={14} className="animate-spin" /> Carregando…
-                    </div>
-                ) : adminList.length === 0 ? (
-                    <div className="muted">Nenhum administrador encontrado.</div>
-                ) : (
-                    <div className="space-y-2">
-                        {adminList.map((admin) => {
-                            const isCreator    = createdByUserId && admin.userId === createdByUserId;
-                            const isCurrentUser = admin.userId === currentUserId;
-                            const isRemoving   = removingId === admin.userId;
-                            const displayName  = fullName(admin);
-                            const canRemove    = !isCreator;
-
-                            return (
-                                <div
-                                    key={admin.userId}
-                                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    {/* avatar */}
-                                    <div className="h-9 w-9 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
-                                        {initials(admin)}
-                                    </div>
-
-                                    {/* info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5">
-                                            {displayName}
-                                            {isCurrentUser && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal">
-                                                    Você
-                                                </span>
-                                            )}
-                                        </div>
-                                        {admin.userName && (
-                                            <div className="text-xs text-slate-400">@{admin.userName}</div>
-                                        )}
-                                    </div>
-
-                                    {/* badge criador ou botão remover */}
-                                    {isCreator ? (
-                                        <span className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-medium shrink-0">
-                                            Criador
-                                        </span>
-                                    ) : canRemove ? (
-                                        <button
-                                            type="button"
-                                            title={`Remover ${displayName} dos admins`}
-                                            aria-label={`Remover ${displayName} dos admins`}
-                                            disabled={isRemoving}
-                                            onClick={() => handleRemoveAdmin(admin.userId, displayName)}
-                                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                                        >
-                                            {isRemoving
-                                                ? <><Loader2 size={12} className="animate-spin" /> Removendo…</>
-                                                : <><ShieldOff size={13} /> Remover</>
-                                            }
-                                        </button>
-                                    ) : null}
+                <div className="p-6">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                        { label: 'Gol',         value: goalIcon,        def: DEFAULT_ICONS.goalIcon,        opts: GOAL_OPTIONS,        set: setGoalIcon },
+                        { label: 'Goleiro',     value: goalkeeperIcon,  def: DEFAULT_ICONS.goalkeeperIcon,  opts: GOALKEEPER_OPTIONS,  set: setGoalkeeperIcon },
+                        { label: 'Assistência', value: assistIcon,      def: DEFAULT_ICONS.assistIcon,      opts: ASSIST_OPTIONS,      set: setAssistIcon },
+                        { label: 'Gol contra',  value: ownGoalIcon,     def: DEFAULT_ICONS.ownGoalIcon,     opts: OWN_GOAL_OPTIONS,    set: setOwnGoalIcon },
+                        { label: 'MVP',         value: mvpIcon,         def: DEFAULT_ICONS.mvpIcon,         opts: MVP_OPTIONS,         set: setMvpIcon },
+                        { label: 'Jogador',     value: playerIcon,      def: DEFAULT_ICONS.playerIcon,      opts: PLAYER_OPTIONS,      set: setPlayerIcon },
+                    ].map(({ label, value, def, opts, set }) => (
+                        <div key={label} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                                    <IconRenderer value={value ?? def} size={22} />
                                 </div>
-                            );
-                        })}
+                                <span className="text-sm font-semibold text-slate-800">{label}</span>
+                            </div>
+                            <IconPicker options={opts} value={value} onChange={set} />
+                        </div>
+                    ))}
+                </div>
+                </div>
+            </div>
+
+            {/* ── Equipe da patota ─────────────────────────────── */}
+            <div className="card p-0 overflow-hidden shadow-sm">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                    <div className="h-8 w-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
+                        <Users size={15} />
+                    </div>
+                    <div>
+                        <div className="font-semibold text-slate-900 text-sm">Equipe da patota</div>
+                        <div className="text-xs text-slate-400">Administradores e responsáveis financeiros</div>
+                    </div>
+                </div>
+                <div className="p-6">
+
+                {/* Aviso: sem financeiro */}
+                {!loadingAdmins && financeiroList.length === 0 && (
+                    <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-6">
+                        <AlertCircle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                        <p className="text-sm text-amber-700">
+                            <span className="font-semibold">Sem financeiro cadastrado.</span>{' '}
+                            Nenhum usuário pode gerenciar pagamentos desta patota enquanto não houver um financeiro.
+                        </p>
                     </div>
                 )}
 
-                <p className="mt-3 text-xs text-slate-400">
-                    O criador do grupo não pode ser removido. Admins podem gerenciar jogadores, partidas e configurações.
-                </p>
-            </Section>
+                {loadingAdmins ? (
+                    <div className="flex items-center gap-2 text-slate-400 py-4">
+                        <Loader2 size={16} className="animate-spin" /> Carregando…
+                    </div>
+                ) : (
+                    <div className="grid md:grid-cols-2 gap-5">
 
-            {/* ── Modal adicionar admin ─────────────────────────── */}
+                        {/* ── Coluna Admins ── */}
+                        <div className="rounded-xl border border-violet-200 bg-gradient-to-b from-violet-50/60 to-white p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-7 w-7 rounded-lg bg-violet-600 text-white flex items-center justify-center shrink-0">
+                                        <Shield size={13} />
+                                    </div>
+                                    <span className="font-semibold text-slate-800 text-sm">Administradores</span>
+                                    <span className="text-xs font-semibold text-violet-700 bg-violet-100 rounded-full px-2 py-0.5 min-w-[20px] text-center">{adminList.length}</span>
+                                </div>
+                                <button type="button"
+                                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-white border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors font-medium shadow-sm"
+                                    onClick={() => setAddAdminOpen(true)}>
+                                    <ShieldPlus size={12} /> Adicionar
+                                </button>
+                            </div>
+
+                            {adminList.length === 0 ? (
+                                <p className="text-sm text-slate-400 italic py-4 text-center">Nenhum administrador.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {adminList.map((admin) => {
+                                        const isCreator     = createdByUserId && admin.userId === createdByUserId;
+                                        const isCurrentUser = admin.userId === currentUserId;
+                                        const isRemoving    = removingId === admin.userId;
+                                        const isAlsoFin     = existingFinanceiroUserIds.has(admin.userId);
+                                        const displayName   = fullName(admin);
+                                        return (
+                                            <div key={admin.userId}
+                                                className="flex items-center gap-3 rounded-xl border border-violet-100 bg-white px-3 py-2.5 shadow-sm">
+                                                <div className="h-9 w-9 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                                    {initials(admin)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-wrap">
+                                                        {displayName}
+                                                        {isCurrentUser && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal shrink-0">Você</span>
+                                                        )}
+                                                        {isAlsoFin && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 leading-none font-medium shrink-0 flex items-center gap-0.5">
+                                                                <Wallet size={9} /> Fin.
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {admin.userName && <div className="text-xs text-slate-400">@{admin.userName}</div>}
+                                                </div>
+                                                {isCreator ? (
+                                                    <span className="text-[11px] px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-medium shrink-0">Criador</span>
+                                                ) : (
+                                                    <button type="button" disabled={isRemoving}
+                                                        onClick={() => handleRemoveAdmin(admin.userId, displayName)}
+                                                        title={`Remover ${displayName} dos admins`}
+                                                        className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-200 text-rose-500 bg-white hover:bg-rose-50 transition-colors disabled:opacity-50 shrink-0">
+                                                        {isRemoving
+                                                            ? <Loader2 size={12} className="animate-spin" />
+                                                            : <ShieldOff size={13} />}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <p className="text-xs text-slate-400 leading-relaxed pt-1">
+                                Gerenciam jogadores, partidas e configurações. O criador não pode ser removido.
+                            </p>
+                        </div>
+
+                        {/* ── Coluna Financeiros ── */}
+                        <div className="rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50/60 to-white p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-7 w-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                        <Wallet size={13} />
+                                    </div>
+                                    <span className="font-semibold text-slate-800 text-sm">Financeiros</span>
+                                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5 min-w-[20px] text-center">{financeiroList.length}</span>
+                                </div>
+                                <button type="button"
+                                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors font-medium shadow-sm"
+                                    onClick={() => setAddFinanceiroOpen(true)}>
+                                    <Wallet size={12} /> Adicionar
+                                </button>
+                            </div>
+
+                            {financeiroList.length === 0 ? (
+                                <p className="text-sm text-slate-400 italic py-4 text-center">Nenhum financeiro cadastrado.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {financeiroList.map((fin) => {
+                                        const isCurrentUser = fin.userId === currentUserId;
+                                        const isRemoving    = removingFinanceiroId === fin.userId;
+                                        const isAlsoAdmin   = existingAdminUserIds.has(fin.userId);
+                                        const displayName   = fullName(fin);
+                                        return (
+                                            <div key={fin.userId}
+                                                className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white px-3 py-2.5 shadow-sm">
+                                                <div className="h-9 w-9 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                                    {initials(fin)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-wrap">
+                                                        {displayName}
+                                                        {isCurrentUser && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal shrink-0">Você</span>
+                                                        )}
+                                                        {isAlsoAdmin && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 leading-none font-medium shrink-0 flex items-center gap-0.5">
+                                                                <Shield size={9} /> Adm.
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {fin.userName && <div className="text-xs text-slate-400">@{fin.userName}</div>}
+                                                </div>
+                                                <button type="button" disabled={isRemoving}
+                                                    onClick={() => handleRemoveFinanceiro(fin.userId, displayName)}
+                                                    title={`Remover ${displayName} dos financeiros`}
+                                                    className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-200 text-rose-500 bg-white hover:bg-rose-50 transition-colors disabled:opacity-50 shrink-0">
+                                                    {isRemoving
+                                                        ? <Loader2 size={12} className="animate-spin" />
+                                                        : <ShieldOff size={13} />}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <p className="text-xs text-slate-400 leading-relaxed pt-1">
+                                Gerenciam pagamentos, mensalidades e cobranças. Admins não têm acesso automático.
+                            </p>
+                        </div>
+
+                    </div>
+                )}
+                </div>
+            </div>
+
+            {/* ── Modais ───────────────────────────────────────── */}
             <AddAdminModal
                 open={addAdminOpen}
                 onClose={() => setAddAdminOpen(false)}
@@ -1018,77 +1039,6 @@ export default function GroupSettingsPage() {
                 existingAdminUserIds={existingAdminUserIds}
                 onAdded={loadGroup}
             />
-
-            {/* ── Financeiros ──────────────────────────────────── */}
-            <Section
-                title="Financeiros"
-                right={
-                    <button
-                        type="button"
-                        className="btn btn-secondary flex items-center gap-1.5 text-sm"
-                        onClick={() => setAddFinanceiroOpen(true)}
-                    >
-                        <Wallet size={15} />
-                        <span className="hidden sm:inline">Adicionar financeiro</span>
-                    </button>
-                }
-            >
-                {loadingAdmins ? (
-                    <div className="muted flex items-center gap-2">
-                        <Loader2 size={14} className="animate-spin" /> Carregando…
-                    </div>
-                ) : financeiroList.length === 0 ? (
-                    <div className="muted">Nenhum financeiro cadastrado.</div>
-                ) : (
-                    <div className="space-y-2">
-                        {financeiroList.map((fin) => {
-                            const isCurrentUser  = fin.userId === currentUserId;
-                            const isRemoving     = removingFinanceiroId === fin.userId;
-                            const displayName    = fullName(fin);
-                            return (
-                                <div
-                                    key={fin.userId}
-                                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    <div className="h-9 w-9 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
-                                        {initials(fin)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5">
-                                            {displayName}
-                                            {isCurrentUser && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal">
-                                                    Você
-                                                </span>
-                                            )}
-                                        </div>
-                                        {fin.userName && (
-                                            <div className="text-xs text-slate-400">@{fin.userName}</div>
-                                        )}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        title={`Remover ${displayName} dos financeiros`}
-                                        disabled={isRemoving}
-                                        onClick={() => handleRemoveFinanceiro(fin.userId, displayName)}
-                                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                                    >
-                                        {isRemoving
-                                            ? <><Loader2 size={12} className="animate-spin" /> Removendo…</>
-                                            : <><ShieldOff size={13} /> Remover</>
-                                        }
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-                <p className="mt-3 text-xs text-slate-400">
-                    Financeiros podem gerenciar pagamentos, mensalidades e cobranças extras. Admins não têm acesso automático — devem ser adicionados explicitamente.
-                </p>
-            </Section>
-
-            {/* ── Modal adicionar financeiro ─────────────────────── */}
             <AddFinanceiroModal
                 open={addFinanceiroOpen}
                 onClose={() => setAddFinanceiroOpen(false)}
@@ -1100,32 +1050,24 @@ export default function GroupSettingsPage() {
 
             {/* ── Modal de confirmação ──────────────────────────── */}
             {confirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="card p-6 w-full max-w-sm space-y-4 shadow-xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                    <div className="card p-6 w-full max-w-sm space-y-4 shadow-2xl">
                         <div className="flex items-center gap-3 text-rose-600">
                             <AlertTriangle size={22} />
                             <span className="font-semibold text-base">Confirmar remoção</span>
                         </div>
                         <p className="text-sm text-slate-700">{confirm.label}</p>
-                        <p className="text-xs text-slate-400">Esta ação não pode ser desfeita.</p>
                         <div className="flex gap-2 justify-end">
-                            <button
-                                className="btn py-1.5 px-4 text-sm"
-                                onClick={() => setConfirm(null)}
-                                disabled={confirmLoading}
-                                type="button"
-                            >
+                            <button className="btn py-1.5 px-4 text-sm" onClick={() => setConfirm(null)}
+                                disabled={confirmLoading} type="button">
                                 Cancelar
                             </button>
                             <button
-                                className="flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                                onClick={runConfirm}
-                                disabled={confirmLoading}
-                                type="button"
-                            >
+                                className="flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors disabled:opacity-50 font-medium"
+                                onClick={runConfirm} disabled={confirmLoading} type="button">
                                 {confirmLoading
                                     ? <><Loader2 size={14} className="animate-spin" /> Removendo…</>
-                                    : <><ShieldOff size={14} /> Remover</>
+                                    : 'Confirmar remoção'
                                 }
                             </button>
                         </div>

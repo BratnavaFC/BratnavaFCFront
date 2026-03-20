@@ -340,28 +340,44 @@ export default function VisualStatsPage() {
     return (
         <div className="space-y-5">
 
-            {/* ── Page header ──────────────────────────────────────── */}
-            <div>
-                <h1 className="text-xl font-bold text-slate-900">Estatísticas</h1>
-                <p className="text-sm text-slate-500 mt-0.5">
-                    {players.length} jogadores
-                    {data.totalFinalizedMatches > 0 && (
-                        <> · {data.totalFinalizedMatches} partidas finalizadas</>
-                    )}
-                    {data.totalMatchesConsidered > 0 && (
-                        <> · {data.totalMatchesConsidered} consideradas</>
-                    )}
-                </p>
-            </div>
+            {/* ── Header ── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-5 overflow-hidden shadow-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
 
-            {/* ── Tabs ─────────────────────────────────────────────── */}
-            <div className="flex gap-5 border-b border-slate-200">
-                <Tab active={mainTab === "rankings"} onClick={() => setMainTab("rankings")}>
-                    <BarChart3 size={14} /> Rankings
-                </Tab>
-                <Tab active={mainTab === "players"} onClick={() => setMainTab("players")}>
-                    <Users size={14} /> Jogadores
-                </Tab>
+                {/* Row 1: icon + title + subtitle */}
+                <div className="relative flex items-center gap-4 mb-3">
+                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                        <BarChart3 size={26} />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-black leading-tight">Estatísticas</h1>
+                        <p className="text-sm text-white/50 mt-0.5">
+                            {players.length} jogadores
+                            {data.totalFinalizedMatches > 0 && <> · {data.totalFinalizedMatches} partidas finalizadas</>}
+                            {data.totalMatchesConsidered > 0 && <> · {data.totalMatchesConsidered} consideradas</>}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Row 2: tabs */}
+                <div className="relative flex gap-1">
+                    <button type="button" onClick={() => setMainTab("rankings")}
+                        className={cx(
+                            "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors",
+                            mainTab === "rankings" ? "bg-white text-slate-900" : "bg-white/10 text-white/80 hover:bg-white/20"
+                        )}>
+                        <BarChart3 size={13} /> Rankings
+                    </button>
+                    <button type="button" onClick={() => setMainTab("players")}
+                        className={cx(
+                            "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors",
+                            mainTab === "players" ? "bg-white text-slate-900" : "bg-white/10 text-white/80 hover:bg-white/20"
+                        )}>
+                        <Users size={13} /> Jogadores
+                    </button>
+                </div>
             </div>
 
             {/* ══════════════════════════════════════════════════════

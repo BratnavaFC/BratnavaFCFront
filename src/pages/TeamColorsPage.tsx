@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Section } from "../components/Section";
 import { TeamColorApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { TeamColorCarousel } from "../domains/teamcolors/TeamColorCarousel";
@@ -9,6 +8,7 @@ import { TeamColorEditModal } from "../components/TeamColorEditModal";
 import { useIsMobile } from "../hooks/UseIsMobile";
 import { isAdmin, isGroupAdmin } from "../auth/guards";
 import { extractApiError } from "../lib/apiError";
+import { Eye, Loader2, Palette, Pencil, Plus, Power } from "lucide-react";
 
 type Item = any;
 
@@ -161,103 +161,113 @@ export default function TeamColorsPage() {
     }
 
     return (
-        <div className="space-y-4">
-            <Section
-                title="Uniformes"
-                right={
-                    <span className="pill">
-                        {loading ? "carregando..." : `${displayItems.length} cores`}
-                    </span>
-                }
-            >
-                {!groupId ? (
-                    <div className="muted">Selecione um Group no Dashboard.</div>
-                ) : (
-                    <div className="grid gap-4">
-                        <div className="card p-4">
-                            {!isMobile && (
-                                <div className="flex justify-end mb-3">
-                                    <button
-                                        className="btn"
-                                        onClick={openSelectedPreview}
-                                        disabled={!selectedColor}
-                                    >
-                                        Ver selecionado
-                                    </button>
-                                </div>
-                            )}
+        <div className="space-y-5">
 
-                            <div>
-                                <TeamColorCarousel
-                                    items={displayItems}
-                                    selectedId={selectedId}
-                                    onSelectedIdChange={setSelectedId}
-                                    readOnly={!canManage}
-                                    isMobile={isMobile}
-                                    onPreview={(item) => openPreview(item)}
-                                />
-                            </div>
-
-                            {/* resumo + ações */}
-                            {canManage ? (
-                                <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                    </div>
-
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <button className="btn" onClick={startCreate}>
-                                            Nova cor
-                                        </button>
-
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={startEditSelected}
-                                            disabled={!selectedColor}
-                                        >
-                                            Editar selecionado
-                                        </button>
-
-                                        {selectedColor?.isActive ? (
-                                            <button
-                                                className="btn"
-                                                onClick={deactivateSelected}
-                                                disabled={!selectedColor}
-                                            >
-                                                Inativar
-                                            </button>
-                                        ) : (
-                                            <button
-                                                className="btn"
-                                                onClick={activateSelected}
-                                                disabled={!selectedColor}
-                                            >
-                                                Ativar
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                    </div>
-
-                                    {isMobile ? (
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={openSelectedPreview}
-                                            disabled={!selectedColor}
-                                        >
-                                            Abrir preview
-                                        </button>
-                                    ) : null}
-                                </div>
-                            )}
+            {/* ── Header ── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                <div className="relative flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                            <Palette size={26} />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black leading-tight">Uniformes</h1>
+                            <p className="text-sm text-white/50 mt-0.5">
+                                {loading
+                                    ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
+                                    : `${displayItems.length} cor${displayItems.length !== 1 ? 'es' : ''} disponível${displayItems.length !== 1 ? 'is' : ''}`}
+                            </p>
                         </div>
                     </div>
-                )}
-            </Section>
+                    {canManage && (
+                        <button
+                            onClick={startCreate}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-white text-slate-900 border-transparent hover:bg-slate-100 transition-colors shrink-0 shadow-sm"
+                        >
+                            <Plus size={15} /> Nova cor
+                        </button>
+                    )}
+                </div>
+            </div>
 
-            {/* Preview (read-only) */}
+            {/* ── Conteúdo ── */}
+            {!groupId ? (
+                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 shadow-sm">
+                    <Palette size={36} className="opacity-30" />
+                    <span className="text-sm">Selecione um grupo no Dashboard.</span>
+                </div>
+            ) : (
+                <div className="card p-0 overflow-hidden shadow-sm">
+
+                    {/* Carousel */}
+                    <div className="p-5">
+                        {!isMobile && (
+                            <div className="flex justify-end mb-4">
+                                <button
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                                    onClick={openSelectedPreview}
+                                    disabled={!selectedColor}
+                                >
+                                    <Eye size={14} /> Ver selecionado
+                                </button>
+                            </div>
+                        )}
+                        <TeamColorCarousel
+                            items={displayItems}
+                            selectedId={selectedId}
+                            onSelectedIdChange={setSelectedId}
+                            readOnly={!canManage}
+                            isMobile={isMobile}
+                            onPreview={(item) => openPreview(item)}
+                        />
+                    </div>
+
+                    {/* Barra de ações */}
+                    {canManage ? (
+                        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60 flex-wrap">
+                            <button
+                                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+                                onClick={startEditSelected}
+                                disabled={!selectedColor}
+                            >
+                                <Pencil size={14} /> Editar selecionado
+                            </button>
+                            {selectedColor?.isActive ? (
+                                <button
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors shadow-sm disabled:opacity-50"
+                                    onClick={deactivateSelected}
+                                    disabled={!selectedColor}
+                                >
+                                    <Power size={14} /> Inativar
+                                </button>
+                            ) : (
+                                <button
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors shadow-sm disabled:opacity-50"
+                                    onClick={activateSelected}
+                                    disabled={!selectedColor}
+                                >
+                                    <Power size={14} /> Ativar
+                                </button>
+                            )}
+                        </div>
+                    ) : isMobile ? (
+                        <div className="flex justify-end px-5 py-4 border-t border-slate-100 bg-slate-50/60">
+                            <button
+                                className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                                onClick={openSelectedPreview}
+                                disabled={!selectedColor}
+                            >
+                                <Eye size={14} /> Abrir preview
+                            </button>
+                        </div>
+                    ) : null}
+                </div>
+            )}
+
+            {/* Preview modal */}
             <PreviewModal
                 open={previewOpen}
                 onClose={() => setPreviewOpen(false)}
@@ -266,8 +276,8 @@ export default function TeamColorsPage() {
                 isMobile={isMobile}
             />
 
-            {/* Edit/Create (admin/godmode) */}
-            {canManage ? (
+            {/* Edit/Create modal */}
+            {canManage && (
                 <TeamColorEditModal
                     open={editOpen}
                     mode={editMode}
@@ -281,7 +291,7 @@ export default function TeamColorsPage() {
                     isMobile={isMobile}
                     saving={saving}
                 />
-            ) : null}
+            )}
         </div>
     );
 }
