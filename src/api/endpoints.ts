@@ -118,6 +118,7 @@ export const MatchesApi = {
   matchmaking: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   postgame: (groupId: string, matchId: string) => http.get(`/api/matches/group/${groupId}/${matchId}/postgame`),
   history: (groupId: string, take: number, playerId?: string) => http.get(`/api/Matches/group/${groupId}/history`, { params: { take, ...(playerId ? { playerId } : {}) } }),
+  playerRecent: (groupId: string, playerId: string, take = 3) => http.get(`/api/Matches/group/${groupId}/player-recent`, { params: { playerId, take } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
     http.post(`/api/Matches/group/${groupId}/${matchId}/guests`, dto),
   setPlayerRole: (

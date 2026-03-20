@@ -158,7 +158,6 @@ export default function DashboardPage() {
 
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [recentLoading, setRecentLoading] = useState(false);
-  // mapa matchId → MatchDetails carregado em background para enriquecer os cards
   const [recentDetails, setRecentDetails] = useState<Record<string, MatchDetails>>({});
 
   const [paymentSummary,        setPaymentSummary]        = useState<any>(null);
@@ -210,25 +209,9 @@ export default function DashboardPage() {
     setRecentMatches([]);
     setRecentDetails({});
     try {
-      // Fase 1: histórico rápido — exibe os cards imediatamente
-      const histRes = await MatchesApi.history(groupId, 3, selectedPlayerId);
-      const items: any[] = Array.isArray(histRes.data) ? histRes.data : [];
-      setRecentMatches(items);
-
-      // Fase 2: detalhes em paralelo — enriquece com gols, assistências e time do jogador
-      if (items.length > 0) {
-        const settled = await Promise.allSettled(
-          items.map(m => MatchesApi.details(groupId, m.id ?? m.matchId))
-        );
-        const map: Record<string, MatchDetails> = {};
-        settled.forEach((r, i) => {
-          if (r.status === 'fulfilled' && r.value.data) {
-            const id = items[i]?.id ?? items[i]?.matchId;
-            if (id) map[id] = r.value.data;
-          }
-        });
-        setRecentDetails(map);
-      }
+      // Uma única chamada ao endpoint dedicado — retorna tudo já enriquecido
+      const res = await MatchesApi.playerRecent(groupId, selectedPlayerId, 3);
+      setRecentMatches(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       toast.error(extractApiError(e, 'Falha ao carregar histórico.'));
     } finally {
@@ -354,18 +337,9 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentMatches.map(m => {
-                const id = m.id ?? m.matchId;
-                return (
-                  <RecentMatchCard
-                    key={id}
-                    match={m}
-                    details={recentDetails[id] ?? null}
-                    playerId={selectedPlayerId}
-                    groupId={groupId ?? ''}
-                  />
-                );
-              })}
+              {recentMatches.map(m => (
+                <RecentMatchCard key={m.matchId} match={m} groupId={groupId ?? ''} />
+              ))}
             </div>
           )}
         </div>
@@ -482,54 +456,28 @@ function TeamBlock({ color, label, count }: { color?: TeamColor | null; label: s
 
 // ─── RecentMatchCard ──────────────────────────────────────────────────────────
 
-function RecentMatchCard({ match, details, playerId, groupId }: {
-  match: any;
-  details: MatchDetails | null;
-  playerId: string;
-  groupId: string;
-}) {
-  const nav     = useNavigate();
-  const icons   = useGroupIcons(groupId);
-  const matchId = match?.id ?? match?.matchId;
-  const dates   = formatDate(match?.playedAt);
+function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
+  const nav   = useNavigate();
+  const icons = useGroupIcons(groupId);
 
-  // Cores dos times — do summary do histórico
-  const teamAHex  = normalizeHex(match?.teamAColorHex ?? match?.teamAColor?.hexValue);
-  const teamBHex  = normalizeHex(match?.teamBColorHex ?? match?.teamBColor?.hexValue);
-  const teamAName = match?.teamAColor?.name ?? match?.teamAColorName ?? 'Time A';
-  const teamBName = match?.teamBColor?.name ?? match?.teamBColorName ?? 'Time B';
+  // Campos diretos do PlayerRecentMatchDto
+  const matchId     = match?.matchId;
+  const dates       = formatDate(match?.playedAt);
+  const scoreA      = match?.teamAGoals ?? null;
+  const scoreB      = match?.teamBGoals ?? null;
+  const hasScore    = typeof scoreA === 'number' && typeof scoreB === 'number';
+  const playerTeam  = match?.playerTeam as 1 | 2 | null;    // 1=A / 2=B
+  const teamAHex    = normalizeHex(match?.teamAColorHex);
+  const teamAName   = match?.teamAColorName ?? 'Time A';
+  const teamBHex    = normalizeHex(match?.teamBColorHex);
+  const teamBName   = match?.teamBColorName ?? 'Time B';
+  const myHex       = playerTeam === 1 ? teamAHex  : playerTeam === 2 ? teamBHex  : null;
+  const myName      = playerTeam === 1 ? teamAName : playerTeam === 2 ? teamBName : null;
+  const goals       = match?.playerGoals   as number ?? 0;
+  const assists     = match?.playerAssists as number ?? 0;
 
-  // Placar — prioriza details quando disponível
-  const d = details;
-  const scoreA = d?.teamAGoals ?? match?.teamAGoals ?? match?.teamAScore ?? match?.scoreA ?? null;
-  const scoreB = d?.teamBGoals ?? match?.teamBGoals ?? match?.teamBScore ?? match?.scoreB ?? null;
-  const hasScore = typeof scoreA === 'number' && typeof scoreB === 'number';
-
-  // Time do jogador — tenta history summary primeiro, depois details
-  const playerTeam: 1 | 2 | null = (() => {
-    const raw = match?.playerTeam ?? match?.myTeam ?? match?.teamNumber ?? null;
-    if (raw === 1 || raw === 2) return raw;
-    if (d) {
-      if (d.teamAPlayers?.some(p => p.playerId === playerId)) return 1;
-      if (d.teamBPlayers?.some(p => p.playerId === playerId)) return 2;
-    }
-    const inA = (match?.teamAPlayers ?? []).some((p: any) =>
-      (typeof p === 'string' ? p : p?.playerId ?? p?.id) === playerId
-    );
-    if (inA) return 1;
-    const inB = (match?.teamBPlayers ?? []).some((p: any) =>
-      (typeof p === 'string' ? p : p?.playerId ?? p?.id) === playerId
-    );
-    if (inB) return 2;
-    return null;
-  })();
-
-  const myHex  = playerTeam === 1 ? teamAHex  : playerTeam === 2 ? teamBHex  : null;
-  const myName = playerTeam === 1 ? teamAName : playerTeam === 2 ? teamBName : null;
-
-  // Resultado
   const outcome: 'win' | 'loss' | 'draw' | null = (() => {
-    if (!hasScore || playerTeam === null) return null;
+    if (!hasScore || !playerTeam) return null;
     const mine = playerTeam === 1 ? scoreA : scoreB;
     const opp  = playerTeam === 1 ? scoreB : scoreA;
     if (mine > opp) return 'win';
@@ -542,10 +490,6 @@ function RecentMatchCard({ match, details, playerId, groupId }: {
     loss: { label: 'Derrota', cls: 'bg-rose-50 border-rose-200 text-rose-700' },
     draw: { label: 'Empate',  cls: 'bg-slate-50 border-slate-200 text-slate-600' },
   } as const;
-
-  // Gols e assistências — só disponíveis depois que details carrega
-  const goals   = d ? (d.goals ?? []).filter(g => g.scorerPlayerId === playerId).length : null;
-  const assists = d ? (d.goals ?? []).filter(g => g.assistPlayerId  === playerId).length : null;
 
   return (
     <button
@@ -591,7 +535,7 @@ function RecentMatchCard({ match, details, playerId, groupId }: {
             {/* Gols */}
             {goals !== null && goals > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
-                <IconRenderer value={resolveIcon(icons, 'goal')} size={15} />
+                <IconRenderer value={resolveIcon(icons, 'goal')} size={20} />
                 {goals}
               </span>
             )}
@@ -599,7 +543,7 @@ function RecentMatchCard({ match, details, playerId, groupId }: {
             {/* Assistências */}
             {assists !== null && assists > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
-                <IconRenderer value={resolveIcon(icons, 'assist')} size={15} />
+                <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
                 {assists}
               </span>
             )}
