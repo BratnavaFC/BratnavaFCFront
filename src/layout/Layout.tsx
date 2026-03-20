@@ -13,9 +13,9 @@ export default function Layout() {
 
     const scheduleAutoClose = () => {
         if (autoCloseTimer.current) window.clearTimeout(autoCloseTimer.current);
-        // no mobile: pode auto-fechar também, mas só se estiver aberto
+        // no mobile: pode auto-fechar tambï¿½m, mas sï¿½ se estiver aberto
         if (!sidebarOpen) return;
-        // pinned só faz sentido no desktop; no mobile a gente ignora
+        // pinned sï¿½ faz sentido no desktop; no mobile a gente ignora
         if (!isMobile && sidebarPinned) return;
 
         autoCloseTimer.current = window.setTimeout(() => {
@@ -46,7 +46,7 @@ export default function Layout() {
         return () => window.removeEventListener("keydown", onKeyDown);
     }, []);
 
-    // Se entrou em mobile, não faz sentido manter pinned e nem sidebar aberta “presa”
+    // Se entrou em mobile, nï¿½o faz sentido manter pinned e nem sidebar aberta ï¿½presaï¿½
     useEffect(() => {
         if (isMobile) {
             setSidebarPinned(false);
@@ -54,12 +54,12 @@ export default function Layout() {
         }
     }, [isMobile]);
 
-    const showDesktopSidebar = !isMobile; // sidebar sempre visível no desktop
-    const showMobileSidebar = isMobile && sidebarOpen; // sidebar só aparece quando abrir no mobile
+    const showDesktopSidebar = !isMobile; // sidebar sempre visï¿½vel no desktop
+    const showMobileSidebar = isMobile && sidebarOpen; // sidebar sï¿½ aparece quando abrir no mobile
 
     return (
         <div className="flex h-dvh bg-slate-50">
-            {/* ===== Desktop: Sidebar sempre visível ===== */}
+            {/* ===== Desktop: Sidebar sempre visï¿½vel ===== */}
             {showDesktopSidebar && (
                 <Sidebar
                     open={sidebarOpen}
@@ -73,7 +73,7 @@ export default function Layout() {
                 />
             )}
 
-            {/* ===== Mobile: Sidebar como drawer (só quando aberto) ===== */}
+            {/* ===== Mobile: Sidebar como drawer (sï¿½ quando aberto) ===== */}
             {showMobileSidebar && (
                 <div className="fixed inset-0 z-50">
                     {/* Backdrop */}
@@ -100,13 +100,12 @@ export default function Layout() {
             )}
 
             <div className="flex-1 flex flex-col min-w-0">
-                {/* Dica: no mobile, Topbar deve ter botão que chama onToggle */}
                 <Topbar
                     onMenuClick={() => setSidebarOpen((v) => !v)}
                     isMobile={isMobile}
                 />
 
-                {/* Conteúdo */}
+                {/* Conteï¿½do */}
                 <main
                     className={[
                         "flex-1 overflow-auto min-w-0",

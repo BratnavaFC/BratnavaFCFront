@@ -510,9 +510,6 @@ export function StepTeams({
                     <div className="flex items-center justify-between px-4 py-2.5">
                         <div>
                             <div className="text-sm font-semibold text-amber-800">Não atribuídos</div>
-                            <div className="text-xs text-amber-600 mt-0.5">
-                                Clique em um time para atribuir o jogador
-                            </div>
                         </div>
                         <span className="text-xs text-amber-600">
                             {allPlayers.filter((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted).length}j
@@ -829,7 +826,6 @@ export function StepTeams({
                 ) : (
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                         <Shuffle size={14} className="shrink-0 text-slate-400" />
-                        Sorteia 2 cores distintas do banco e aplica automaticamente.
                     </div>
                 )}
             </div>

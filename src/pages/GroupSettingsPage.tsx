@@ -621,13 +621,6 @@ export default function GroupSettingsPage() {
                             )}
                         </div>
 
-                        {/* ── Info ───────────────────────────────────────── */}
-                        <div className="md:col-span-2 card p-4 text-sm text-slate-600 space-y-1">
-                            <div className="font-semibold text-slate-800">Como funciona</div>
-                            <div>• <b>Local</b> e <b>Horário</b> são pré-preenchidos no formulário "Criar partida".</div>
-                            <div>• <b>Mínimo/Máximo de jogadores</b> controla a lista de aceitos na etapa de aceitação.</div>
-                            <div>• O <b>Horário</b> é salvo como TimeSpan no banco — formato <code>HH:mm</code> no formulário.</div>
-                        </div>
 
                     </div>
                 )}
@@ -637,7 +630,6 @@ export default function GroupSettingsPage() {
             <Section title="Ícones da patota">
                 <p className="text-sm text-slate-500 mb-4">
                     Escolha os ícones exibidos em toda a aplicação para esta patota.
-                    Clique em um ícone para selecioná-lo e depois salve as configurações acima.
                 </p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
 

@@ -50,9 +50,6 @@ export function StepCreate({
         <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
             <div>
                 <div className="font-semibold text-slate-900">Criar nova partida</div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                    Preencha local e horário para habilitar o botão.
-                </div>
             </div>
 
             {/* Local */}

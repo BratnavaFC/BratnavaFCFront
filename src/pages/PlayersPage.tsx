@@ -66,15 +66,6 @@ export default function PlayersPage(){
               {msg ? <div className="text-sm text-emerald-700">{msg}</div> : null}
             </div>
 
-            <div className="card p-4">
-              <div className="text-sm font-semibold">Como funciona</div>
-              <div className="muted mt-2">
-                O perfil é por (UserId + GroupId). Um mesmo usuário pode ter perfis em vários Groups.
-              </div>
-              <div className="muted mt-2">
-                Dica: como admin, você pode criar perfis para outros usuários usando o endpoint Players com UserId.
-              </div>
-            </div>
           </div>
         )}
       </Section>

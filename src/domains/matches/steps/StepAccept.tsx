@@ -91,11 +91,6 @@ export function StepAccept({
                 <div className="card p-4">
                     {admin ? (
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="muted text-sm">
-                                <>Admin: você pode aceitar/recusar <b>qualquer jogador</b>.</>
-                                <div className="muted">Regras: pendente → qualquer lista; aceito ↔ não aceito; <b>não volta para pendente</b>.</div>
-                            </div>
-
                             <div className="flex items-center gap-2 shrink-0">
                                 {onAddGuest && (
                                     <button
