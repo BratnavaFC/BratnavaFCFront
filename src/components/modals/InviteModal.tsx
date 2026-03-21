@@ -96,7 +96,7 @@ export function InviteModal({
             setSearchErr(null);
             try {
                 const res = await UsersApi.list({ search: q, pageSize: 8 });
-                setResults(res.data?.items ?? []);
+                setResults((res.data?.data as any)?.items ?? []);
             } catch {
                 setSearchErr("Erro ao buscar usuarios.");
                 setResults([]);

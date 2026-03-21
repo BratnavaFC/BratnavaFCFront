@@ -24,7 +24,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     useEffect(() => {
         if (!active?.userId) return;
         GroupInvitesApi.mineCount()
-            .then((res) => setPendingCount(res.data?.count ?? 0))
+            .then((res) => setPendingCount((res.data?.data as any)?.count ?? 0))
             .catch(() => { /* silencioso */ });
     }, [active?.userId, setPendingCount]);
 

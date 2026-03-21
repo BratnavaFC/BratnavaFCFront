@@ -64,7 +64,7 @@ function CreateGroupModal({
                 defaultDayOfWeek: dayOfWeek,
                 defaultTime: time,
             } as any);
-            const newGroupId: string = res.data?.id ?? res.data?.groupId ?? "";
+            const newGroupId: string = (res.data?.data as any)?.id ?? (res.data?.data as any)?.groupId ?? "";
             if (newGroupId) {
                 // Persist the default place and kickoff time in GroupSettings
                 // so MatchesPage can pre-fill the "Criar partida" form automatically.
@@ -195,7 +195,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
         const userId = active.userId;
         PlayersApi.mine()
             .then((res) => {
-                const list = (res.data ?? []) as MyPlayerDto[];
+                const list = ((res.data?.data ?? []) as unknown) as MyPlayerDto[];
                 setMyPlayers(list);
                 if (list.length > 0 && !active.activePlayerId) {
                     updateActive({ activePlayerId: list[0].playerId, activeGroupId: list[0].groupId });
@@ -204,13 +204,13 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
             .catch(() => setMyPlayers([]));
         GroupsApi.listByAdmin(userId)
             .then((res) => {
-                const ids = (res.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
                 updateActive({ groupAdminIds: ids });
             })
             .catch(() => {});
         GroupsApi.listByFinanceiro(userId)
             .then((res) => {
-                const ids = (res.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
                 updateActive({ groupFinanceiroIds: ids });
             })
             .catch(() => {});

@@ -37,7 +37,7 @@ function PaymentSection({
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         PaymentsApi.isMonthInitiated(groupId, year, month)
-            .then(res => setIsInitiated(res.data?.isInitiated ?? false))
+            .then(res => setIsInitiated((res.data?.data as any)?.isInitiated ?? false))
             .catch(() => setIsInitiated(false));
     }, [paymentMode, groupId, matchDate]);
 
