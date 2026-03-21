@@ -6,7 +6,7 @@ import { Field } from '../components/Field';
 import { UsersApi } from '../api/endpoints';
 import type { CreateUserDto } from '../api/generated/types';
 import { Link, useNavigate } from 'react-router-dom';
-import { extractApiError } from '../lib/apiError';
+import { getResponseMessage } from '../api/apiResponse';
 
 const schema = z.object({
   firstName: z.string().min(2),
@@ -31,7 +31,7 @@ export default function RegisterPage(){
       setMsg('Usuário criado! Faça login.');
       setTimeout(() => nav('/login'), 600);
     } catch (e) {
-      toast.error(extractApiError(e, "Falha ao criar usuário."));
+      toast.error(getResponseMessage(e, "Falha ao criar usuário."));
     }
   };
 

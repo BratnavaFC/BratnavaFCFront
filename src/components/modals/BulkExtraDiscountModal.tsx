@@ -48,12 +48,12 @@ function BulkExtraDiscountModal({ open, groupId, charge, onClose, onSaved }: Bul
         if (selected.size === 0) { toast.error('Selecione ao menos um jogador'); return; }
         setSaving(true);
         try {
-            await PaymentsApi.bulkDiscountExtraCharge(groupId, charge.id, {
+            const res = await PaymentsApi.bulkDiscountExtraCharge(groupId, charge.id, {
                 discount: parseFloat(discount),
                 discountReason: reason.trim() || undefined,
                 playerIds: [...selected],
             });
-            toast.success(`Desconto aplicado para ${selected.size} jogador${selected.size !== 1 ? 'es' : ''}!`);
+            if (res.data.message) toast.success(res.data.message);
             onSaved(); onClose();
         } catch { toast.error('Erro ao aplicar desconto'); }
         finally { setSaving(false); }

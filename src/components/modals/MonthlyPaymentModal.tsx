@@ -54,7 +54,7 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
                 proofFileName = file.name;
                 proofMimeType = file.type;
             }
-            await PaymentsApi.upsertMonthly(groupId, {
+            const res = await PaymentsApi.upsertMonthly(groupId, {
                 playerId: row.playerId,
                 year: new Date().getFullYear(),
                 month,
@@ -63,7 +63,7 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
                 discountReason: isAdmin ? discReason || undefined : undefined,
                 proofBase64, proofFileName, proofMimeType,
             });
-            toast.success(status === 1 ? 'Marcado como pago!' : 'Marcado como pendente');
+            if (res.data.message) toast.success(res.data.message);
             onSaved();
             onClose();
         } catch { toast.error('Erro ao salvar pagamento'); }

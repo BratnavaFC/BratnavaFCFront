@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PlayersApi, MatchesApi, PaymentsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
-import { extractApiError } from '../lib/apiError';
+import { getResponseMessage } from '../api/apiResponse';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
 import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useGroupIcons } from '../hooks/useGroupIcons';
@@ -177,7 +177,7 @@ export default function DashboardPage() {
         store.updateActive({ activePlayerId: filtered[0].playerId });
       }
     } catch (e) {
-      toast.error(extractApiError(e, 'Falha ao carregar jogadores.'));
+      toast.error(getResponseMessage(e, 'Falha ao carregar jogadores.'));
     }
   }
 
@@ -196,7 +196,7 @@ export default function DashboardPage() {
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 404 || status === 204) setNoCurrentMatch(true);
-      else toast.error(extractApiError(e, 'Falha ao carregar partida atual.'));
+      else toast.error(getResponseMessage(e, 'Falha ao carregar partida atual.'));
     } finally {
       setCurrentLoading(false);
     }
@@ -213,7 +213,7 @@ export default function DashboardPage() {
       const res = await MatchesApi.playerRecent(groupId, selectedPlayerId, 3);
       setRecentMatches(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      toast.error(extractApiError(e, 'Falha ao carregar histórico.'));
+      toast.error(getResponseMessage(e, 'Falha ao carregar histórico.'));
     } finally {
       setRecentLoading(false);
     }

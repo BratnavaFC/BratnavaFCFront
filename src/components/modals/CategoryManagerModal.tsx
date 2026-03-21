@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Plus, Loader2, Tag, Pencil, Trash2 } from "lucide-react";
 import { CalendarApi } from "../../api/endpoints";
-import { extractApiError } from "../../lib/apiError";
+import { getResponseMessage } from "../../api/apiResponse";
 import { toast } from "sonner";
 import ModalBackdrop from "./ModalBackdrop";
 
@@ -41,11 +41,11 @@ function CategoryManagerModal({
         if (!name.trim()) { toast.error("Nome é obrigatório."); return; }
         setSaving(true);
         try {
-            await CalendarApi.createCategory(groupId, { name: name.trim(), color: color || null, icon: icon.trim() || null });
-            toast.success("Categoria criada!");
+            const res = await CalendarApi.createCategory(groupId, { name: name.trim(), color: color || null, icon: icon.trim() || null });
+            if (res.data.message) toast.success(res.data.message);
             setName(""); setIcon("");
             onChanged();
-        } catch (e) { toast.error(extractApiError(e, "Erro ao criar categoria.")); }
+        } catch (e) { toast.error(getResponseMessage(e, "Erro ao criar categoria.")); }
         finally { setSaving(false); }
     }
 
@@ -54,21 +54,21 @@ function CategoryManagerModal({
         if (!editName.trim()) { toast.error("Nome é obrigatório."); return; }
         setSaving(true);
         try {
-            await CalendarApi.updateCategory(groupId, editing.id, { name: editName.trim(), color: editColor || null, icon: editIcon.trim() || null });
-            toast.success("Categoria atualizada!");
+            const res = await CalendarApi.updateCategory(groupId, editing.id, { name: editName.trim(), color: editColor || null, icon: editIcon.trim() || null });
+            if (res.data.message) toast.success(res.data.message);
             setEditing(null);
             onChanged();
-        } catch (e) { toast.error(extractApiError(e, "Erro ao atualizar categoria.")); }
+        } catch (e) { toast.error(getResponseMessage(e, "Erro ao atualizar categoria.")); }
         finally { setSaving(false); }
     }
 
     async function handleDelete(id: string) {
         setDeleting(id);
         try {
-            await CalendarApi.deleteCategory(groupId, id);
-            toast.success("Categoria removida!");
+            const res = await CalendarApi.deleteCategory(groupId, id);
+            if (res.data.message) toast.success(res.data.message);
             onChanged();
-        } catch (e) { toast.error(extractApiError(e, "Erro ao remover categoria.")); }
+        } catch (e) { toast.error(getResponseMessage(e, "Erro ao remover categoria.")); }
         finally { setDeleting(null); }
     }
 

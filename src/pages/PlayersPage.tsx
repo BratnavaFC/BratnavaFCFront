@@ -4,7 +4,7 @@ import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { PlayersApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
-import { extractApiError } from '../lib/apiError';
+import { getResponseMessage } from '../api/apiResponse';
 
 export default function PlayersPage(){
   const active = useAccountStore(s => s.getActive());
@@ -37,7 +37,7 @@ export default function PlayersPage(){
         setMsg('Player criado.');
       }
     } catch (e) {
-      toast.error(extractApiError(e, "Falha ao criar perfil."));
+      toast.error(getResponseMessage(e, "Falha ao criar perfil."));
     }
   }
 

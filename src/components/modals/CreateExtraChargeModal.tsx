@@ -35,13 +35,13 @@ function CreateExtraChargeModal({ open, groupId, players, onClose, onSaved }: Cr
         if (selected.size === 0)     { toast.error('Selecione ao menos um jogador'); return; }
         setSaving(true);
         try {
-            await PaymentsApi.createExtraCharge(groupId, {
+            const res = await PaymentsApi.createExtraCharge(groupId, {
                 name: name.trim(), description: desc.trim() || undefined,
                 amount: parseFloat(amount),
                 dueDate: dueDate || undefined,
                 playerIds: [...selected],
             });
-            toast.success('Cobrança criada!');
+            if (res.data.message) toast.success(res.data.message);
             onSaved(); onClose();
         } catch { toast.error('Erro ao criar cobrança'); }
         finally { setSaving(false); }

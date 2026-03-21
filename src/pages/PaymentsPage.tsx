@@ -223,8 +223,8 @@ export default function PaymentsPage() {
     async function cancelCharge(chargeId: string) {
         if (!confirm('Cancelar esta cobrança?')) return;
         try {
-            await PaymentsApi.cancelExtraCharge(groupId, chargeId);
-            toast.success('Cobrança cancelada');
+            const res = await PaymentsApi.cancelExtraCharge(groupId, chargeId);
+            if (res.data.message) toast.success(res.data.message);
             loadExtra();
         } catch { toast.error('Erro ao cancelar'); }
     }

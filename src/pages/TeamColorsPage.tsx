@@ -7,7 +7,7 @@ import { PreviewModal } from "../components/modals/PreviewModal";
 import { TeamColorEditModal } from "../components/modals/TeamColorEditModal";
 import { useIsMobile } from "../hooks/UseIsMobile";
 import { isAdmin, isGroupAdmin } from "../auth/guards";
-import { extractApiError } from "../lib/apiError";
+import { getResponseMessage } from "../api/apiResponse";
 import { Eye, Loader2, Palette, Pencil, Plus, Power } from "lucide-react";
 
 type Item = any;
@@ -59,7 +59,7 @@ export default function TeamColorsPage() {
                 setSelectedId(data[0].id);
             }
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao carregar uniformes."));
+            toast.error(getResponseMessage(e, "Falha ao carregar uniformes."));
         } finally {
             setLoading(false);
         }
@@ -132,7 +132,7 @@ export default function TeamColorsPage() {
             await load();
             setEditOpen(false);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao salvar cor."));
+            toast.error(getResponseMessage(e, "Falha ao salvar cor."));
         } finally {
             setSaving(false);
         }
@@ -145,7 +145,7 @@ export default function TeamColorsPage() {
             await TeamColorApi.activate(groupId, selectedColor.id);
             await load();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao ativar cor."));
+            toast.error(getResponseMessage(e, "Falha ao ativar cor."));
         }
     }
 
@@ -156,7 +156,7 @@ export default function TeamColorsPage() {
             await TeamColorApi.deactivate(groupId, selectedColor.id);
             await load();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao inativar cor."));
+            toast.error(getResponseMessage(e, "Falha ao inativar cor."));
         }
     }
 

@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { CalendarApi } from "../api/endpoints";
-import { extractApiError } from "../lib/apiError";
+import { getResponseMessage } from "../api/apiResponse";
 import { toast } from "sonner";
 import EventDetailModal from "../components/modals/EventDetailModal";
 import CreateEditEventModal from "../components/modals/CreateEditEventModal";
@@ -435,7 +435,7 @@ export default function CalendarPage() {
             const res = await CalendarApi.events(groupId, toDateStr(start), toDateStr(end));
             setEvents(res.data ?? []);
         } catch (e) {
-            toast.error(extractApiError(e, "Erro ao carregar calendário."));
+            toast.error(getResponseMessage(e, "Erro ao carregar calendário."));
         } finally {
             setLoading(false);
         }
@@ -470,11 +470,11 @@ export default function CalendarPage() {
         if (!ev.id || !groupId) return;
         if (!confirm(`Excluir "${ev.title}"?`)) return;
         try {
-            await CalendarApi.deleteEvent(groupId, ev.id);
-            toast.success("Evento excluído!");
+            const res = await CalendarApi.deleteEvent(groupId, ev.id);
+            if (res.data.message) toast.success(res.data.message);
             setSelectedEvent(null);
             fetchEvents();
-        } catch (e) { toast.error(extractApiError(e, "Erro ao excluir evento.")); }
+        } catch (e) { toast.error(getResponseMessage(e, "Erro ao excluir evento.")); }
     }
 
     const viewTitle      = view === "month" ? formatMonthTitle(cursor)

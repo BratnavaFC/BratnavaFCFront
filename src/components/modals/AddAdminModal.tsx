@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Loader2, Search, ShieldPlus, X } from 'lucide-react';
 import { GroupsApi, UsersApi } from '../../api/endpoints';
-import { extractApiError } from '../../lib/apiError';
+import { getResponseMessage } from '../../api/apiResponse';
 
 type UserResult = {
     id: string;
@@ -91,7 +91,7 @@ export function AddAdminModal({
             setAdded((prev) => new Set(prev).add(user.id));
             onAdded();
         } catch (e) {
-            const msg = extractApiError(e, 'Erro ao adicionar admin.');
+            const msg = getResponseMessage(e, 'Erro ao adicionar admin.');
             setAddErr((prev) => ({ ...prev, [user.id]: msg }));
         } finally {
             setAdding((prev) => { const n = { ...prev }; delete n[user.id]; return n; });

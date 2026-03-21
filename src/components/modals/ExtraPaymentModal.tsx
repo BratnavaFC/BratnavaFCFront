@@ -56,13 +56,13 @@ function ExtraPaymentModal({ open, groupId, charge, payment, isAdmin, onClose, o
                 proofFileName = file.name;
                 proofMimeType = file.type;
             }
-            await PaymentsApi.upsertExtraChargePayment(groupId, charge.id, payment.playerId, {
+            const res = await PaymentsApi.upsertExtraChargePayment(groupId, charge.id, payment.playerId, {
                 status,
                 discount: isAdmin ? parseFloat(discount) || 0 : undefined,
                 discountReason: isAdmin ? discReason || undefined : undefined,
                 proofBase64, proofFileName, proofMimeType,
             });
-            toast.success(status === 1 ? 'Marcado como pago!' : 'Marcado como pendente');
+            if (res.data.message) toast.success(res.data.message);
             onSaved(); onClose();
         } catch { toast.error('Erro ao salvar pagamento'); }
         finally { setSaving(false); }

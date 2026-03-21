@@ -4,7 +4,7 @@ import { Section } from "../../components/Section";
 import useAccountStore from "../../auth/accountStore";
 import { GroupInvitesApi, UsersApi, PaymentsApi } from "../../api/endpoints";
 import { useInviteStore } from "../../stores/inviteStore";
-import { extractApiError } from "../../lib/apiError";
+import { getResponseMessage } from "../../api/apiResponse";
 import {
     Shield,
     User,
@@ -484,7 +484,7 @@ function ChangePasswordModal({
             await UsersApi.changePassword(userId, { currentPassword: current, newPassword: next1 });
             onClose();
         } catch (e: any) {
-            const msg = extractApiError(e, "Falha ao alterar senha.");
+            const msg = getResponseMessage(e, "Falha ao alterar senha.");
 
             if (msg.toLowerCase().includes("current password is invalid")) {
                 setError("A senha atual está incorreta.");
@@ -659,7 +659,7 @@ export default function AdminUsersPage() {
             const data = resp?.data ?? resp;
             setResult(data as PagedResultDto<UserListItemDto>);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao carregar lista de usuários."));
+            toast.error(getResponseMessage(e, "Falha ao carregar lista de usuários."));
         } finally {
             setLoading(false);
         }

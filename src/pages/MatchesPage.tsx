@@ -4,7 +4,7 @@ import { CalendarDays, Loader2, RotateCcw } from "lucide-react";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
-import { extractApiError } from "../lib/apiError";
+import { getResponseMessage } from "../api/apiResponse";
 
 import { MatchWizard } from "../domains/matches/steps/MatchWizard";
 import type {
@@ -343,11 +343,11 @@ export default function MatchesPage() {
                     setCurrentMatchId(null);
                     setCurrent(null);
                 } else {
-                    toast.error(extractApiError(e, "Falha ao carregar partida atual."));
+                    toast.error(getResponseMessage(e, "Falha ao carregar partida atual."));
                 }
             }
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao carregar dados da página."));
+            toast.error(getResponseMessage(e, "Falha ao carregar dados da página."));
         } finally {
             setLoading(false);
         }
@@ -367,7 +367,7 @@ export default function MatchesPage() {
             await MatchesApi.create(groupId!, { placeName: placeName.trim(), playedAt } as any);
             await loadCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao criar partida."));
+            toast.error(getResponseMessage(e, "Falha ao criar partida."));
         } finally {
             setCreating(false);
         }
@@ -379,7 +379,7 @@ export default function MatchesPage() {
         try {
             await MatchesApi.rewind(groupId, currentMatchId);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao voltar etapa."));
+            toast.error(getResponseMessage(e, "Falha ao voltar etapa."));
         } finally {
             await refreshCurrent();
         }
@@ -525,7 +525,7 @@ export default function MatchesPage() {
             await MatchesApi.accept(groupId, currentMatchId, { playerId } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao aceitar convite."));
+            toast.error(getResponseMessage(e, "Falha ao aceitar convite."));
         } finally {
             setMutatingInvite((prev) => ({ ...prev, [playerId]: false }));
         }
@@ -539,7 +539,7 @@ export default function MatchesPage() {
             await MatchesApi.reject(groupId, currentMatchId, { playerId } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao recusar convite."));
+            toast.error(getResponseMessage(e, "Falha ao recusar convite."));
         } finally {
             setMutatingInvite((prev) => ({ ...prev, [playerId]: false }));
         }
@@ -551,7 +551,7 @@ export default function MatchesPage() {
             await MatchesApi.goToMatchMaking(groupId, currentMatchId);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao avançar para matchmaking."));
+            toast.error(getResponseMessage(e, "Falha ao avançar para matchmaking."));
         }
     }
 
@@ -565,7 +565,7 @@ export default function MatchesPage() {
             });
             await loadAcceptation(currentMatchId);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao adicionar convidado."));
+            toast.error(getResponseMessage(e, "Falha ao adicionar convidado."));
         }
     }
 
@@ -575,7 +575,7 @@ export default function MatchesPage() {
             await MatchesApi.start(groupId, currentMatchId);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao iniciar partida."));
+            toast.error(getResponseMessage(e, "Falha ao iniciar partida."));
         }
     }
 
@@ -585,7 +585,7 @@ export default function MatchesPage() {
             await MatchesApi.end(groupId, currentMatchId);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao encerrar partida."));
+            toast.error(getResponseMessage(e, "Falha ao encerrar partida."));
         }
     }
 
@@ -595,7 +595,7 @@ export default function MatchesPage() {
             await MatchesApi.goToPostGame(groupId, currentMatchId);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao ir para pós-jogo."));
+            toast.error(getResponseMessage(e, "Falha ao ir para pós-jogo."));
         }
     }
 
@@ -606,7 +606,7 @@ export default function MatchesPage() {
             await MatchesApi.finalize(groupId, currentMatchId);
             await loadCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao finalizar partida."));
+            toast.error(getResponseMessage(e, "Falha ao finalizar partida."));
         } finally {
             setFinalizing(false);
         }
@@ -637,7 +637,7 @@ export default function MatchesPage() {
             setTeamGenOptions(options);
             setSelectedTeamGenIdx(0);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao gerar times."));
+            toast.error(getResponseMessage(e, "Falha ao gerar times."));
         }
     }
 
@@ -657,7 +657,7 @@ export default function MatchesPage() {
             setTeamBColorId(String(b.id));
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao definir cores."));
+            toast.error(getResponseMessage(e, "Falha ao definir cores."));
         }
     }
 
@@ -668,7 +668,7 @@ export default function MatchesPage() {
             await MatchesApi.setColors(groupId, currentMatchId, { teamAColorId, teamBColorId } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao aplicar cores."));
+            toast.error(getResponseMessage(e, "Falha ao aplicar cores."));
         }
     }
 
@@ -692,7 +692,7 @@ export default function MatchesPage() {
             setSelectedTeamGenIdx(0);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao atribuir times."));
+            toast.error(getResponseMessage(e, "Falha ao atribuir times."));
         } finally {
             setAssigningTeams(false);
         }
@@ -704,7 +704,7 @@ export default function MatchesPage() {
             await MatchesApi.swap(groupId, currentMatchId, { playerAId, playerBId } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao trocar jogadores."));
+            toast.error(getResponseMessage(e, "Falha ao trocar jogadores."));
         }
     }
 
@@ -714,7 +714,7 @@ export default function MatchesPage() {
             await MatchesApi.setPlayerRole(groupId, currentMatchId, matchPlayerId, { isGoalkeeper });
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao alterar função do jogador."));
+            toast.error(getResponseMessage(e, "Falha ao alterar função do jogador."));
         }
     }
 
@@ -739,7 +739,7 @@ export default function MatchesPage() {
             } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao mover jogador."));
+            toast.error(getResponseMessage(e, "Falha ao mover jogador."));
         } finally {
             setAssigningTeams(false);
         }
@@ -833,7 +833,7 @@ export default function MatchesPage() {
             } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao atribuir jogador."));
+            toast.error(getResponseMessage(e, "Falha ao atribuir jogador."));
         } finally {
             setAssigningTeams(false);
         }
@@ -857,7 +857,7 @@ export default function MatchesPage() {
             await MatchesApi.setScore(groupId, currentMatchId, { teamAGoals: a, teamBGoals: b } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao registrar placar."));
+            toast.error(getResponseMessage(e, "Falha ao registrar placar."));
         } finally {
             setSettingScore(false);
         }
@@ -872,7 +872,7 @@ export default function MatchesPage() {
             await MatchesApi.vote(groupId, currentMatchId, { voterPlayerId: voteVoterMpId, votedPlayerId: voteVotedMpId } as any);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao registrar voto."));
+            toast.error(getResponseMessage(e, "Falha ao registrar voto."));
         } finally {
             setVoting(false);
         }
@@ -893,7 +893,7 @@ export default function MatchesPage() {
 
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao adicionar gol."));
+            toast.error(getResponseMessage(e, "Falha ao adicionar gol."));
         } finally {
             setAddingGoal(false);
         }
@@ -908,7 +908,7 @@ export default function MatchesPage() {
             await MatchesApi.removeGoal(groupId, currentMatchId, goalId);
             await refreshCurrent();
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao remover gol."));
+            toast.error(getResponseMessage(e, "Falha ao remover gol."));
         } finally {
             setRemovingGoal((p) => ({ ...p, [goalId]: false }));
         }

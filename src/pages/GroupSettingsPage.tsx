@@ -6,7 +6,7 @@ import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
-import { extractApiError } from '../lib/apiError';
+import { getResponseMessage } from '../api/apiResponse';
 import { isGodMode } from '../auth/guards';
 import { IconPicker } from '../components/IconPicker';
 import { IconRenderer } from '../components/IconRenderer';
@@ -163,7 +163,7 @@ export default function GroupSettingsPage() {
                 setMonthlyFee(gs.monthlyFee != null ? String(gs.monthlyFee) : '');
             }
         } catch (e) {
-            toast.error(extractApiError(e, 'Erro ao carregar configurações.'));
+            toast.error(getResponseMessage(e, 'Erro ao carregar configurações.'));
         } finally {
             setLoading(false);
         }
@@ -238,7 +238,7 @@ export default function GroupSettingsPage() {
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
             invalidateGroupIcons(groupId);
         } catch (e) {
-            toast.error(extractApiError(e, 'Erro ao salvar configurações.'));
+            toast.error(getResponseMessage(e, 'Erro ao salvar configurações.'));
         } finally {
             setSaving(false);
         }
@@ -252,11 +252,11 @@ export default function GroupSettingsPage() {
             onConfirm: async () => {
                 setRemovingId(userId);
                 try {
-                    await GroupsApi.removeAdmin(groupId, userId);
-                    toast.success(`${displayName} removido dos administradores.`);
+                    const res = await GroupsApi.removeAdmin(groupId, userId);
+                    if (res.data.message) toast.success(res.data.message);
                     await loadGroup();
                 } catch (e) {
-                    toast.error(extractApiError(e, 'Erro ao remover administrador.'));
+                    toast.error(getResponseMessage(e, 'Erro ao remover administrador.'));
                 } finally {
                     setRemovingId(null);
                 }
@@ -271,11 +271,11 @@ export default function GroupSettingsPage() {
             onConfirm: async () => {
                 setRemovingFinanceiroId(userId);
                 try {
-                    await GroupsApi.removeFinanceiro(groupId, userId);
-                    toast.success(`${displayName} removido dos financeiros.`);
+                    const res = await GroupsApi.removeFinanceiro(groupId, userId);
+                    if (res.data.message) toast.success(res.data.message);
                     await loadGroup();
                 } catch (e) {
-                    toast.error(extractApiError(e, 'Erro ao remover financeiro.'));
+                    toast.error(getResponseMessage(e, 'Erro ao remover financeiro.'));
                 } finally {
                     setRemovingFinanceiroId(null);
                 }

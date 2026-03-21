@@ -14,7 +14,7 @@ import {
     Play,
     RefreshCw,
 } from "lucide-react";
-import { extractApiError } from "../lib/apiError";
+import { getResponseMessage } from "../api/apiResponse";
 import useAccountStore from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
 import { useGroupIcons } from "../hooks/useGroupIcons";
@@ -560,7 +560,7 @@ export default function MatchDetailsPage() {
                 const res = await MatchesApi.details(groupId, matchId);
                 setData(res.data);
             } catch (e) {
-                toast.error(extractApiError(e, "Falha ao carregar detalhes da partida."));
+                toast.error(getResponseMessage(e, "Falha ao carregar detalhes da partida."));
             }
         })();
     }, [groupId, matchId]);
@@ -715,7 +715,7 @@ export default function MatchDetailsPage() {
         if (!editingGoalId || !editScorerId || !groupId || !matchId) return;
         setSavingGoal(true);
         try {
-            await MatchesApi.updateGoal(groupId, matchId, editingGoalId, {
+            const updateRes = await MatchesApi.updateGoal(groupId, matchId, editingGoalId, {
                 scorerPlayerId: editScorerId,
                 assistPlayerId: editAssistId,
                 time: editTime || null,
@@ -724,9 +724,9 @@ export default function MatchDetailsPage() {
             const res = await MatchesApi.details(groupId, matchId);
             setData(res.data);
             closeEditGoal();
-            toast.success("Gol atualizado.");
+            if (updateRes.data.message) toast.success(updateRes.data.message);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao atualizar o gol."));
+            toast.error(getResponseMessage(e, "Falha ao atualizar o gol."));
         } finally {
             setSavingGoal(false);
         }

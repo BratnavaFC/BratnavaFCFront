@@ -7,7 +7,7 @@ import { AuthApi, GroupsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import type { LoginDto } from "../api/generated/types";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { extractApiError } from "../lib/apiError";
+import { getResponseMessage } from "../api/apiResponse";
 
 const schema = z.object({
     email: z.string().email(),
@@ -76,7 +76,7 @@ export default function LoginPage() {
         try {
             res = await AuthApi.login(dto);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao fazer login."));
+            toast.error(getResponseMessage(e, "Falha ao fazer login."));
             return;
         }
 

@@ -8,6 +8,7 @@ import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
 import { resolveIcon } from "../../../lib/groupIcons";
 import { PaymentsApi } from "../../../api/endpoints";
+import { getResponseMessage } from "../../../api/apiResponse";
 import { toast } from "sonner";
 
 // ── Payment section (admin only) ────────────────────────────────────────────
@@ -57,12 +58,12 @@ function PaymentSection({
                 : "—";
             setCreatingCharge(true);
             try {
-                await PaymentsApi.createExtraCharge(groupId, {
+                const res = await PaymentsApi.createExtraCharge(groupId, {
                     name: `Jogo — ${dateLabel}`,
                     amount,
                     playerIds: participantPlayerIds,
                 });
-                toast.success("Cobrança do jogo criada com sucesso!");
+                if (res.data.message) toast.success(res.data.message);
                 setGameAmount("");
             } catch {
                 toast.error("Erro ao criar cobrança do jogo.");
@@ -121,8 +122,7 @@ function PaymentSection({
         setInitiating(true);
         try {
             const res = await PaymentsApi.initiateMonthly(groupId, year, month);
-            const { created, skipped } = res.data ?? {};
-            toast.success(`Mensalidade lançada! ${created} novo(s), ${skipped} já existia(m).`);
+            if (res.data.message) toast.success(res.data.message);
             setIsInitiated(true);
         } catch {
             toast.error("Erro ao lançar mensalidade.");

@@ -5,7 +5,7 @@ import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { useNavigate } from "react-router-dom";
 import { Calendar, ChevronLeft, ChevronRight, History, Loader2, MapPin, RefreshCw } from "lucide-react";
-import { extractApiError } from "../lib/apiError";
+import { getResponseMessage } from "../api/apiResponse";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -118,7 +118,7 @@ export default function HistoryPage() {
             setItems(Array.isArray(res.data) ? res.data : []);
             setPage(1);
         } catch (e) {
-            toast.error(extractApiError(e, "Falha ao carregar histórico."));
+            toast.error(getResponseMessage(e, "Falha ao carregar histórico."));
         } finally {
             setLoading(false);
         }

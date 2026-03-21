@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Plus, Loader2 } from "lucide-react";
 import { CalendarApi } from "../../api/endpoints";
-import { extractApiError } from "../../lib/apiError";
+import { getResponseMessage } from "../../api/apiResponse";
 import { toast } from "sonner";
 import ModalBackdrop from "./ModalBackdrop";
 
@@ -69,15 +69,15 @@ function CreateEditEventModal({
                 timeTBD,
             };
             if (isEdit && editEvent?.id) {
-                await CalendarApi.updateEvent(groupId, editEvent.id, dto);
-                toast.success("Evento atualizado!");
+                const res = await CalendarApi.updateEvent(groupId, editEvent.id, dto);
+                if (res.data.message) toast.success(res.data.message);
             } else {
-                await CalendarApi.createEvent(groupId, dto);
-                toast.success("Evento criado!");
+                const res = await CalendarApi.createEvent(groupId, dto);
+                if (res.data.message) toast.success(res.data.message);
             }
             onSaved();
         } catch (e) {
-            toast.error(extractApiError(e, "Erro ao salvar evento."));
+            toast.error(getResponseMessage(e, "Erro ao salvar evento."));
         } finally {
             setSaving(false);
         }
