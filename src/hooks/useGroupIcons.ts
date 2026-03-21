@@ -22,7 +22,7 @@ export function useGroupIcons(groupId?: string | null): GroupIconConfig {
         _pending.add(groupId);
         GroupSettingsApi.get(groupId)
             .then((res) => {
-                const gs = res.data as any;
+                const gs = res.data.data as any;
                 setConfig(groupId, {
                     goalIcon:       gs?.goalIcon       ?? null,
                     goalkeeperIcon: gs?.goalkeeperIcon ?? null,

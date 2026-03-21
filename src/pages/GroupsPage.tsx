@@ -162,7 +162,7 @@ export default function GroupsPage() {
                 PaymentsApi.getMonthlyGrid(expandedGroupId, year),
                 PaymentsApi.getExtraCharges(expandedGroupId),
             ]);
-            const grid: any = gridRes.data;
+            const grid: any = gridRes.data.data;
             const extras: any[] = extraRes.data.data! ?? [];
             const hasMonthlyFee = !!(grid?.monthlyFee && grid.monthlyFee > 0);
             const now = new Date();
