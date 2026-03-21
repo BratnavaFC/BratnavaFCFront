@@ -102,7 +102,7 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                                         <button onClick={async () => {
                                             try {
                                                 const res = await PaymentsApi.getExtraChargeProof(groupId, charge.id, payment.playerId);
-                                                const { base64, fileName, mimeType } = res.data;
+                                                const { base64, fileName, mimeType } = res.data.data as any;
                                                 const link = document.createElement('a');
                                                 link.href = `data:${mimeType};base64,${base64}`;
                                                 link.download = fileName; link.click();
@@ -186,9 +186,9 @@ export default function PaymentsPage() {
                 PaymentsApi.getMyMonthlyRow(groupId, year),
                 PaymentsApi.getMyExtraCharges(groupId),
             ]);
-            const rowData = rowRes.data;
+            const rowData = rowRes.data.data as any;
             setMyRow(rowData ? { ...rowData, months: rowData.months ?? [] } : null);
-            setMyCharges(chargesRes.data ?? []);
+            setMyCharges((chargesRes.data.data as any[]) ?? []);
         } catch { toast.error('Erro ao carregar seus pagamentos'); }
     }, [groupId, year, isAdmin, activePlayerId]);
 
@@ -199,7 +199,7 @@ export default function PaymentsPage() {
         setLoading(true);
         try {
             const res = await PaymentsApi.getMonthlyGrid(groupId, year);
-            setGrid(res.data);
+            setGrid(res.data.data as any);
         } catch { toast.error('Erro ao carregar grade mensal'); }
         finally { setLoading(false); }
     }, [groupId, year]);
@@ -209,7 +209,7 @@ export default function PaymentsPage() {
         setLoading(true);
         try {
             const res = await PaymentsApi.getExtraCharges(groupId);
-            setCharges(res.data);
+            setCharges((res.data.data as any[]) ?? []);
         } catch { toast.error('Erro ao carregar cobranças'); }
         finally { setLoading(false); }
     }, [groupId]);
@@ -458,7 +458,7 @@ export default function PaymentsPage() {
                                                                 <button onClick={async () => {
                                                                     try {
                                                                         const res = await PaymentsApi.getExtraChargeProof(groupId, charge.id, payment.playerId);
-                                                                        const { base64, fileName, mimeType } = res.data;
+                                                                        const { base64, fileName, mimeType } = res.data.data as any;
                                                                         const link = document.createElement('a'); link.href = `data:${mimeType};base64,${base64}`; link.download = fileName; link.click();
                                                                     } catch { toast.error('Erro ao baixar comprovante'); }
                                                                 }} title="Baixar comprovante" className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-white rounded-lg">

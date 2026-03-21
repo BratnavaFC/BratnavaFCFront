@@ -52,11 +52,11 @@ export default function TeamColorsPage() {
         setLoading(true);
         try {
             const res = await TeamColorApi.list(groupId);
-            const data = res.data ?? [];
+            const data = res.data?.data ?? [];
             setItems(data);
 
             if (!selectedId && data.length) {
-                setSelectedId(data[0].id);
+                setSelectedId(data[0].id ?? null);
             }
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar uniformes."));

@@ -29,7 +29,7 @@ export default function PlayersPage(){
         isGuest,
         status: 1
       } as any);
-      const playerId = res.data?.id ?? res.data?.playerId;
+      const playerId = (res.data?.data as any)?.id ?? (res.data?.data as any)?.playerId;
       if (playerId) {
         useAccountStore.getState().updateActive({ activePlayerId: playerId });
         setMsg(`Player criado: ${playerId}`);

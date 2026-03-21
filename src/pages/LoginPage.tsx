@@ -80,16 +80,18 @@ export default function LoginPage() {
             return;
         }
 
+        const payload = res.data?.data as any;
+
         const accessToken =
-            res.data?.accessToken ??
-            res.data?.token ??
-            res.data?.jwt;
+            payload?.accessToken ??
+            payload?.token ??
+            payload?.jwt;
 
         const refreshToken =
-            res.data?.refreshToken ??
-            res.data?.refresh;
+            payload?.refreshToken ??
+            payload?.refresh;
 
-        const user = res.data?.user ?? res.data;
+        const user = payload?.user ?? payload;
 
         if (!accessToken || !refreshToken) {
             setError("Login não retornou accessToken/refreshToken. Ajuste o mapeamento no LoginPage.tsx");
@@ -134,8 +136,8 @@ export default function LoginPage() {
                 GroupsApi.listByAdmin(userId),
                 GroupsApi.listByFinanceiro(userId),
             ]);
-            const groupAdminIds = (adminRes.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
-            const groupFinanceiroIds = (finRes.data ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
+            const groupAdminIds = ((adminRes.data?.data as any[]) ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
+            const groupFinanceiroIds = ((finRes.data?.data as any[]) ?? []).map((g: any) => g.id ?? g.groupId).filter(Boolean);
             useAccountStore.getState().updateActive({ groupAdminIds, groupFinanceiroIds });
         } catch { /* non-critical */ }
 
