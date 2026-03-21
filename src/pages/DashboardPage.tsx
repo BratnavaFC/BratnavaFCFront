@@ -189,7 +189,7 @@ export default function DashboardPage() {
     setNoCurrentMatch(false);
     try {
       const headerRes = await MatchesApi.getCurrent(groupId);
-      const matchId = headerRes.data.data?.matchId;
+      const matchId = (headerRes.data.data as any)?.id ?? headerRes.data.data?.matchId;
       if (!matchId) { setNoCurrentMatch(true); return; }
       const detRes = await MatchesApi.details(groupId, matchId);
       setCurrentMatch((detRes.data.data! as unknown as MatchDetails) ?? null);

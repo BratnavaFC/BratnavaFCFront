@@ -210,8 +210,8 @@ export default function MatchesPage() {
             MatchesApi.details(groupId, matchId).catch(() => ({ data: null })),
         ]);
 
-        const dto = pgRes.data as any;
-        const dDto = (detailsRes as any)?.data as any;
+        const dto = pgRes.data.data as any;
+        const dDto = (detailsRes as any)?.data?.data as any;
 
         // Prefer postgame fields; fall back to details for votes/goals/mvp
         const votes = (dto?.votes ?? dto?.Votes ?? dDto?.votes ?? dDto?.Votes ?? []) as any[];
@@ -264,7 +264,7 @@ export default function MatchesPage() {
             // participants vêm do matchmaking; goals do details
             await loadMatchMaking(matchId);
             const detailsRes = await MatchesApi.details(groupId!, matchId).catch(() => ({ data: null }));
-            const dDto = (detailsRes as any)?.data as any;
+            const dDto = (detailsRes as any)?.data?.data as any;
             const goals = (dDto?.goals ?? dDto?.Goals ?? []) as any[];
             setCurrent((prev) => mergeCurrent(prev, { goals } as any));
             return;
@@ -279,14 +279,14 @@ export default function MatchesPage() {
         setLoading(true);
         try {
             // Load colors — critical
-            const colorsRes = await TeamColorApi.list(groupId, true).catch(() => ({ data: [] }));
-            const colors = (colorsRes.data ?? []) as TeamColorDto[];
+            const colorsRes = await TeamColorApi.list(groupId, true).catch(() => ({ data: { data: [] } }));
+            const colors = (colorsRes.data.data ?? []) as TeamColorDto[];
             setTeamColors(colors);
 
             // Load group settings — non-critical, never breaks the rest of the flow
             try {
                 const settingsRes = await GroupSettingsApi.get(groupId);
-                const gs = (settingsRes.data ?? null) as GroupSettingsDto | null;
+                const gs = (settingsRes.data.data ?? null) as GroupSettingsDto | null;
                 setGroupSettings(gs);
 
                 if (gs) {
@@ -303,7 +303,7 @@ export default function MatchesPage() {
             // ✅ pega a partida em andamento
             try {
                 const cur = await MatchesApi.getCurrent(groupId);
-                const dto = cur.data as any;
+                const dto = cur.data.data as any;
 
                 const id = getIdFromDto(dto);
                 if (!id) {
