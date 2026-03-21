@@ -103,7 +103,7 @@ export default function GodModeAdminPage() {
 
     useEffect(() => {
         GroupsApi.listAll()
-            .then((res) => setGroups(res.data ?? []))
+            .then((res) => setGroups((res.data.data ?? []) as GroupDto[]))
             .catch(() => setError("Erro ao carregar grupos."))
             .finally(() => setLoading(false));
     }, []);

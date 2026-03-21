@@ -564,7 +564,7 @@ export default function AdminUsersPage() {
         setInvitesLoading(true);
         try {
             const res = await GroupInvitesApi.mine();
-            const list: GroupInviteDto[] = res.data ?? [];
+            const list: GroupInviteDto[] = (res.data.data ?? []) as GroupInviteDto[];
             setInvites(list);
             setPendingCount(list.length);
         } catch {
@@ -656,7 +656,7 @@ export default function AdminUsersPage() {
                 pageSize,
                 includeInactive,
             });
-            const data = resp?.data ?? resp;
+            const data = (resp?.data?.data ?? resp?.data) as unknown;
             setResult(data as PagedResultDto<UserListItemDto>);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar lista de usuários."));
@@ -676,7 +676,7 @@ export default function AdminUsersPage() {
 
         try {
             const resp = await UsersApi.get(myUserId);
-            const data = resp?.data ?? resp;
+            const data = (resp?.data?.data ?? resp?.data) as any;
 
             // ✅ agora depende do backend retornar esses campos (ajuste no UserDto/GetUserByIdAsync)
             const mapped: UserListItemDto = {
