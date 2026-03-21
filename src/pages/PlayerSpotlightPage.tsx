@@ -454,7 +454,7 @@ export default function PlayerSpotlightPage() {
         setLoading(true);
         TeamGenApi.spotlight(groupId)
             .then(res => {
-                const data = (res.data as any)?.players ?? [];
+                const data = (res.data.data as any)?.players ?? [];
                 setPlayers(data);
                 setCurrent(0);
             })

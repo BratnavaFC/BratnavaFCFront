@@ -211,7 +211,7 @@ export default function DashboardPage() {
     try {
       // Uma única chamada ao endpoint dedicado — retorna tudo já enriquecido
       const res = await MatchesApi.playerRecent(groupId, selectedPlayerId, 3);
-      setRecentMatches(Array.isArray(res.data) ? res.data : []);
+      setRecentMatches(Array.isArray(res.data.data) ? res.data.data as any[] : []);
     } catch (e) {
       toast.error(getResponseMessage(e, 'Falha ao carregar histórico.'));
     } finally {
@@ -225,7 +225,7 @@ export default function DashboardPage() {
     setPaymentSummaryLoading(true);
     try {
       const res = await PaymentsApi.getMySummary(groupId);
-      setPaymentSummary(res.data ?? null);
+      setPaymentSummary((res.data.data ?? null) as any);
     } catch {
       // silencioso — summary é best-effort
     } finally {

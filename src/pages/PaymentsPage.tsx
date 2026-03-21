@@ -170,7 +170,7 @@ export default function PaymentsPage() {
         if (!groupId) return;
         GroupSettingsApi.get(groupId)
             .then(res => {
-                const mode = (res.data as any)?.paymentMode ?? 0;
+                const mode = (res.data.data as any)?.paymentMode ?? 0;
                 setPaymentMode(mode);
                 // If PerGame, switch to extra tab
                 if (mode === 1) setTab('extra');

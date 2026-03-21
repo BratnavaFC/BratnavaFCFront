@@ -144,7 +144,7 @@ export default function MatchesPage() {
         if (!groupId || !matchId) return;
 
         const res = await MatchesApi.header(groupId, matchId);
-        const dto = res.data as any;
+        const dto = res.data.data as any;
 
         // normaliza para o shape do MatchDetailsDto que você já usa
         const patch: Partial<MatchDetailsDto> = {
@@ -164,7 +164,7 @@ export default function MatchesPage() {
         if (!groupId || !matchId) return;
 
         const res = await MatchesApi.acceptation(groupId, matchId);
-        const dto = res.data as any;
+        const dto = res.data.data as any;
 
         const players = (dto?.players ?? dto?.Players ?? []) as PlayerInMatchDto[];
 
@@ -185,7 +185,7 @@ export default function MatchesPage() {
         if (!groupId || !matchId) return;
 
         const res = await MatchesApi.matchmaking(groupId, matchId);
-        const dto = res.data as any;
+        const dto = res.data.data as any;
 
         const patch: Partial<MatchDetailsDto> = {
             matchId,

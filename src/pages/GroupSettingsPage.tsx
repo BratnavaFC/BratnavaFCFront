@@ -141,7 +141,7 @@ export default function GroupSettingsPage() {
         setMsg(null);
         try {
             const res = await GroupSettingsApi.get(groupId);
-            const gs = res.data as any;
+            const gs = res.data.data as any;
             if (gs) {
                 setMinPlayers(gs.minPlayers ?? 5);
                 setMaxPlayers(gs.maxPlayers ?? 6);
