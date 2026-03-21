@@ -633,7 +633,7 @@ export default function MatchesPage() {
         const req = { players, strategyType, playersPerTeam, includeGoalkeepers, optionsCount: 3 };
         try {
             const res = await TeamGenApi.generate(req as any);
-            const options = normalizeTeamGenOptions(res.data);
+            const options = normalizeTeamGenOptions(res.data.data);
             setTeamGenOptions(options);
             setSelectedTeamGenIdx(0);
         } catch (e) {

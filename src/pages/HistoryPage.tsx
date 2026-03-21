@@ -115,7 +115,7 @@ export default function HistoryPage() {
         setLoading(true);
         try {
             const res = await MatchesApi.history(groupId, 400);
-            setItems(Array.isArray(res.data) ? res.data : []);
+            setItems(Array.isArray(res.data.data) ? res.data.data as any[] : []);
             setPage(1);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar histórico."));

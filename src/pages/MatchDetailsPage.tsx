@@ -558,7 +558,7 @@ export default function MatchDetailsPage() {
             if (!groupId || !matchId) return;
             try {
                 const res = await MatchesApi.details(groupId, matchId);
-                setData(res.data);
+                setData(res.data.data as any);
             } catch (e) {
                 toast.error(getResponseMessage(e, "Falha ao carregar detalhes da partida."));
             }
@@ -722,7 +722,7 @@ export default function MatchDetailsPage() {
                 isOwnGoal: editIsOwnGoal,
             });
             const res = await MatchesApi.details(groupId, matchId);
-            setData(res.data);
+            setData(res.data.data as any);
             closeEditGoal();
             if (updateRes.data.message) toast.success(updateRes.data.message);
         } catch (e) {

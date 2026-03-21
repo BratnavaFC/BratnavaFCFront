@@ -126,7 +126,7 @@ export default function GodModeAdminPage() {
         setLazy((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loadingMatches: true } }));
         try {
             const res = await MatchesApi.list(groupId);
-            const items: MatchItem[] = Array.isArray(res.data) ? res.data : [];
+            const items: MatchItem[] = Array.isArray(res.data.data) ? res.data.data as MatchItem[] : [];
             setLazy((prev) => ({
                 ...prev,
                 [groupId]: { ...prev[groupId], matches: items, loadingMatches: false },
@@ -144,7 +144,7 @@ export default function GodModeAdminPage() {
         setLazy((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loadingColors: true } }));
         try {
             const res = await TeamColorApi.list(groupId);
-            const items: ColorItem[] = Array.isArray(res.data) ? res.data : [];
+            const items: ColorItem[] = Array.isArray(res.data.data) ? res.data.data as ColorItem[] : [];
             setLazy((prev) => ({
                 ...prev,
                 [groupId]: { ...prev[groupId], colors: items, loadingColors: false },

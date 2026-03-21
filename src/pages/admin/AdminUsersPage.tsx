@@ -609,7 +609,7 @@ export default function AdminUsersPage() {
         setMyPaymentSummaryLoading(true);
         try {
             const res = await PaymentsApi.getMySummary(activeGroupId);
-            setMyPaymentSummary(res.data ?? null);
+            setMyPaymentSummary(res.data.data ?? null);
         } catch {
             // silencioso
         } finally {
