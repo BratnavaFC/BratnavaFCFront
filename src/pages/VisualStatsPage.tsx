@@ -263,7 +263,7 @@ export default function VisualStatsPage() {
                 setErr(null);
                 if (!groupId) throw new Error("groupId não encontrado.");
                 const res: any = await TeamGenApi.visualStats(groupId);
-                const payload: PlayerVisualStatsReport = res?.data ?? res;
+                const payload: PlayerVisualStatsReport = res?.data?.data ?? res?.data ?? res;
                 if (!mounted) return;
                 setData(payload);
                 const first = [...(payload.players ?? [])].sort((a, b) =>
