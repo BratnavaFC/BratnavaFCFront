@@ -175,7 +175,7 @@ export default function GroupSettingsPage() {
         setLoadingAdmins(true);
         try {
             const res = await GroupsApi.get(groupId);
-            const raw = res.data as GroupDetailDto;
+            const raw = res.data.data as GroupDetailDto;
 
             // Se o backend já retornou adminUsers com dados, usa direto.
             // Caso contrário, busca cada usuário em paralelo pelos IDs.
@@ -188,7 +188,7 @@ export default function GroupSettingsPage() {
                 Promise.all(ids.map(async (id) => {
                     try {
                         const r = await UsersApi.get(id);
-                        const u = r.data as UserResult;
+                        const u = r.data.data as UserResult;
                         return { userId: id, userName: u.userName ?? null, firstName: u.firstName ?? null, lastName: u.lastName ?? null } satisfies AdminUser;
                     } catch {
                         return { userId: id } satisfies AdminUser;

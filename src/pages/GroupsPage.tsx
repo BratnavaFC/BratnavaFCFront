@@ -121,7 +121,7 @@ export default function GroupsPage() {
     function loadMine() {
         setMineLoading(true);
         return PlayersApi.mine()
-            .then(res => setMyPlayers((res.data as MyPlayerItem[]) ?? []))
+            .then(res => setMyPlayers((res.data.data as MyPlayerItem[]) ?? []))
             .catch(() => setMyPlayers([]))
             .finally(() => setMineLoading(false));
     }
@@ -132,7 +132,7 @@ export default function GroupsPage() {
         setGroupError(null);
         setGroup(null);
         GroupsApi.get(groupId)
-            .then(res => setGroup(res.data as GroupDto))
+            .then(res => setGroup(res.data.data as GroupDto))
             .catch(() => setGroupError("Não foi possível carregar os dados da patota."))
             .finally(() => setGroupLoading(false));
     }
@@ -163,7 +163,7 @@ export default function GroupsPage() {
                 PaymentsApi.getExtraCharges(expandedGroupId),
             ]);
             const grid: any = gridRes.data;
-            const extras: any[] = extraRes.data ?? [];
+            const extras: any[] = extraRes.data.data! ?? [];
             const hasMonthlyFee = !!(grid?.monthlyFee && grid.monthlyFee > 0);
             const now = new Date();
             const currentMonth = now.getMonth() + 1;

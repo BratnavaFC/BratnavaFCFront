@@ -433,7 +433,7 @@ export default function CalendarPage() {
         setLoading(true);
         try {
             const res = await CalendarApi.events(groupId, toDateStr(start), toDateStr(end));
-            setEvents(res.data ?? []);
+            setEvents((res.data.data! as CalendarEvent[]) ?? []);
         } catch (e) {
             toast.error(getResponseMessage(e, "Erro ao carregar calendário."));
         } finally {
@@ -445,7 +445,7 @@ export default function CalendarPage() {
         if (!groupId) return;
         try {
             const res = await CalendarApi.categories(groupId);
-            setCategories(res.data ?? []);
+            setCategories((res.data.data! as CalendarCategory[]) ?? []);
         } catch { /* silencioso */ }
     }, [groupId]);
 

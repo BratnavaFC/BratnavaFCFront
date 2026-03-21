@@ -170,7 +170,7 @@ export default function DashboardPage() {
     if (!groupId) return;
     try {
       const res = await PlayersApi.mine();
-      const all: any[] = res.data ?? [];
+      const all: any[] = res.data.data! ?? [];
       const filtered = all.filter(p => p.groupId === groupId) as MyPlayer[];
       setMyPlayers(filtered);
       if (filtered.length > 0 && !filtered.find(p => p.playerId === selectedPlayerId)) {
@@ -189,10 +189,10 @@ export default function DashboardPage() {
     setNoCurrentMatch(false);
     try {
       const headerRes = await MatchesApi.getCurrent(groupId);
-      const matchId = headerRes.data?.matchId ?? headerRes.data?.id;
+      const matchId = headerRes.data.data?.matchId;
       if (!matchId) { setNoCurrentMatch(true); return; }
       const detRes = await MatchesApi.details(groupId, matchId);
-      setCurrentMatch(detRes.data ?? null);
+      setCurrentMatch((detRes.data.data! as unknown as MatchDetails) ?? null);
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 404 || status === 204) setNoCurrentMatch(true);
