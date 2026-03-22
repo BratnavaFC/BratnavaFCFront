@@ -329,21 +329,69 @@ function PlayerSlide({ player, isFullscreen }: { player: PlayerSpotlightItem; is
                         <p className="text-white/50 text-lg mt-1">{player.isGoalkeeper ? 'Goleiro' : 'Linha'}</p>
                     </div>
                 </div>
-                {/* Quick stats pills */}
-                <div className="flex flex-wrap gap-2 justify-end">
-                    {[
-                        { label: 'Partidas', value: player.gamesPlayed },
-                        { label: 'Vitórias', value: player.wins },
-                        { label: 'Win %', value: pct(player.winRate) },
-                        { label: 'Gols', value: player.goals },
-                        { label: 'Assist.', value: player.assists },
-                        ...(player.mvps > 0 ? [{ label: 'MVPs', value: player.mvps }] : []),
-                    ].map(s => (
-                        <div key={s.label} className="bg-white/10 rounded-xl px-4 py-2.5 text-center min-w-[72px]">
-                            <div className="text-white font-bold text-xl leading-none">{s.value}</div>
-                            <div className="text-white/40 text-sm mt-1">{s.label}</div>
+                {/* Quick stats — dois grupos */}
+                <div className="flex flex-wrap gap-3 justify-end items-start">
+
+                    {/* Grupo 1: Partidas + V/E/D */}
+                    <div className="bg-white/10 rounded-2xl px-4 py-3 min-w-[200px]">
+                        <div className="text-white/40 text-[11px] font-semibold uppercase tracking-widest mb-2.5">
+                            Partidas
                         </div>
-                    ))}
+                        <div className="flex items-end gap-4">
+                            <div className="text-center">
+                                <div className="text-white font-black text-3xl leading-none">{player.gamesPlayed}</div>
+                                <div className="text-white/40 text-[11px] mt-1">total</div>
+                            </div>
+                            <div className="w-px self-stretch bg-white/10 mx-1" />
+                            <div className="flex gap-3">
+                                <div className="text-center">
+                                    <div className="text-emerald-400 font-bold text-xl leading-none">{player.wins}</div>
+                                    <div className="text-white/40 text-[11px] mt-1">V</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-amber-300 font-bold text-xl leading-none">{player.ties}</div>
+                                    <div className="text-white/40 text-[11px] mt-1">E</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-red-400 font-bold text-xl leading-none">{player.losses}</div>
+                                    <div className="text-white/40 text-[11px] mt-1">D</div>
+                                </div>
+                            </div>
+                            <div className="w-px self-stretch bg-white/10 mx-1" />
+                            <div className="text-center">
+                                <div className="text-white font-bold text-xl leading-none">{pct(player.winRate)}</div>
+                                <div className="text-white/40 text-[11px] mt-1">win%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Grupo 2: Gols / Assists / MVP */}
+                    <div className="bg-white/10 rounded-2xl px-4 py-3">
+                        <div className="text-white/40 text-[11px] font-semibold uppercase tracking-widest mb-2.5">
+                            Desempenho
+                        </div>
+                        <div className="flex items-end gap-4">
+                            <div className="text-center">
+                                <div className="text-white font-black text-3xl leading-none">{player.goals}</div>
+                                <div className="text-white/40 text-[11px] mt-1">gols</div>
+                            </div>
+                            <div className="w-px self-stretch bg-white/10 mx-1" />
+                            <div className="text-center">
+                                <div className="text-white font-black text-3xl leading-none">{player.assists}</div>
+                                <div className="text-white/40 text-[11px] mt-1">assist.</div>
+                            </div>
+                            {player.mvps > 0 && (
+                                <>
+                                    <div className="w-px self-stretch bg-white/10 mx-1" />
+                                    <div className="text-center">
+                                        <div className="text-yellow-300 font-black text-3xl leading-none">{player.mvps}</div>
+                                        <div className="text-white/40 text-[11px] mt-1">MVP</div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -357,8 +405,7 @@ function PlayerSlide({ player, isFullscreen }: { player: PlayerSpotlightItem; is
                     emptyMsg="Sem dados suficientes"
                     renderExtra={r => (
                         <span className="text-emerald-300 text-base font-bold shrink-0">
-                            {pct(r.rate)} <span className="text-white/30 font-normal">({r.count}j)</span>
-                        </span>
+                            {pct(r.rate)}                        </span>
                     )}
                 />
                 <RelationList
@@ -369,8 +416,7 @@ function PlayerSlide({ player, isFullscreen }: { player: PlayerSpotlightItem; is
                     emptyMsg="Sem dados suficientes"
                     renderExtra={r => (
                         <span className="text-orange-300 text-base font-bold shrink-0">
-                            {pct(r.rate)} <span className="text-white/30 font-normal">({r.count}j)</span>
-                        </span>
+                            {pct(r.rate)}                        </span>
                     )}
                 />
                 <RelationList
@@ -381,8 +427,7 @@ function PlayerSlide({ player, isFullscreen }: { player: PlayerSpotlightItem; is
                     emptyMsg="Sem dados suficientes"
                     renderExtra={r => (
                         <span className="text-red-300 text-base font-bold shrink-0">
-                            {pct(r.rate)} <span className="text-white/30 font-normal">({r.count}j)</span>
-                        </span>
+                            {pct(r.rate)}                        </span>
                     )}
                 />
                 <RelationList
@@ -393,8 +438,7 @@ function PlayerSlide({ player, isFullscreen }: { player: PlayerSpotlightItem; is
                     emptyMsg="Sem dados suficientes"
                     renderExtra={r => (
                         <span className="text-sky-300 text-base font-bold shrink-0">
-                            {pct(r.rate)} <span className="text-white/30 font-normal">({r.count}j)</span>
-                        </span>
+                            {pct(r.rate)}                        </span>
                     )}
                 />
                 <RelationList
@@ -463,6 +507,8 @@ export default function PlayerSpotlightPage() {
     }, [groupId]);
 
     // ── Auto-advance ───────────────────────────────────────────────────────────
+    const [timerKey, setTimerKey] = useState(0);
+
     const goNext = useCallback(() => {
         setCurrent(c => (c + 1) % (totalSlides || 1));
     }, [totalSlides]);
@@ -471,6 +517,10 @@ export default function PlayerSpotlightPage() {
         setCurrent(c => (c - 1 + (totalSlides || 1)) % (totalSlides || 1));
     }, [totalSlides]);
 
+    // Wrappers para navegação manual: avança/volta E reseta o timer
+    const handleNext = useCallback(() => { goNext(); setTimerKey(k => k + 1); }, [goNext]);
+    const handlePrev = useCallback(() => { goPrev(); setTimerKey(k => k + 1); }, [goPrev]);
+
     useEffect(() => {
         if (playing && totalSlides > 1) {
             intervalRef.current = setInterval(goNext, 8000);
@@ -478,7 +528,7 @@ export default function PlayerSpotlightPage() {
             if (intervalRef.current) clearInterval(intervalRef.current);
         }
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [playing, totalSlides, goNext]);
+    }, [playing, totalSlides, goNext, timerKey]);
 
     // ── Fullscreen API ─────────────────────────────────────────────────────────
     const enterFullscreen = useCallback(() => {
@@ -515,14 +565,14 @@ export default function PlayerSpotlightPage() {
     // ── Keyboard navigation ────────────────────────────────────────────────────
     useEffect(() => {
         function handleKey(e: KeyboardEvent) {
-            if (e.key === 'ArrowRight') goNext();
-            if (e.key === 'ArrowLeft')  goPrev();
+            if (e.key === 'ArrowRight') handleNext();
+            if (e.key === 'ArrowLeft')  handlePrev();
             if (e.key === ' ') { e.preventDefault(); setPlaying(p => !p); }
             if (e.key === 'Escape' && isFullscreen) exitFullscreen();
         }
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
-    }, [goNext, goPrev, isFullscreen, exitFullscreen]);
+    }, [handleNext, handlePrev, isFullscreen, exitFullscreen]);
 
     // ── Render ─────────────────────────────────────────────────────────────────
     if (!groupId) {
@@ -625,7 +675,7 @@ export default function PlayerSpotlightPage() {
             )}>
                 {/* Prev */}
                 <button
-                    onClick={goPrev}
+                    onClick={handlePrev}
                     disabled={totalSlides <= 1}
                     className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition disabled:opacity-30"
                 >
@@ -705,7 +755,7 @@ export default function PlayerSpotlightPage() {
 
                 {/* Next */}
                 <button
-                    onClick={goNext}
+                    onClick={handleNext}
                     disabled={totalSlides <= 1}
                     className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition disabled:opacity-30"
                 >

@@ -1,32 +1,38 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
-    LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, Shield, ShieldAlert,
-    Menu, X, CreditCard, Presentation,
+    LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, User, ShieldAlert,
+    Menu, X, DollarSign, Presentation, Vote,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
 import { GroupInvitesApi } from "../api/endpoints";
-import { isGodMode } from "../auth/guards";
 
 type Item = { to: string; label: string; icon: any; badge?: number; end?: boolean };
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
-    const active = useAccountStore((s) => s.getActive());
-    const isAdminOrGod = !!active && (active.roles.includes("Admin") || active.roles.includes("GodMode"));
-    const isGod = isGodMode();
-    const isGroupAdm = !!active?.activeGroupId &&
-        (isAdminOrGod || (active?.groupAdminIds?.includes(active.activeGroupId) ?? false));
+    // Selectors reativos diretos — evita o problema do getActive() que usa closure interno
+    const userId       = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
+    const roles        = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.roles ?? []);
+    const activeGrpId  = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupId ?? null);
+    const grpAdminIds  = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.groupAdminIds ?? []);
+
+    const isAdminOrGod = roles.includes("Admin") || roles.includes("GodMode");
+    const isGod        = roles.includes("GodMode");
+    // Admin/GodMode global: sempre vê itens de admin (independente de grupo)
+    // Admin de grupo: precisa ter activeGrpId dentro de grpAdminIds
+    const isGroupAdm   = isAdminOrGod || (!!activeGrpId && grpAdminIds.includes(activeGrpId));
+
     const pendingCount = useInviteStore((s) => s.pendingCount);
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
 
     // Buscar contagem de convites ao montar / quando userId muda
     useEffect(() => {
-        if (!active?.userId) return;
+        if (!userId) return;
         GroupInvitesApi.mineCount()
             .then((res) => setPendingCount((res.data?.data as any)?.count ?? 0))
             .catch(() => { /* silencioso */ });
-    }, [active?.userId, setPendingCount]);
+    }, [userId, setPendingCount]);
 
     const items: Item[] = useMemo(() => [
         { to: "/app",             label: "Dashboard",     icon: LayoutDashboard, end: true },
@@ -34,12 +40,12 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/team-colors", label: "Cores",         icon: Palette },
         { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
         { to: "/app/history",     label: "Histórico",     icon: History },
-        // TODO: reativar quando prontos
-        // ...(isGroupAdm || isGod ? [{ to: "/app/calendar",  label: "Calendário",  icon: CalendarCheck }] : []),
-        // ...(isGroupAdm || isGod ? [{ to: "/app/payments", label: "Pagamentos", icon: CreditCard }] : []),
-        // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight", icon: Presentation }] : []),
-        ...(isGroupAdm || isGod ? [{
-            to: active?.activeGroupId ? `/app/groups/${active.activeGroupId}/visual-stats` : "/app",
+        ...(isGroupAdm || isGod ? [{ to: "/app/calendar",  label: "Calendário",  icon: CalendarCheck }] : []),
+        ...(isGroupAdm || isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
+        ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
+        ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight",   icon: Presentation }] : []),
+        ...((isGroupAdm || isGod) && activeGrpId ? [{
+            to: `/app/groups/${activeGrpId}/visual-stats`,
             label: "Visual Stats",
             icon: BarChart3,
         }] : []),
@@ -47,11 +53,11 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         {
             to: "/app/admin/users",
             label: isAdminOrGod ? "Usuários" : "Minha conta",
-            icon: Shield,
+            icon: User,
             badge: isAdminOrGod ? 0 : pendingCount,
         },
         ...(isGod ? [{ to: "/app/admin/godmode", label: "GodMode", icon: ShieldAlert }] : []),
-    ], [isAdminOrGod, isGod, isGroupAdm, active?.activeGroupId, pendingCount]);
+    ], [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount]);
 
     return (
         <aside className={`bg-white border-r transition-all duration-300 ${open ? "w-64" : "w-16"}`}>

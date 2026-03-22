@@ -32,12 +32,18 @@ function EventDetailModal({
         return () => document.removeEventListener('keydown', handleKey);
     }, [onClose]);
 
+    const isMatchPast = event.type === "match" && (() => {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+        return event.date < todayStr;
+    })();
     const icon = event.type === "birthday" ? "🎂"
-        : event.type === "match"   ? "⚽"
+        : event.type === "match"   ? (isMatchPast ? "✅" : "⚽")
         : event.type === "holiday" ? "🎉"
         : (event.categoryIcon ?? "📅");
     const typeLabel = event.type === "birthday" ? "Aniversário"
-        : event.type === "match"   ? "Jogo"
+        : event.type === "match"   ? (isMatchPast ? "Jogo encerrado" : "Jogo")
         : event.type === "holiday" ? "Feriado"
         : "Evento";
 

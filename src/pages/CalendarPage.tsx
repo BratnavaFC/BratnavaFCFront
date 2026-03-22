@@ -19,7 +19,7 @@ type ViewMode = "month" | "week" | "day";
 
 interface CalendarEvent {
     id?: string;
-    type: "manual" | "birthday" | "match" | "holiday";
+    type: "manual" | "birthday" | "match" | "holiday" | "event";
     title: string;
     date: string;        // "YYYY-MM-DD"
     time?: string | null;
@@ -28,6 +28,7 @@ interface CalendarEvent {
     categoryName?: string | null;
     categoryColor?: string | null;
     categoryIcon?: string | null;
+    icon?: string | null;          // ícone direto do evento (sobrepõe categoryIcon)
     sourceId?: string | null;
     description?: string | null;
 }
@@ -148,13 +149,22 @@ function nextCursor(view: ViewMode, cursor: Date): Date {
 // Event styling
 // ─────────────────────────────────────────────────────────────────────────────
 
+function isMatchPast(ev: CalendarEvent): boolean {
+    return ev.type === "match" && ev.date < toDateStr(new Date());
+}
+
 function eventStyle(ev: CalendarEvent): { bg: string; text: string; border: string } {
     if (ev.type === "birthday")
         return { bg: "bg-pink-100", text: "text-pink-800", border: "border-pink-200" };
-    if (ev.type === "match")
-        return { bg: "bg-green-100", text: "text-green-800", border: "border-green-200" };
+    if (ev.type === "match") {
+        return isMatchPast(ev)
+            ? { bg: "bg-slate-100", text: "text-slate-500", border: "border-slate-300" }
+            : { bg: "bg-green-100", text: "text-green-800", border: "border-green-300" };
+    }
     if (ev.type === "holiday")
         return { bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200" };
+    if (ev.type === "event")
+        return { bg: "bg-violet-100", text: "text-violet-800", border: "border-violet-200" };
     // manual: use category color if available
     if (ev.categoryColor) {
         return { bg: "bg-[var(--ev-bg)]", text: "text-[var(--ev-text)]", border: "border-[var(--ev-border)]" };
@@ -177,9 +187,10 @@ function eventCSSVars(ev: CalendarEvent): React.CSSProperties {
 function EventPill({ ev, onClick, compact = false }: { ev: CalendarEvent; onClick: () => void; compact?: boolean }) {
     const s = eventStyle(ev);
     const icon = ev.type === "birthday" ? "🎂"
-        : ev.type === "match"   ? "⚽"
+        : ev.type === "match"   ? (isMatchPast(ev) ? "✅" : "⚽")
         : ev.type === "holiday" ? "🎉"
-        : (ev.categoryIcon ?? "📅");
+        : ev.type === "event"   ? (ev.icon ?? "🍖")
+        : (ev.icon ?? ev.categoryIcon ?? "📅");
     return (
         <button
             onClick={onClick}
@@ -241,12 +252,14 @@ function MonthView({
                             const isCurrentMonth = day.getMonth() === cursor.getMonth();
                             const dayEvs = dayEvents(day);
                             return (
-                                <button
+                                <div
                                     key={di}
-                                    type="button"
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() => onDayClick(day, dayEvs)}
+                                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onDayClick(day, dayEvs)}
                                     className={cls(
-                                        "border-r border-b last:border-r-0 p-0.5 sm:p-1 text-left flex flex-col items-start gap-0.5 overflow-hidden hover:bg-slate-50 transition-colors",
+                                        "border-r border-b last:border-r-0 p-0.5 sm:p-1 text-left flex flex-col items-start gap-0.5 overflow-hidden hover:bg-slate-50 transition-colors cursor-pointer",
                                         !isCurrentMonth && "bg-slate-50/50",
                                     )}
                                 >
@@ -276,7 +289,7 @@ function MonthView({
                                     {dayEvs.length > 1 && (
                                         <span className="sm:hidden text-[10px] text-slate-500 font-medium px-0.5">+{dayEvs.length - 1}</span>
                                     )}
-                                </button>
+                                </div>
                             );
                         })}
                     </div>
@@ -373,9 +386,9 @@ function DayView({
         <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-2">
             {dayEvs.map((ev, i) => {
                 const icon = ev.type === "birthday" ? "🎂"
-                    : ev.type === "match"   ? "⚽"
+                    : ev.type === "match"   ? (isMatchPast(ev) ? "✅" : "⚽")
                     : ev.type === "holiday" ? "🎉"
-                    : (ev.categoryIcon ?? "📅");
+                    : (ev.icon ?? ev.categoryIcon ?? "📅");
                 const s = eventStyle(ev);
                 return (
                     <button

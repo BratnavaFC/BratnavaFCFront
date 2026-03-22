@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import {
     CheckCircle2, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
-    Upload, Download, Loader2, CreditCard, DollarSign, Calendar, Users
+    Upload, Download, Loader2, DollarSign, Calendar, Users
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PaymentsApi, GroupSettingsApi } from '../api/endpoints';
@@ -283,8 +283,8 @@ export default function PaymentsPage() {
 
                 {/* Row 1: icon + title */}
                 <div className="relative flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                        <CreditCard size={20} />
+                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                        <DollarSign size={26} />
                     </div>
                     <div>
                         <h1 className="text-lg font-black leading-tight">Pagamentos</h1>

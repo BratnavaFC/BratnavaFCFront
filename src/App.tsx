@@ -21,6 +21,7 @@ import VisualStatsPage from "./pages/VisualStatsPage";
 import CalendarPage from './pages/CalendarPage';
 import PaymentsPage from './pages/PaymentsPage';
 import PlayerSpotlightPage from './pages/PlayerSpotlightPage';
+import PollsPage from './pages/PollsPage';
 
 export default function App() {
     return (
@@ -56,6 +57,7 @@ export default function App() {
                 <Route path="groups/:groupId/visual-stats" element={<VisualStatsPage />} />
                 <Route path="spotlight" element={<PlayerSpotlightPage />} />
                 <Route path="payments" element={<PaymentsPage />} />
+                <Route path="polls" element={<PollsPage />} />
 
                 <Route
                     path="settings"

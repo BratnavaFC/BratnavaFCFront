@@ -164,6 +164,35 @@ export const CalendarApi = {
                     http.delete<ApiResponse<null>>(`/api/Calendar/group/${groupId}/categories/${id}`),
 };
 
+export const PollsApi = {
+  getPolls:              (groupId: string) =>
+                           http.get(`/api/Polls/group/${groupId}`),
+  getPoll:               (groupId: string, pollId: string) =>
+                           http.get(`/api/Polls/group/${groupId}/${pollId}`),
+  createPoll:            (groupId: string, dto: any) =>
+                           http.post(`/api/Polls/group/${groupId}`, dto),
+  createEventPoll:       (groupId: string, dto: any) =>
+                           http.post(`/api/Polls/group/${groupId}/event`, dto),
+  closePoll:             (groupId: string, pollId: string, dto: any) =>
+                           http.post(`/api/Polls/group/${groupId}/${pollId}/close`, dto),
+  reopenPoll:            (groupId: string, pollId: string) =>
+                           http.put(`/api/Polls/group/${groupId}/${pollId}/reopen`),
+  deletePoll:            (groupId: string, pollId: string) =>
+                           http.delete(`/api/Polls/group/${groupId}/${pollId}`),
+  addOption:             (groupId: string, pollId: string, dto: any) =>
+                           http.post(`/api/Polls/group/${groupId}/${pollId}/options`, dto),
+  updateOption:          (groupId: string, pollId: string, optionId: string, dto: any) =>
+                           http.put(`/api/Polls/group/${groupId}/${pollId}/options/${optionId}`, dto),
+  deleteOption:          (groupId: string, pollId: string, optionId: string) =>
+                           http.delete(`/api/Polls/group/${groupId}/${pollId}/options/${optionId}`),
+  castVote:              (groupId: string, pollId: string, dto: any) =>
+                           http.post(`/api/Polls/group/${groupId}/${pollId}/vote`, dto),
+  removeVote:            (groupId: string, pollId: string) =>
+                           http.delete(`/api/Polls/group/${groupId}/${pollId}/vote`),
+  adminCastVote:         (groupId: string, pollId: string, dto: { playerId: string; optionIds: string[] }) =>
+                           http.post(`/api/Polls/group/${groupId}/${pollId}/admin-vote`, dto),
+};
+
 export const PaymentsApi = {
   // Mensalidades
   getMonthlyGrid:     (groupId: string, year: number) =>

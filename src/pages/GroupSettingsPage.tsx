@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, CreditCard, AlertCircle, Save } from 'lucide-react';
+import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, DollarSign, AlertCircle, Save } from 'lucide-react';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
@@ -422,7 +422,7 @@ export default function GroupSettingsPage() {
                             <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
                                 <div className="flex items-center gap-3">
                                     <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                                        <CreditCard size={17} />
+                                        <DollarSign size={17} />
                                     </div>
                                     <div>
                                         <div className="text-sm font-semibold text-slate-900">Pagamento</div>
