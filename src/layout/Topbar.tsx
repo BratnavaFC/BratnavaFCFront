@@ -1,17 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     LogOut,
-    UserCircle2,
     ChevronDown,
     Menu,
     Plus,
     X,
     Loader2,
     Users2,
+    Check,
+    UserPlus,
+    ChevronRight,
 } from "lucide-react";
 import { useAccountStore } from "../auth/accountStore";
-import { getRole, isAdmin } from "../auth/guards";
+import { isAdmin } from "../auth/guards";
 import { PlayersApi, GroupsApi, GroupSettingsApi } from "../api/endpoints";
 import { Field } from "../components/Field";
 
@@ -27,21 +29,52 @@ type Props = {
     onMenuClick?: () => void;
 };
 
-function roleLabel(role: string | null) {
-    return role || "User";
+/* ─── helpers ─────────────────────────────────────────────────────────── */
+
+function getInitials(name: string): string {
+    return name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0].toUpperCase())
+        .join("");
 }
 
+// Deterministic pastel gradient per name
+const GRADIENTS = [
+    "from-violet-500 to-indigo-500",
+    "from-sky-500 to-cyan-400",
+    "from-emerald-500 to-teal-400",
+    "from-orange-400 to-rose-500",
+    "from-pink-500 to-fuchsia-500",
+    "from-amber-400 to-orange-500",
+];
+function avatarGradient(name: string): string {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+    return GRADIENTS[h % GRADIENTS.length];
+}
+
+/* ─── Avatar ───────────────────────────────────────────────────────────── */
+
+function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+    const initials = getInitials(name) || "?";
+    const gradient = avatarGradient(name);
+    const sz = size === "sm" ? "h-7 w-7 text-[11px]" : size === "lg" ? "h-10 w-10 text-sm" : "h-9 w-9 text-xs";
+    return (
+        <span
+            className={`${sz} bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center font-bold text-white select-none shrink-0`}
+        >
+            {initials}
+        </span>
+    );
+}
+
+/* ─── CreateGroupModal ─────────────────────────────────────────────────── */
+
 function CreateGroupModal({
-    open,
-    onClose,
-    onCreated,
-    userId,
-}: {
-    open: boolean;
-    onClose: () => void;
-    onCreated?: (groupId: string) => void;
-    userId: string;
-}) {
+    open, onClose, onCreated, userId,
+}: { open: boolean; onClose: () => void; onCreated?: (id: string) => void; userId: string }) {
     const [name, setName] = useState("Bratnava FC");
     const [place, setPlace] = useState("Boca Jrs");
     const [dayOfWeek, setDayOfWeek] = useState(2);
@@ -49,30 +82,18 @@ function CreateGroupModal({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (open) setError(null);
-    }, [open]);
+    useEffect(() => { if (open) setError(null); }, [open]);
 
     async function handleCreate() {
         setSaving(true);
         setError(null);
         try {
-            const res = await GroupsApi.create({
-                name,
-                userAdminIds: [userId],
-                defaultPlaceName: place,
-                defaultDayOfWeek: dayOfWeek,
-                defaultTime: time,
-            } as any);
+            const res = await GroupsApi.create({ name, userAdminIds: [userId], defaultPlaceName: place, defaultDayOfWeek: dayOfWeek, defaultTime: time } as any);
             const newGroupId: string = (res.data?.data as any)?.id ?? (res.data?.data as any)?.groupId ?? "";
             if (newGroupId) {
-                // Persist the default place and kickoff time in GroupSettings
-                // so MatchesPage can pre-fill the "Criar partida" form automatically.
-                // "HH:mm" → "HH:mm:ss" for TimeSpan deserialization on the backend.
                 try {
                     await GroupSettingsApi.upsert(newGroupId, {
-                        minPlayers: 5,
-                        maxPlayers: 6,
+                        minPlayers: 5, maxPlayers: 6,
                         defaultPlaceName: place || null,
                         defaultDayOfWeek: dayOfWeek,
                         defaultKickoffTime: time ? `${time}:00` : null,
@@ -100,18 +121,14 @@ function CreateGroupModal({
     }
 
     if (!open) return null;
-
     return (
         <div className="fixed inset-0 z-50">
-            <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-                onClick={onClose}
-            />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
             <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700/50 border dark:border-slate-700 overflow-hidden">
+                <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 shadow-2xl dark:ring-1 dark:ring-slate-700/50 border dark:border-slate-700 overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700">
                         <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                            <div className="h-9 w-9 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center">
                                 <Users2 size={18} />
                             </div>
                             <div>
@@ -119,44 +136,22 @@ function CreateGroupModal({
                                 <div className="text-xs text-slate-500 dark:text-slate-400">Bratnava FC</div>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
-                            aria-label="Fechar"
-                            type="button"
-                        >
+                        <button onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center" type="button">
                             <X size={18} />
                         </button>
                     </div>
-
                     <div className="p-5 space-y-4">
-                        {error && (
-                            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                                {error}
-                            </div>
-                        )}
-
+                        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
                         <div className="space-y-3">
-                            <Field label="Nome">
-                                <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} />
-                            </Field>
-                            <Field label="Local padrao">
-                                <input className="input w-full" value={place} onChange={(e) => setPlace(e.target.value)} />
-                            </Field>
+                            <Field label="Nome"><input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} /></Field>
+                            <Field label="Local padrão"><input className="input w-full" value={place} onChange={(e) => setPlace(e.target.value)} /></Field>
                             <div className="grid grid-cols-2 gap-3">
-                                <Field label="Dia (0=Dom, 1=Seg...)">
-                                    <input className="input w-full" type="number" min={0} max={6} value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} />
-                                </Field>
-                                <Field label="Hora">
-                                    <input className="input w-full" value={time} onChange={(e) => setTime(e.target.value)} />
-                                </Field>
+                                <Field label="Dia (0=Dom…)"><input className="input w-full" type="number" min={0} max={6} value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} /></Field>
+                                <Field label="Hora"><input className="input w-full" value={time} onChange={(e) => setTime(e.target.value)} /></Field>
                             </div>
                         </div>
-
                         <div className="flex justify-end gap-2 pt-1">
-                            <button type="button" className="btn" onClick={onClose} disabled={saving}>
-                                Cancelar
-                            </button>
+                            <button type="button" className="btn" onClick={onClose} disabled={saving}>Cancelar</button>
                             <button type="button" className="btn btn-primary" onClick={handleCreate} disabled={saving}>
                                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
                                 {saving ? "Criando..." : "Criar"}
@@ -169,29 +164,47 @@ function CreateGroupModal({
     );
 }
 
+/* ─── useClickOutside ──────────────────────────────────────────────────── */
+
+function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () => void) {
+    useEffect(() => {
+        function onDown(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) handler();
+        }
+        document.addEventListener("mousedown", onDown);
+        return () => document.removeEventListener("mousedown", onDown);
+    }, [ref, handler]);
+}
+
+/* ─── Topbar ───────────────────────────────────────────────────────────── */
+
 export default function Topbar({ isMobile = false, onMenuClick }: Props) {
     const nav = useNavigate();
 
-    const accounts = useAccountStore((s) => s.accounts);
-    const activeAccountId = useAccountStore((s) => s.activeAccountId);
+    const accounts         = useAccountStore((s) => s.accounts);
+    const activeAccountId  = useAccountStore((s) => s.activeAccountId);
     const setActiveAccount = useAccountStore((s) => s.setActiveAccount);
-    const logoutActive = useAccountStore((s) => s.logoutActive);
-    const getActive = useAccountStore((s) => s.getActive);
+    const logoutActive     = useAccountStore((s) => s.logoutActive);
+    const getActive        = useAccountStore((s) => s.getActive);
+    const updateActive     = useAccountStore((s) => s.updateActive);
 
     const active = getActive();
-    const role = getRole();
-    const admin = isAdmin();
-    const updateActive = useAccountStore((s) => s.updateActive);
+    const admin  = isAdmin();
 
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [myPlayers, setMyPlayers] = useState<MyPlayerDto[]>([]);
+    const [myPlayers, setMyPlayers]         = useState<MyPlayerDto[]>([]);
     const [createGroupOpen, setCreateGroupOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen]   = useState(false);
+    const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
 
+    const userMenuRef   = useRef<HTMLDivElement>(null);
+    const playerMenuRef = useRef<HTMLDivElement>(null);
+
+    useClickOutside(userMenuRef,   () => setUserMenuOpen(false));
+    useClickOutside(playerMenuRef, () => setPlayerMenuOpen(false));
+
+    /* ── fetch logic ── */
     useEffect(() => {
-        if (!active?.userId) {
-            setMyPlayers([]);
-            return;
-        }
+        if (!active?.userId) { setMyPlayers([]); return; }
         const userId = active.userId;
 
         function fetchAdminIds() {
@@ -199,225 +212,269 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                 .then((res) => {
                     const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
                     updateActive({ groupAdminIds: ids });
-                })
-                .catch(() => {});
+                }).catch(() => {});
             GroupsApi.listByFinanceiro(userId)
                 .then((res) => {
                     const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
                     updateActive({ groupFinanceiroIds: ids });
-                })
-                .catch(() => {});
+                }).catch(() => {});
         }
 
         PlayersApi.mine()
             .then((res) => {
                 const list = ((res.data?.data ?? []) as unknown) as MyPlayerDto[];
                 setMyPlayers(list);
-                if (list.length > 0 && !active.activePlayerId) {
+                if (list.length > 0 && !active.activePlayerId)
                     updateActive({ activePlayerId: list[0].playerId, activeGroupId: list[0].groupId });
-                }
             })
             .catch(() => setMyPlayers([]));
 
-        // Busca imediata ao montar / trocar de usuário
         fetchAdminIds();
 
-        // Re-busca sempre que o usuário volta para a aba — captura mudanças de permissão feitas pelo admin
         function onFocus() { fetchAdminIds(); }
         window.addEventListener("focus", onFocus);
         return () => window.removeEventListener("focus", onFocus);
     }, [active?.userId]);
 
+    /* ── derived ── */
+    const activePlayer = useMemo(
+        () => myPlayers.find((p) => p.playerId === active?.activePlayerId) ?? myPlayers[0],
+        [myPlayers, active?.activePlayerId],
+    );
+
+    const displayName = activePlayer?.playerName || active?.name || active?.email || "—";
+
+    const subtitle = activePlayer
+        ? activePlayer.groupName
+        : null;
+
     function handlePlayerChange(playerId: string) {
         const player = myPlayers.find((p) => p.playerId === playerId);
         if (!player) return;
         updateActive({ activePlayerId: player.playerId, activeGroupId: player.groupId });
+        setPlayerMenuOpen(false);
         nav("/app");
     }
 
-    const display = useMemo(() => {
-        if (!active) return { name: "—" };
-        return { name: active.name || active.email || active.userId };
-    }, [active]);
+    function handleAccountSwitch(userId: string) {
+        setActiveAccount(userId);
+        setUserMenuOpen(false);
+        nav("/app");
+    }
 
-    const onLogout = () => {
+    function handleLogout() {
+        setUserMenuOpen(false);
         logoutActive();
         nav("/login");
-    };
+    }
 
+    /* ── render ── */
     return (
         <>
-            <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-3 md:px-6 flex items-center justify-between gap-3">
-                {/* LEFT */}
-                <div className="flex items-center gap-3 min-w-0">
-                    {isMobile ? (
+            <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-3 md:px-5 flex items-center justify-between gap-2 shrink-0">
+
+                {/* ── LEFT ── */}
+                <div className="flex items-center gap-2 min-w-0">
+                    {isMobile && (
                         <button
                             type="button"
-                            className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-[0.98] transition grid place-items-center"
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-[0.97] transition grid place-items-center shrink-0"
                             onClick={onMenuClick}
                             aria-label="Abrir menu"
                         >
-                            <Menu size={18} className="text-slate-700 dark:text-slate-300" />
+                            <Menu size={18} className="text-slate-600 dark:text-slate-400" />
                         </button>
-                    ) : null}
+                    )}
 
-                    <UserCircle2 className="text-slate-700 dark:text-slate-300 shrink-0" />
-
-                    <div className="min-w-0">
-                        <div className="font-semibold leading-tight truncate">{display.name}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                            <span className="pill">{roleLabel(role)}</span>
-                            {!isMobile ? <span>Conta ativa</span> : null}
+                    {/* Avatar + name */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <Avatar name={displayName} />
+                        <div className="min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 dark:text-white leading-tight truncate max-w-[110px] sm:max-w-[160px]">
+                                {displayName}
+                            </div>
+                            {subtitle && (
+                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[110px] sm:max-w-[160px]">
+                                    {subtitle}
+                                </div>
+                            )}
                         </div>
                     </div>
+
+                    {/* Player switcher — only when multiple players, desktop */}
+                    {!isMobile && myPlayers.length > 1 && (
+                        <div ref={playerMenuRef} className="relative ml-1">
+                            <button
+                                type="button"
+                                onClick={() => setPlayerMenuOpen((v) => !v)}
+                                className="flex items-center gap-1.5 h-8 pl-3 pr-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                            >
+                                <span className="max-w-[120px] truncate">{activePlayer?.groupName ?? "Grupo"}</span>
+                                <ChevronDown size={13} className={`transition-transform ${playerMenuOpen ? "rotate-180" : ""}`} />
+                            </button>
+
+                            {playerMenuOpen && (
+                                <div className="absolute left-0 top-full mt-1.5 z-50 w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg dark:ring-1 dark:ring-slate-700/40 overflow-hidden">
+                                    <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+                                        <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Patota ativa</span>
+                                    </div>
+                                    {myPlayers.map((p) => (
+                                        <button
+                                            key={p.playerId}
+                                            type="button"
+                                            onClick={() => handlePlayerChange(p.playerId)}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left"
+                                        >
+                                            <Avatar name={p.playerName} size="sm" />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-medium text-slate-800 dark:text-slate-200 truncate">{p.playerName}</div>
+                                                <div className="text-xs text-slate-400 dark:text-slate-500 truncate">{p.groupName}</div>
+                                            </div>
+                                            {p.playerId === active?.activePlayerId && (
+                                                <Check size={14} className="text-emerald-500 shrink-0" />
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* RIGHT */}
+                {/* ── RIGHT ── */}
                 <div className="flex items-center gap-2 shrink-0">
-                    {/* Criar grupo (apenas admin) */}
-                    {admin ? (
+
+                    {/* Create group — admin only */}
+                    {admin && !isMobile && (
                         <button
                             type="button"
                             title="Criar grupo"
-                            aria-label="Criar grupo"
-                            className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-slate-900 active:scale-[0.97] transition grid place-items-center"
                             onClick={() => setCreateGroupOpen(true)}
+                            className="h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.97] transition grid place-items-center"
                         >
-                            <Plus size={18} className="text-slate-700 dark:text-slate-300" />
+                            <Plus size={16} className="text-slate-600 dark:text-slate-400" />
                         </button>
-                    ) : null}
-
-                    {/* Player selector — desktop only; shown in mobile dropdown */}
-                    {!isMobile && myPlayers.length === 1 && (
-                        <span className="text-sm text-slate-600 dark:text-slate-400 font-medium px-2 truncate max-w-[200px]">
-                            {myPlayers[0].playerName} ({myPlayers[0].groupName})
-                        </span>
-                    )}
-                    {!isMobile && myPlayers.length > 1 && (
-                        <div className="relative">
-                            <select
-                                value={active?.activePlayerId ?? ""}
-                                onChange={(e) => handlePlayerChange(e.target.value)}
-                                className="input appearance-none pr-9 w-[220px]"
-                            >
-                                <option value="" disabled>Selecionar player</option>
-                                {myPlayers.map((p) => (
-                                    <option key={p.playerId} value={p.playerId}>
-                                        {p.playerName} ({p.groupName})
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown
-                                size={16}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none"
-                            />
-                        </div>
                     )}
 
-                    {/* Account selector */}
-                    <div className="relative">
-                        <select
-                            value={activeAccountId ?? ""}
-                            onChange={(e) => setActiveAccount(e.target.value)}
-                            className={[
-                                "input appearance-none pr-8",
-                                isMobile ? "h-10 text-sm w-[130px]" : "w-[240px]",
-                            ].join(" ")}
+                    {/* User menu */}
+                    <div ref={userMenuRef} className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setUserMenuOpen((v) => !v)}
+                            className="flex items-center gap-2 h-9 pl-1 pr-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.97] transition"
+                            aria-label="Menu do usuário"
                         >
-                            {activeAccountId == null ? (
-                                <option value="" disabled>Selecione</option>
-                            ) : null}
-                            {accounts.map((a) => (
-                                <option key={a.userId} value={a.userId}>
-                                    {a.name || a.email || a.userId}
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown
-                            size={16}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none"
-                        />
-                    </div>
+                            <Avatar name={displayName} size="sm" />
+                            {!isMobile && (
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 max-w-[100px] truncate">
+                                    {accounts.length > 1 ? `${accounts.length} contas` : displayName}
+                                </span>
+                            )}
+                            <ChevronDown size={13} className={`text-slate-400 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+                        </button>
 
-                    {/* Desktop actions */}
-                    {!isMobile ? (
-                        <>
-                            <button className="btn" onClick={() => nav("/login?add=1")}>
-                                Adicionar conta
-                            </button>
-                            <button className="btn btn-danger" onClick={onLogout} disabled={!active}>
-                                <LogOut size={16} /> Sair
-                            </button>
-                        </>
-                    ) : (
-                        <div className="relative">
-                            <button
-                                type="button"
-                                className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-[0.98] transition grid place-items-center"
-                                onClick={() => setMobileMenuOpen((v) => !v)}
-                                aria-label="Acoes"
-                            >
-                                <ChevronDown size={18} className="text-slate-700 dark:text-slate-300" />
-                            </button>
+                        {userMenuOpen && (
+                            <div className="absolute right-0 top-full mt-1.5 z-50 w-64 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl dark:ring-1 dark:ring-slate-700/40 overflow-hidden">
 
-                            {mobileMenuOpen ? (
-                                <>
-                                    <button
-                                        className="fixed inset-0 z-40"
-                                        aria-label="Fechar acoes"
-                                        onClick={() => setMobileMenuOpen(false)}
-                                    />
-                                    <div className="absolute right-0 mt-2 z-50 w-64 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg dark:shadow-none dark:ring-1 dark:ring-slate-700/50 overflow-hidden">
-                                        {/* Player selector section (mobile only) */}
-                                        {myPlayers.length > 0 && (
-                                            <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
-                                                <div className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5">
-                                                    Patota ativa
-                                                </div>
-                                                {myPlayers.length === 1 ? (
-                                                    <div className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate">
-                                                        {myPlayers[0].playerName}{" "}
-                                                        <span className="text-xs text-slate-400 dark:text-slate-500">({myPlayers[0].groupName})</span>
-                                                    </div>
-                                                ) : (
-                                                    <select
-                                                        value={active?.activePlayerId ?? ""}
-                                                        onChange={(e) => { setMobileMenuOpen(false); handlePlayerChange(e.target.value); }}
-                                                        className="input h-9 text-sm w-full"
-                                                    >
-                                                        {myPlayers.map((p) => (
-                                                            <option key={p.playerId} value={p.playerId}>
-                                                                {p.playerName} ({p.groupName})
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                {/* Accounts list */}
+                                <div className="px-3 pt-3 pb-1.5">
+                                    <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-1">Contas</span>
+                                </div>
+                                {accounts.map((a) => {
+                                    const aName = a.name || a.email || a.userId;
+                                    const isActive = a.userId === activeAccountId;
+                                    return (
+                                        <button
+                                            key={a.userId}
+                                            type="button"
+                                            onClick={() => handleAccountSwitch(a.userId)}
+                                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition text-left ${isActive ? "bg-slate-50 dark:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                                        >
+                                            <Avatar name={aName} size="sm" />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-medium text-slate-800 dark:text-slate-200 truncate">{aName}</div>
+                                                {a.email && a.email !== aName && (
+                                                    <div className="text-xs text-slate-400 dark:text-slate-500 truncate">{a.email}</div>
                                                 )}
                                             </div>
-                                        )}
-                                        <button
-                                            className="w-full px-3 py-2.5 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center gap-2"
-                                            onClick={() => { setMobileMenuOpen(false); nav("/login?add=1"); }}
-                                        >
-                                            <Plus size={16} className="text-slate-700 dark:text-slate-300" />
-                                            Adicionar conta
+                                            {isActive && <Check size={14} className="text-emerald-500 shrink-0" />}
                                         </button>
-                                        <button
-                                            className="w-full px-3 py-2.5 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center gap-2 disabled:opacity-50"
-                                            onClick={() => { setMobileMenuOpen(false); onLogout(); }}
-                                            disabled={!active}
-                                        >
-                                            <LogOut size={16} className="text-slate-700 dark:text-slate-300" />
-                                            Sair
-                                        </button>
-                                    </div>
-                                </>
-                            ) : null}
-                        </div>
-                    )}
+                                    );
+                                })}
+
+                                {/* Mobile: player switcher */}
+                                {isMobile && myPlayers.length > 1 && (
+                                    <>
+                                        <div className="mx-3 my-1 border-t border-slate-100 dark:border-slate-800" />
+                                        <div className="px-3 pt-1 pb-1.5">
+                                            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-1">Patota</span>
+                                        </div>
+                                        {myPlayers.map((p) => (
+                                            <button
+                                                key={p.playerId}
+                                                type="button"
+                                                onClick={() => { handlePlayerChange(p.playerId); setUserMenuOpen(false); }}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left"
+                                            >
+                                                <Avatar name={p.playerName} size="sm" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="font-medium text-slate-800 dark:text-slate-200 truncate">{p.playerName}</div>
+                                                    <div className="text-xs text-slate-400 dark:text-slate-500 truncate">{p.groupName}</div>
+                                                </div>
+                                                {p.playerId === active?.activePlayerId && <Check size={14} className="text-emerald-500 shrink-0" />}
+                                            </button>
+                                        ))}
+                                    </>
+                                )}
+
+                                {/* Actions */}
+                                <div className="mx-3 my-1 border-t border-slate-100 dark:border-slate-800" />
+
+                                {admin && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setUserMenuOpen(false); setCreateGroupOpen(true); }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left"
+                                    >
+                                        <span className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                            <Users2 size={14} className="text-slate-600 dark:text-slate-400" />
+                                        </span>
+                                        <span className="text-slate-700 dark:text-slate-300 font-medium">Criar grupo</span>
+                                    </button>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() => { setUserMenuOpen(false); nav("/login?add=1"); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left"
+                                >
+                                    <span className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                        <UserPlus size={14} className="text-slate-600 dark:text-slate-400" />
+                                    </span>
+                                    <span className="text-slate-700 dark:text-slate-300 font-medium">Adicionar conta</span>
+                                </button>
+
+                                <div className="mx-3 my-1 border-t border-slate-100 dark:border-slate-800" />
+
+                                <button
+                                    type="button"
+                                    onClick={handleLogout}
+                                    disabled={!active}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 mb-1.5 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10 transition text-left disabled:opacity-50 rounded-b-2xl"
+                                >
+                                    <span className="h-7 w-7 rounded-lg bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center shrink-0">
+                                        <LogOut size={14} className="text-rose-500" />
+                                    </span>
+                                    <span className="text-rose-600 dark:text-rose-400 font-medium">Sair</span>
+                                </button>
+
+                            </div>
+                        )}
+                    </div>
                 </div>
             </header>
 
-            {active?.userId ? (
+            {active?.userId && (
                 <CreateGroupModal
                     open={createGroupOpen}
                     onClose={() => setCreateGroupOpen(false)}
@@ -427,7 +484,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                     }}
                     userId={active.userId}
                 />
-            ) : null}
+            )}
         </>
     );
 }
