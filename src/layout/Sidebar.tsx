@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, User, ShieldAlert,
-    Menu, X, DollarSign, Presentation, Vote, Sun, Moon,
+    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -40,14 +40,15 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
         { to: "/app/history",     label: "Histórico",     icon: History },
         { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
-        ...(isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
-        ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
-        ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight",   icon: Presentation }] : []),
+        // ...(isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
+        // ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
+        // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight",   icon: Presentation }] : []),
         ...((isGroupAdm || isGod) && activeGrpId ? [{
             to: `/app/groups/${activeGrpId}/visual-stats`,
             label: "Visual Stats",
             icon: BarChart3,
         }] : []),
+        // ...(isGroupAdm || isGod ? [{ to: "/app/birthday-status", label: "Aniversários", icon: Cake }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/settings", label: "Configurações", icon: Settings }] : []),
         {
             to: "/app/admin/users",

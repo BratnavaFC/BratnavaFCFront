@@ -22,6 +22,7 @@ import CalendarPage from './pages/CalendarPage';
 import PaymentsPage from './pages/PaymentsPage';
 import PlayerSpotlightPage from './pages/PlayerSpotlightPage';
 import PollsPage from './pages/PollsPage';
+import BirthdayStatusPage from './pages/BirthdayStatusPage';
 
 export default function App() {
     return (
@@ -51,6 +52,7 @@ export default function App() {
                 <Route path="spotlight" element={<PlayerSpotlightPage />} />
                 <Route path="payments" element={<PaymentsPage />} />
                 <Route path="polls" element={<PollsPage />} />
+                <Route path="birthday-status" element={<BirthdayStatusPage />} />
 
                 <Route
                     path="settings"

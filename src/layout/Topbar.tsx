@@ -194,6 +194,21 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
         }
         const userId = active.userId;
 
+        function fetchAdminIds() {
+            GroupsApi.listByAdmin(userId)
+                .then((res) => {
+                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                    updateActive({ groupAdminIds: ids });
+                })
+                .catch(() => {});
+            GroupsApi.listByFinanceiro(userId)
+                .then((res) => {
+                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                    updateActive({ groupFinanceiroIds: ids });
+                })
+                .catch(() => {});
+        }
+
         PlayersApi.mine()
             .then((res) => {
                 const list = ((res.data?.data ?? []) as unknown) as MyPlayerDto[];
@@ -204,24 +219,13 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
             })
             .catch(() => setMyPlayers([]));
 
-        // LoginPage já popula groupAdminIds e groupFinanceiroIds no login —
-        // só busca de novo se ainda não estiverem no store (ex: refresh de página com store antigo)
-        if (!active.groupAdminIds) {
-            GroupsApi.listByAdmin(userId)
-                .then((res) => {
-                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
-                    updateActive({ groupAdminIds: ids });
-                })
-                .catch(() => {});
-        }
-        if (!active.groupFinanceiroIds) {
-            GroupsApi.listByFinanceiro(userId)
-                .then((res) => {
-                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
-                    updateActive({ groupFinanceiroIds: ids });
-                })
-                .catch(() => {});
-        }
+        // Busca imediata ao montar / trocar de usuário
+        fetchAdminIds();
+
+        // Re-busca sempre que o usuário volta para a aba — captura mudanças de permissão feitas pelo admin
+        function onFocus() { fetchAdminIds(); }
+        window.addEventListener("focus", onFocus);
+        return () => window.removeEventListener("focus", onFocus);
     }, [active?.userId]);
 
     function handlePlayerChange(playerId: string) {
