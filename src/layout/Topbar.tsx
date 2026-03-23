@@ -193,6 +193,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
             return;
         }
         const userId = active.userId;
+
         PlayersApi.mine()
             .then((res) => {
                 const list = ((res.data?.data ?? []) as unknown) as MyPlayerDto[];
@@ -202,18 +203,25 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                 }
             })
             .catch(() => setMyPlayers([]));
-        GroupsApi.listByAdmin(userId)
-            .then((res) => {
-                const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
-                updateActive({ groupAdminIds: ids });
-            })
-            .catch(() => {});
-        GroupsApi.listByFinanceiro(userId)
-            .then((res) => {
-                const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
-                updateActive({ groupFinanceiroIds: ids });
-            })
-            .catch(() => {});
+
+        // LoginPage já popula groupAdminIds e groupFinanceiroIds no login —
+        // só busca de novo se ainda não estiverem no store (ex: refresh de página com store antigo)
+        if (!active.groupAdminIds) {
+            GroupsApi.listByAdmin(userId)
+                .then((res) => {
+                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                    updateActive({ groupAdminIds: ids });
+                })
+                .catch(() => {});
+        }
+        if (!active.groupFinanceiroIds) {
+            GroupsApi.listByFinanceiro(userId)
+                .then((res) => {
+                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                    updateActive({ groupFinanceiroIds: ids });
+                })
+                .catch(() => {});
+        }
     }, [active?.userId]);
 
     function handlePlayerChange(playerId: string) {

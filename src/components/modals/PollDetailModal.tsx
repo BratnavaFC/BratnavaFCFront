@@ -138,7 +138,15 @@ function AdminVotePanel({
         setLoading(playerId);
         try {
             const res = await PollsApi.adminCastVote(groupId, poll.id, { playerId, optionIds });
-            onUpdated(res.data.data);
+            // Preserve existing images — vote response intentionally omits imageUrl
+            const merged = {
+                ...res.data.data,
+                options: (res.data.data.options as PollOption[]).map((newOpt: PollOption) => ({
+                    ...newOpt,
+                    imageUrl: newOpt.imageUrl ?? poll.options.find(o => o.id === newOpt.id)?.imageUrl ?? null,
+                })),
+            };
+            onUpdated(merged);
             toast.success('Resposta atualizada!');
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao atualizar resposta.'));
@@ -526,6 +534,17 @@ function PollDetailModal({
     const hasMyVotes = selectedIds.length > 0;
     const votesChanged = JSON.stringify([...selectedIds].sort()) !== JSON.stringify([...poll.myVotedOptionIds].sort());
 
+    // Vote responses skip images to save bandwidth — preserve them from current state
+    function mergeVoteResponse(updated: Poll): Poll {
+        return {
+            ...updated,
+            options: updated.options.map(newOpt => ({
+                ...newOpt,
+                imageUrl: newOpt.imageUrl ?? poll.options.find(o => o.id === newOpt.id)?.imageUrl ?? null,
+            })),
+        };
+    }
+
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16'];
 
     function toggleOption(id: string) {
@@ -547,7 +566,7 @@ function PollDetailModal({
         setVoting(true);
         try {
             const res = await PollsApi.castVote(groupId, poll.id, { optionIds: selectedIds });
-            onUpdated(res.data.data);
+            onUpdated(mergeVoteResponse(res.data.data));
             toast.success('Voto registrado!');
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao votar.'));
@@ -558,7 +577,7 @@ function PollDetailModal({
         setVoting(true);
         try {
             const res = await PollsApi.removeVote(groupId, poll.id);
-            onUpdated(res.data.data);
+            onUpdated(mergeVoteResponse(res.data.data));
             setSelectedIds([]);
             toast.success('Voto removido.');
         } catch (e) {

@@ -173,7 +173,10 @@ export default function DashboardPage() {
       const all: any[] = res.data.data! ?? [];
       const filtered = all.filter(p => p.groupId === groupId) as MyPlayer[];
       setMyPlayers(filtered);
-      if (filtered.length > 0 && !filtered.find(p => p.playerId === selectedPlayerId)) {
+      // Lê do store atual para evitar stale closure — o efeito não depende mais
+      // de selectedPlayerId, então não podemos usar o valor capturado na closure
+      const currentPlayerId = store.getActive()?.activePlayerId ?? '';
+      if (filtered.length > 0 && !filtered.find(p => p.playerId === currentPlayerId)) {
         store.updateActive({ activePlayerId: filtered[0].playerId });
       }
     } catch (e) {
@@ -234,7 +237,9 @@ export default function DashboardPage() {
   }
 
   // ── effects ────────────────────────────────────────────────────────────────
-  useEffect(() => { loadPlayers(); loadCurrentMatch(); loadPaymentSummary(); /* eslint-disable-next-line */ }, [groupId, selectedPlayerId]);
+  // loadCurrentMatch e loadPaymentSummary não dependem de selectedPlayerId —
+  // separá-los evita que rodem de novo quando o player é auto-selecionado
+  useEffect(() => { loadPlayers(); loadCurrentMatch(); loadPaymentSummary(); /* eslint-disable-next-line */ }, [groupId]);
   useEffect(() => { loadRecentMatches(); /* eslint-disable-next-line */ }, [groupId, selectedPlayerId]);
 
   // ── render ─────────────────────────────────────────────────────────────────

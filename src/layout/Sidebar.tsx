@@ -36,7 +36,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/team-colors", label: "Cores",         icon: Palette },
         { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
         { to: "/app/history",     label: "Histórico",     icon: History },
-        ...(isGroupAdm || isGod ? [{ to: "/app/calendar",  label: "Calendário",  icon: CalendarCheck }] : []),
+        { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
         ...(isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight",   icon: Presentation }] : []),
