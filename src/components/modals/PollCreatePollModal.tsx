@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
 import { extractApiError } from '../../lib/apiError';
+import { compressImage } from '../../lib/compressImage';
 import ModalBackdrop from './ModalBackdrop';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -124,15 +125,13 @@ function OptionDraftForm({
                             : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                     onDragOver={e => { e.preventDefault(); set('_dragOver', true); }}
                     onDragLeave={() => set('_dragOver', false)}
-                    onDrop={e => {
+                    onDrop={async e => {
                         e.preventDefault();
                         set('_dragOver', false);
                         const file = e.dataTransfer.files?.[0];
                         if (!file || !file.type.startsWith('image/')) return;
                         if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                        const reader = new FileReader();
-                        reader.onload = ev => set('imageUrl', ev.target?.result as string);
-                        reader.readAsDataURL(file);
+                        try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
                     }}
                 >
                     <Image size={18} />
@@ -141,13 +140,11 @@ function OptionDraftForm({
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={e => {
+                        onChange={async e => {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                            const reader = new FileReader();
-                            reader.onload = ev => set('imageUrl', ev.target?.result as string);
-                            reader.readAsDataURL(file);
+                            try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
                         }}
                     />
                 </label>

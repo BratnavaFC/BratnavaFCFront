@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
 import { extractApiError } from '../../lib/apiError';
+import { compressImage } from '../../lib/compressImage';
 import ModalBackdrop from './ModalBackdrop';
 import PollClosePollModal from './PollClosePollModal';
 
@@ -292,15 +293,13 @@ function OptionDraftForm({
                             : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                     onDragOver={e => { e.preventDefault(); set('_dragOver', true); }}
                     onDragLeave={() => set('_dragOver', false)}
-                    onDrop={e => {
+                    onDrop={async e => {
                         e.preventDefault();
                         set('_dragOver', false);
                         const file = e.dataTransfer.files?.[0];
                         if (!file || !file.type.startsWith('image/')) return;
                         if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                        const reader = new FileReader();
-                        reader.onload = ev => set('imageUrl', ev.target?.result as string);
-                        reader.readAsDataURL(file);
+                        try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
                     }}
                 >
                     <Image size={18} />
@@ -309,13 +308,11 @@ function OptionDraftForm({
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={e => {
+                        onChange={async e => {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                            const reader = new FileReader();
-                            reader.onload = ev => set('imageUrl', ev.target?.result as string);
-                            reader.readAsDataURL(file);
+                            try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
                         }}
                     />
                 </label>
@@ -421,6 +418,8 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                                 <img
                                     src={opt.imageUrl}
                                     alt={opt.text}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="h-9 w-9 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-600"
                                 />
                             )}
@@ -769,7 +768,7 @@ function PollDetailModal({
                                 {/* Banner de imagem (largura total) */}
                                 {opt.imageUrl && (
                                     <div
-                                        className="relative w-full bg-slate-100 overflow-hidden"
+                                        className="relative w-full bg-slate-200 dark:bg-slate-700 overflow-hidden"
                                         style={{ aspectRatio: '16/9' }}
                                         onClick={e => { e.stopPropagation(); setLightboxSrc(opt.imageUrl!); }}
                                         title="Clique para ampliar"
@@ -777,7 +776,10 @@ function PollDetailModal({
                                         <img
                                             src={opt.imageUrl}
                                             alt={opt.text}
-                                            className="w-full h-full object-cover"
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-cover transition-opacity duration-300 opacity-0"
+                                            onLoad={e => e.currentTarget.classList.replace('opacity-0', 'opacity-100')}
                                             onError={e => (e.currentTarget.parentElement!.style.display = 'none')}
                                         />
                                         <div className="absolute inset-0 bg-black/0 hover:bg-black/25 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
