@@ -343,14 +343,14 @@ export default function GroupSettingsPage() {
             </div>
 
             {/* ── Configurações gerais ──────────────────────────── */}
-            <div className="card p-0 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+            <div className="card p-0 overflow-hidden shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80">
                     <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
                         <Settings size={14} />
                     </div>
                     <div>
-                        <div className="font-semibold text-slate-900 text-sm">Configurações gerais</div>
-                        <div className="text-xs text-slate-400">Regras de partidas e modo de cobrança</div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Configurações gerais</div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500">Regras de partidas e modo de cobrança</div>
                     </div>
                 </div>
                 <div className="p-6">
@@ -363,14 +363,14 @@ export default function GroupSettingsPage() {
                         <div className="grid md:grid-cols-3 gap-4">
 
                             {/* ── Jogadores ── */}
-                            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                                 <div className="flex items-center gap-3">
                                     <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
                                         <Users size={17} />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-semibold text-slate-900">Jogadores</div>
-                                        <div className="text-xs text-slate-400">Por partida</div>
+                                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Jogadores</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-500">Por partida</div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
@@ -386,14 +386,14 @@ export default function GroupSettingsPage() {
                             </div>
 
                             {/* ── Padrões de Partida ── */}
-                            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                                 <div className="flex items-center gap-3">
                                     <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                                         <CalendarClock size={17} />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-semibold text-slate-900">Padrões</div>
-                                        <div className="text-xs text-slate-400">Local, dia e horário</div>
+                                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Padrões</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-500">Local, dia e horário</div>
                                     </div>
                                 </div>
                                 <div className="space-y-3">
@@ -419,20 +419,20 @@ export default function GroupSettingsPage() {
                             </div>
 
                             {/* ── Pagamento ── */}
-                            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                                 <div className="flex items-center gap-3">
                                     <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                                         <DollarSign size={17} />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-semibold text-slate-900">Pagamento</div>
-                                        <div className="text-xs text-slate-400">Modo de cobrança</div>
+                                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Pagamento</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-500">Modo de cobrança</div>
                                     </div>
                                 </div>
                                 <div className="space-y-3">
                                     <div className="grid grid-cols-2 gap-2">
                                         {[{ val: 0, label: 'Mensal' }, { val: 1, label: 'Por jogo' }].map(({ val, label }) => (
-                                            <label key={val} className={`flex items-center justify-center p-2.5 rounded-lg border-2 cursor-pointer transition-all text-sm font-medium select-none ${paymentMode === val ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
+                                            <label key={val} className={`flex items-center justify-center p-2.5 rounded-lg border-2 cursor-pointer transition-all text-sm font-medium select-none ${paymentMode === val ? 'border-slate-900 bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                                                 <input type="radio" name="paymentMode" value={val} checked={paymentMode === val}
                                                     onChange={() => setPaymentMode(val)} className="sr-only" />
                                                 {label}
@@ -446,7 +446,7 @@ export default function GroupSettingsPage() {
                                                 onChange={(e) => setMonthlyFee(e.target.value)} />
                                         </Field>
                                     )}
-                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
                                         {paymentMode === 0
                                             ? 'Cobrado mensalmente ao encerrar uma partida.'
                                             : 'O financeiro define o valor ao encerrar cada partida.'}
@@ -456,7 +456,7 @@ export default function GroupSettingsPage() {
                         </div>
 
                         {/* ── Salvar ── */}
-                        <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
+                        <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                             <button
                                 className="btn btn-primary flex items-center gap-2 px-6"
                                 onClick={save}
@@ -484,14 +484,14 @@ export default function GroupSettingsPage() {
             </div>
 
             {/* ── Ícones da patota ─────────────────────────────── */}
-            <div className="card p-0 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+            <div className="card p-0 overflow-hidden shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80">
                     <div className="h-8 w-8 rounded-lg bg-violet-600 text-white flex items-center justify-center shrink-0 text-base leading-none">
                         ⚽
                     </div>
                     <div>
-                        <div className="font-semibold text-slate-900 text-sm">Ícones da patota</div>
-                        <div className="text-xs text-slate-400">Personalize os ícones exibidos em toda a aplicação</div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Ícones da patota</div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500">Personalize os ícones exibidos em toda a aplicação</div>
                     </div>
                 </div>
                 <div className="p-6">
@@ -504,12 +504,12 @@ export default function GroupSettingsPage() {
                         { label: 'MVP',         value: mvpIcon,         def: DEFAULT_ICONS.mvpIcon,         opts: MVP_OPTIONS,         set: setMvpIcon },
                         { label: 'Jogador',     value: playerIcon,      def: DEFAULT_ICONS.playerIcon,      opts: PLAYER_OPTIONS,      set: setPlayerIcon },
                     ].map(({ label, value, def, opts, set }) => (
-                        <div key={label} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 space-y-3">
+                        <div key={label} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 p-4 space-y-3">
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                                <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
                                     <IconRenderer value={value ?? def} size={22} />
                                 </div>
-                                <span className="text-sm font-semibold text-slate-800">{label}</span>
+                                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{label}</span>
                             </div>
                             <IconPicker options={opts} value={value} onChange={set} />
                         </div>
@@ -519,14 +519,14 @@ export default function GroupSettingsPage() {
             </div>
 
             {/* ── Equipe da patota ─────────────────────────────── */}
-            <div className="card p-0 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+            <div className="card p-0 overflow-hidden shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80">
                     <div className="h-8 w-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
                         <Users size={15} />
                     </div>
                     <div>
-                        <div className="font-semibold text-slate-900 text-sm">Equipe da patota</div>
-                        <div className="text-xs text-slate-400">Administradores e responsáveis financeiros</div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Equipe da patota</div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500">Administradores e responsáveis financeiros</div>
                     </div>
                 </div>
                 <div className="p-6">
@@ -550,13 +550,13 @@ export default function GroupSettingsPage() {
                     <div className="grid md:grid-cols-2 gap-5">
 
                         {/* ── Coluna Admins ── */}
-                        <div className="rounded-xl border border-violet-200 bg-gradient-to-b from-violet-50/60 to-white p-4 space-y-3">
+                        <div className="rounded-xl border border-violet-200 dark:border-slate-700 bg-gradient-to-b from-violet-50/60 to-white dark:from-slate-800/80 dark:to-slate-900 p-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="h-7 w-7 rounded-lg bg-violet-600 text-white flex items-center justify-center shrink-0">
                                         <Shield size={13} />
                                     </div>
-                                    <span className="font-semibold text-slate-800 text-sm">Administradores</span>
+                                    <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">Administradores</span>
                                     <span className="text-xs font-semibold text-violet-700 bg-violet-100 rounded-full px-2 py-0.5 min-w-[20px] text-center">{adminList.length}</span>
                                 </div>
                                 <button type="button"
@@ -578,12 +578,12 @@ export default function GroupSettingsPage() {
                                         const displayName   = fullName(admin);
                                         return (
                                             <div key={admin.userId}
-                                                className="flex items-center gap-3 rounded-xl border border-violet-100 bg-white px-3 py-2.5 shadow-sm">
+                                                className="flex items-center gap-3 rounded-xl border border-violet-100 bg-white dark:bg-slate-900 dark:border-slate-700 px-3 py-2.5 shadow-sm dark:shadow-none">
                                                 <div className="h-9 w-9 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center shrink-0 select-none">
                                                     {initials(admin)}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-wrap">
+                                                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate flex items-center gap-1.5 flex-wrap">
                                                         {displayName}
                                                         {isCurrentUser && (
                                                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal shrink-0">Você</span>
@@ -594,7 +594,7 @@ export default function GroupSettingsPage() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    {admin.userName && <div className="text-xs text-slate-400">@{admin.userName}</div>}
+                                                    {admin.userName && <div className="text-xs text-slate-400 dark:text-slate-500">@{admin.userName}</div>}
                                                 </div>
                                                 {isCreator ? (
                                                     <span className="text-[11px] px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-medium shrink-0">Criador</span>
@@ -602,7 +602,7 @@ export default function GroupSettingsPage() {
                                                     <button type="button" disabled={isRemoving}
                                                         onClick={() => handleRemoveAdmin(admin.userId, displayName)}
                                                         title={`Remover ${displayName} dos admins`}
-                                                        className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-200 text-rose-500 bg-white hover:bg-rose-50 transition-colors disabled:opacity-50 shrink-0">
+                                                        className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-200 text-rose-500 bg-white dark:bg-slate-800 dark:border-slate-600 hover:bg-rose-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 shrink-0">
                                                         {isRemoving
                                                             ? <Loader2 size={12} className="animate-spin" />
                                                             : <ShieldOff size={13} />}
@@ -613,19 +613,19 @@ export default function GroupSettingsPage() {
                                     })}
                                 </div>
                             )}
-                            <p className="text-xs text-slate-400 leading-relaxed pt-1">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed pt-1">
                                 Gerenciam jogadores, partidas e configurações. O criador não pode ser removido.
                             </p>
                         </div>
 
                         {/* ── Coluna Financeiros ── */}
-                        <div className="rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50/60 to-white p-4 space-y-3">
+                        <div className="rounded-xl border border-emerald-200 dark:border-slate-700 bg-gradient-to-b from-emerald-50/60 to-white dark:from-slate-800/80 dark:to-slate-900 p-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="h-7 w-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
                                         <Wallet size={13} />
                                     </div>
-                                    <span className="font-semibold text-slate-800 text-sm">Financeiros</span>
+                                    <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">Financeiros</span>
                                     <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5 min-w-[20px] text-center">{financeiroList.length}</span>
                                 </div>
                                 <button type="button"
@@ -646,12 +646,12 @@ export default function GroupSettingsPage() {
                                         const displayName   = fullName(fin);
                                         return (
                                             <div key={fin.userId}
-                                                className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white px-3 py-2.5 shadow-sm">
+                                                className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white dark:bg-slate-900 dark:border-slate-700 px-3 py-2.5 shadow-sm dark:shadow-none">
                                                 <div className="h-9 w-9 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0 select-none">
                                                     {initials(fin)}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5 flex-wrap">
+                                                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate flex items-center gap-1.5 flex-wrap">
                                                         {displayName}
                                                         {isCurrentUser && (
                                                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white leading-none font-normal shrink-0">Você</span>
@@ -662,12 +662,12 @@ export default function GroupSettingsPage() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    {fin.userName && <div className="text-xs text-slate-400">@{fin.userName}</div>}
+                                                    {fin.userName && <div className="text-xs text-slate-400 dark:text-slate-500">@{fin.userName}</div>}
                                                 </div>
                                                 <button type="button" disabled={isRemoving}
                                                     onClick={() => handleRemoveFinanceiro(fin.userId, displayName)}
                                                     title={`Remover ${displayName} dos financeiros`}
-                                                    className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-200 text-rose-500 bg-white hover:bg-rose-50 transition-colors disabled:opacity-50 shrink-0">
+                                                    className="h-7 w-7 flex items-center justify-center rounded-lg border border-rose-200 text-rose-500 bg-white dark:bg-slate-800 dark:border-slate-600 hover:bg-rose-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 shrink-0">
                                                     {isRemoving
                                                         ? <Loader2 size={12} className="animate-spin" />
                                                         : <ShieldOff size={13} />}
@@ -677,7 +677,7 @@ export default function GroupSettingsPage() {
                                     })}
                                 </div>
                             )}
-                            <p className="text-xs text-slate-400 leading-relaxed pt-1">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed pt-1">
                                 Gerenciam pagamentos, mensalidades e cobranças. Admins não têm acesso automático.
                             </p>
                         </div>
@@ -708,12 +708,12 @@ export default function GroupSettingsPage() {
             {/* ── Modal de confirmação ──────────────────────────── */}
             {confirm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                    <div className="card p-6 w-full max-w-sm space-y-4 shadow-2xl">
+                    <div className="card p-6 w-full max-w-sm space-y-4 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                         <div className="flex items-center gap-3 text-rose-600">
                             <AlertTriangle size={22} />
                             <span className="font-semibold text-base">Confirmar remoção</span>
                         </div>
-                        <p className="text-sm text-slate-700">{confirm.label}</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{confirm.label}</p>
                         <div className="flex gap-2 justify-end">
                             <button className="btn py-1.5 px-4 text-sm" onClick={() => setConfirm(null)}
                                 disabled={confirmLoading} type="button">

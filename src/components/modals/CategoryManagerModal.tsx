@@ -81,19 +81,19 @@ function CategoryManagerModal({
 
     return (
         <ModalBackdrop onClose={onClose}>
-            <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl border-t sm:border flex flex-col overflow-hidden">
+            <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-800 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700 border-t sm:border flex flex-col overflow-hidden">
                 {/* Drag indicator (mobile only) */}
                 <div className="sm:hidden flex justify-center pt-2 pb-0">
-                    <div className="w-8 h-1 rounded-full bg-slate-200" />
+                    <div className="w-8 h-1 rounded-full bg-slate-200 dark:bg-slate-600" />
                 </div>
-                <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b">
+                <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b dark:border-slate-700">
                     <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                            <Tag size={17} className="text-slate-600" />
+                        <div className="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                            <Tag size={17} className="text-slate-600 dark:text-slate-300" />
                         </div>
-                        <div className="text-base font-semibold text-slate-900">Categorias</div>
+                        <div className="text-base font-semibold text-slate-900 dark:text-white">Categorias</div>
                     </div>
-                    <button onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center" type="button">
+                    <button onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white" type="button">
                         <X size={18} />
                     </button>
                 </div>
@@ -105,20 +105,20 @@ function CategoryManagerModal({
                             <p className="text-sm text-slate-400 text-center py-2">Nenhuma categoria criada.</p>
                         )}
                         {categories.map(cat => (
-                            <div key={cat.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                            <div key={cat.id} className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-3 py-2">
                                 {editing?.id === cat.id ? (
                                     <div className="flex-1 flex flex-col gap-2">
                                         <div className="flex gap-2">
                                             <input value={editIcon} onChange={e => setEditIcon(e.target.value)}
-                                                className="w-14 rounded border border-slate-200 px-2 py-1 text-sm text-center" placeholder="🎉" />
+                                                className="w-14 rounded border border-slate-200 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400 dark:focus:ring-slate-400 px-2 py-1 text-sm text-center" placeholder="🎉" />
                                             <input value={editName} onChange={e => setEditName(e.target.value)}
-                                                className="flex-1 rounded border border-slate-200 px-2 py-1 text-sm" placeholder="Nome" />
+                                                className="flex-1 rounded border border-slate-200 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400 dark:focus:ring-slate-400 px-2 py-1 text-sm" placeholder="Nome" />
                                             <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)}
-                                                className="h-8 w-10 rounded border border-slate-200 cursor-pointer" title="Cor" />
+                                                className="h-8 w-10 rounded border border-slate-200 dark:border-slate-600 cursor-pointer" title="Cor" />
                                         </div>
                                         <div className="flex gap-2 justify-end">
-                                            <button onClick={() => setEditing(null)} className="px-2 py-1 text-xs rounded border border-slate-200 text-slate-600" type="button">Cancelar</button>
-                                            <button onClick={handleUpdate} disabled={saving} className="px-2 py-1 text-xs rounded bg-slate-900 text-white disabled:opacity-50" type="button">
+                                            <button onClick={() => setEditing(null)} className="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 dark:hover:bg-slate-700" type="button">Cancelar</button>
+                                            <button onClick={handleUpdate} disabled={saving} className="px-2 py-1 text-xs rounded bg-slate-900 text-white disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100" type="button">
                                                 {saving ? <Loader2 size={12} className="animate-spin" /> : "Salvar"}
                                             </button>
                                         </div>
@@ -129,19 +129,19 @@ function CategoryManagerModal({
                                             style={{ background: cat.color ? `${cat.color}22` : "#f1f5f9" }}>
                                             {cat.icon ?? <Tag size={12} />}
                                         </span>
-                                        <span className="flex-1 text-sm font-medium text-slate-900">{cat.name}</span>
+                                        <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{cat.name}</span>
                                         {cat.color && (
                                             <span className="w-4 h-4 rounded-full shrink-0 border border-white shadow-sm" style={{ background: cat.color }} />
                                         )}
                                         {!cat.isSystem && (
                                             <>
-                                                <button onClick={() => openEdit(cat)} className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700" type="button">
+                                                <button onClick={() => openEdit(cat)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200" type="button">
                                                     <Pencil size={13} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(cat.id)}
                                                     disabled={deleting === cat.id}
-                                                    className="p-1 rounded hover:bg-rose-100 text-slate-400 hover:text-rose-600 disabled:opacity-50"
+                                                    className="p-1 rounded hover:bg-rose-100 dark:hover:bg-rose-900/30 text-slate-400 dark:text-slate-500 hover:text-rose-600 disabled:opacity-50"
                                                     type="button"
                                                 >
                                                     {deleting === cat.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
@@ -149,7 +149,7 @@ function CategoryManagerModal({
                                             </>
                                         )}
                                         {cat.isSystem && (
-                                            <span className="text-[10px] text-slate-400 bg-slate-200 rounded px-1.5 py-0.5">sistema</span>
+                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 bg-slate-200 dark:bg-slate-600 rounded px-1.5 py-0.5">sistema</span>
                                         )}
                                     </>
                                 )}
@@ -158,21 +158,21 @@ function CategoryManagerModal({
                     </div>
 
                     {/* Nova categoria */}
-                    <div className="border-t pt-3">
-                        <p className="text-xs font-semibold text-slate-600 mb-2">Nova categoria</p>
+                    <div className="border-t dark:border-slate-700 pt-3">
+                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Nova categoria</p>
                         <div className="flex gap-2 mb-2">
                             <input value={icon} onChange={e => setIcon(e.target.value)}
-                                className="w-14 rounded-lg border border-slate-200 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-900"
+                                className="w-14 rounded-lg border border-slate-200 px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400 dark:focus:ring-slate-400"
                                 placeholder="🎉" title="Ícone (emoji)" />
                             <input value={name} onChange={e => setName(e.target.value)}
-                                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400 dark:focus:ring-slate-400"
                                 placeholder="Nome da categoria" />
                             <input type="color" value={color} onChange={e => setColor(e.target.value)}
-                                className="h-10 w-12 rounded-lg border border-slate-200 cursor-pointer" title="Cor" />
+                                className="h-10 w-12 rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer" title="Cor" />
                         </div>
                         <button
                             onClick={handleCreate} disabled={saving}
-                            className="w-full py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                             type="button"
                         >
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}

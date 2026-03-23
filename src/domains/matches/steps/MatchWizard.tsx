@@ -163,14 +163,6 @@ export function MatchWizard({
                         </div>
                     )}
 
-                    {/* Non-admin notice */}
-                    {!admin && (
-                        <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-500">
-                            Modo usuário: você só consegue{" "}
-                            <b>aceitar/recusar o seu próprio convite</b> quando estiver em
-                            &ldquo;Aceitação&rdquo;. O restante é controlado pelo admin.
-                        </div>
-                    )}
                 </div>
             </div>
         );

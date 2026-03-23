@@ -161,20 +161,6 @@ export function TeamColorCarousel({
                                             )}
                                         </div>
 
-                                        {/* hex row */}
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <div
-                                                className="h-5 w-5 rounded shrink-0"
-                                                style={{
-                                                    background: hex,
-                                                    boxShadow: "0 0 0 1px rgba(0,0,0,0.12)",
-                                                }}
-                                            />
-                                            <span className="text-xs font-mono text-slate-500 tracking-wide">
-                                                {hex.toUpperCase()}
-                                            </span>
-                                        </div>
-
                                         {/* cta hint */}
                                         <div className="mt-2 text-[10px] text-slate-400 tracking-widest uppercase">
                                             {readOnly ? "Toque para visualizar" : "Clique para selecionar"}

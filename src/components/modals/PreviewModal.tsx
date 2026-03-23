@@ -81,7 +81,7 @@ export function PreviewModal({ open, onClose, title, item, isMobile }: Props) {
                 </div>
 
                 {/* info footer */}
-                <div className="bg-white px-5 py-4 flex items-center justify-between gap-4">
+                <div className="bg-white dark:bg-slate-800 px-5 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div
                             className="h-10 w-10 rounded-xl shrink-0"
@@ -91,15 +91,15 @@ export function PreviewModal({ open, onClose, title, item, isMobile }: Props) {
                             }}
                         />
                         <div>
-                            <div className="text-[10px] text-slate-400 uppercase tracking-widest">Hex</div>
-                            <div className="text-sm font-mono font-semibold text-slate-800 mt-0.5">
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hex</div>
+                            <div className="text-sm font-mono font-semibold text-slate-800 dark:text-slate-100 mt-0.5">
                                 {hex.toUpperCase()}
                             </div>
                         </div>
                     </div>
 
                     <div className="text-right">
-                        <div className="text-[10px] text-slate-400 uppercase tracking-widest">Status</div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</div>
                         <div
                             className="text-xs font-semibold mt-1 px-2.5 py-0.5 rounded-full inline-block"
                             style={

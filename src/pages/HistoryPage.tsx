@@ -195,7 +195,7 @@ export default function HistoryPage() {
             </div>
 
             {!groupId ? (
-                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 shadow-sm">
+                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                     <Calendar size={36} className="opacity-30" />
                     <span className="text-sm">Selecione um grupo no Dashboard.</span>
                 </div>
@@ -208,7 +208,7 @@ export default function HistoryPage() {
                                 {Array.from({ length: 6 }).map((_, i) => (
                                     <div
                                         key={i}
-                                        className="h-[68px] rounded-2xl bg-slate-100 animate-pulse"
+                                        className="h-[68px] rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse"
                                     />
                                 ))}
                             </div>
@@ -216,12 +216,12 @@ export default function HistoryPage() {
 
                         {/* ── Empty state ──────────────────────────── */}
                         {!loading && total === 0 && (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center">
-                                <Calendar size={36} className="mx-auto text-slate-300 mb-3" />
-                                <div className="text-sm font-medium text-slate-500">
+                            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-12 text-center">
+                                <Calendar size={36} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                                <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
                                     Nenhuma partida encontrada
                                 </div>
-                                <div className="text-xs text-slate-400 mt-1">
+                                <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                                     O histórico aparecerá aqui após a primeira partida finalizada.
                                 </div>
                             </div>
@@ -262,7 +262,7 @@ export default function HistoryPage() {
                                         <button
                                             key={matchId}
                                             onClick={() => nav(`${groupId}/${matchId}`)}
-                                            className="w-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-slate-300 hover:shadow-sm active:scale-[0.99] transition-all"
+                                            className="w-full text-left rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm active:scale-[0.99] transition-all"
                                         >
                                             <div className="flex items-stretch">
                                                 {/* Left accent strip */}
@@ -272,14 +272,14 @@ export default function HistoryPage() {
                                                 />
 
                                                 {/* Date box — desktop only */}
-                                                <div className="hidden sm:flex flex-col items-center justify-center bg-slate-50 border-r border-slate-100 px-4 py-3 shrink-0 min-w-[62px]">
-                                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                                                <div className="hidden sm:flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800 px-4 py-3 shrink-0 min-w-[62px]">
+                                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                                                         {dates?.month ?? "—"}
                                                     </span>
-                                                    <span className="text-2xl font-extrabold text-slate-800 leading-none">
+                                                    <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">
                                                         {dates?.day ?? "—"}
                                                     </span>
-                                                    <span className="text-[10px] text-slate-400 mt-0.5">
+                                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                                                         {dates?.time ?? ""}
                                                     </span>
                                                 </div>
@@ -288,7 +288,7 @@ export default function HistoryPage() {
                                                 <div className="flex flex-1 items-center gap-3 px-4 py-3 min-w-0">
                                                     <div className="min-w-0 flex-1">
                                                         {/* Date — desktop full / mobile compact */}
-                                                        <div className="font-medium text-slate-900 truncate text-sm">
+                                                        <div className="font-medium text-slate-900 dark:text-white truncate text-sm">
                                                             <span className="sm:hidden">
                                                                 {dates?.short ?? matchId}
                                                             </span>
@@ -303,7 +303,7 @@ export default function HistoryPage() {
                                                             {(teamAHex || teamBHex) && (
                                                                 <div className="flex items-center gap-1">
                                                                     <TeamDot hex={teamAHex} />
-                                                                    <span className="text-[10px] text-slate-300 font-bold">
+                                                                    <span className="text-[10px] text-slate-300 dark:text-slate-600 font-bold">
                                                                         vs
                                                                     </span>
                                                                     <TeamDot hex={teamBHex} />
@@ -322,7 +322,7 @@ export default function HistoryPage() {
 
                                                             {/* Place — hidden on mobile */}
                                                             {m?.placeName && (
-                                                                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-400">
+                                                                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
                                                                     <MapPin size={10} className="shrink-0" />
                                                                     <span className="truncate">{m.placeName}</span>
                                                                 </span>
@@ -331,7 +331,7 @@ export default function HistoryPage() {
 
                                                         {/* Place — mobile only */}
                                                         {m?.placeName && (
-                                                            <div className="sm:hidden mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+                                                            <div className="sm:hidden mt-1 flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
                                                                 <MapPin size={10} className="shrink-0" />
                                                                 <span className="truncate">{m.placeName}</span>
                                                             </div>
@@ -340,21 +340,21 @@ export default function HistoryPage() {
 
                                                     {/* Score or arrow */}
                                                     {score ? (
-                                                        <div className="shrink-0 flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5">
-                                                            <span className="text-base font-extrabold text-white tabular-nums leading-none">
+                                                        <div className="shrink-0 flex items-center gap-1 rounded-xl bg-slate-900 dark:bg-white px-3 py-1.5">
+                                                            <span className="text-base font-extrabold text-white dark:text-slate-900 tabular-nums leading-none">
                                                                 {score.a}
                                                             </span>
-                                                            <span className="text-slate-500 text-xs mx-0.5">
+                                                            <span className="text-slate-500 dark:text-slate-400 text-xs mx-0.5">
                                                                 ×
                                                             </span>
-                                                            <span className="text-base font-extrabold text-white tabular-nums leading-none">
+                                                            <span className="text-base font-extrabold text-white dark:text-slate-900 tabular-nums leading-none">
                                                                 {score.b}
                                                             </span>
                                                         </div>
                                                     ) : (
                                                         <ChevronRight
                                                             size={16}
-                                                            className="shrink-0 text-slate-300"
+                                                            className="shrink-0 text-slate-300 dark:text-slate-600"
                                                         />
                                                     )}
                                                 </div>
@@ -372,24 +372,24 @@ export default function HistoryPage() {
                                     type="button"
                                     onClick={() => goPage(page - 1)}
                                     disabled={page <= 1 || loading}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <ChevronLeft size={14} />
                                     Anterior
                                 </button>
 
-                                <div className="text-xs text-slate-500">
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
                                     Página{" "}
-                                    <span className="font-semibold text-slate-800">{page}</span>
+                                    <span className="font-semibold text-slate-800 dark:text-slate-100">{page}</span>
                                     {" "}de{" "}
-                                    <span className="font-semibold text-slate-800">{totalPages}</span>
+                                    <span className="font-semibold text-slate-800 dark:text-slate-100">{totalPages}</span>
                                 </div>
 
                                 <button
                                     type="button"
                                     onClick={() => goPage(page + 1)}
                                     disabled={page >= totalPages || loading}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     Próxima
                                     <ChevronRight size={14} />

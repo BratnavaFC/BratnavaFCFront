@@ -162,21 +162,21 @@ function AdminVotePanel({
     const notVotedCount = members.length - votedCount;
 
     return (
-        <div className="border-t border-slate-100 mt-2">
+        <div className="border-t border-slate-100 dark:border-slate-700 mt-2">
             <button
                 type="button"
                 onClick={() => setOpen(p => !p)}
-                className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
             >
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-2">
                     <Users size={13} />
                     Gerenciar respostas
-                    <span className="font-normal text-slate-400 normal-case tracking-normal text-[11px]">
+                    <span className="font-normal text-slate-400 dark:text-slate-500 normal-case tracking-normal text-[11px]">
                         {votedCount}/{members.length} responderam
                         {notVotedCount > 0 && <span className="text-amber-500"> · {notVotedCount} pendente{notVotedCount > 1 ? 's' : ''}</span>}
                     </span>
                 </span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-slate-400 dark:text-slate-500 transition-transform ${open ? 'rotate-90' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
             </button>
 
             {open && (
@@ -189,12 +189,12 @@ function AdminVotePanel({
                         return (
                             <div key={member.playerId} className={`flex items-center gap-3 py-1.5 rounded-lg px-1 ${hasVoted ? '' : 'opacity-60'}`}>
                                 <div className="relative shrink-0">
-                                    <div className="h-7 w-7 rounded-full bg-slate-200 flex items-center justify-center text-[11px] font-bold text-slate-600">
+                                    <div className="h-7 w-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-slate-200">
                                         {member.playerName.charAt(0).toUpperCase()}
                                     </div>
-                                    <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${hasVoted ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                    <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-800 ${hasVoted ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                                 </div>
-                                <span className="text-sm text-slate-700 flex-1 truncate">{member.playerName}</span>
+                                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{member.playerName}</span>
 
                                 {isBusy ? (
                                     <Loader2 size={14} className="animate-spin text-slate-400" />
@@ -211,7 +211,7 @@ function AdminVotePanel({
                                                     className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all border ${
                                                         voted
                                                             ? baseColor + ' border-transparent scale-105'
-                                                            : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                                            : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                                                     }`}
                                                 >
                                                     {opt.text}
@@ -221,7 +221,7 @@ function AdminVotePanel({
                                     </div>
                                 ) : (
                                     <select
-                                        className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white max-w-[140px]"
+                                        className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white dark:bg-slate-700 dark:text-white max-w-[140px]"
                                         value={hasVoted ? votedIds[0] : ''}
                                         onChange={e => handleSetVote(member.playerId, e.target.value ? [e.target.value] : [])}
                                     >
@@ -255,12 +255,12 @@ function OptionDraftForm({
     const set = (key: keyof OptionDraft, val: any) => onChange({ ...draft, [key]: val });
 
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/40 p-4 shadow-sm space-y-3">
             {/* Texto */}
             <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Texto da opção *</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Texto da opção *</label>
                 <input
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                     placeholder="Ex: Churrasco no domingo"
                     value={draft.text}
                     onChange={e => set('text', e.target.value)}
@@ -269,9 +269,9 @@ function OptionDraftForm({
 
             {/* Descrição */}
             <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Descrição <span className="font-normal text-slate-400">(opcional)</span></label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Descrição <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span></label>
                 <textarea
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                     rows={2}
                     placeholder="Detalhes sobre esta opção..."
                     value={draft.description}
@@ -281,15 +281,15 @@ function OptionDraftForm({
 
             {/* Upload de imagem */}
             <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                     <Image size={11} className="inline mr-1" />
-                    Foto <span className="font-normal text-slate-400">(opcional)</span>
+                    Foto <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span>
                 </label>
                 <label
                     className={`flex flex-col items-center justify-center gap-1 cursor-pointer w-full rounded-lg border-2 border-dashed px-3 py-4 text-sm transition-colors
                         ${draft._dragOver
-                            ? 'border-slate-500 bg-slate-100 text-slate-700'
-                            : 'border-slate-300 text-slate-500 hover:border-slate-400 hover:bg-slate-50'}`}
+                            ? 'border-slate-500 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                            : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                     onDragOver={e => { e.preventDefault(); set('_dragOver', true); }}
                     onDragLeave={() => set('_dragOver', false)}
                     onDrop={e => {
@@ -324,7 +324,7 @@ function OptionDraftForm({
                         <img
                             src={draft.imageUrl}
                             alt="Preview"
-                            className="h-32 w-full object-cover rounded-lg border border-slate-200"
+                            className="h-32 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-600"
                         />
                         <button
                             type="button"
@@ -342,7 +342,7 @@ function OptionDraftForm({
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                 >
                     Cancelar
                 </button>
@@ -350,7 +350,7 @@ function OptionDraftForm({
                     type="button"
                     onClick={onSave}
                     disabled={saving || !draft.text.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center gap-1.5"
                 >
                     {saving && <Loader2 size={12} className="animate-spin" />}
                     {isEdit ? 'Salvar' : 'Adicionar'}
@@ -377,7 +377,7 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
     return (
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
             {/* Summary */}
-            <div className="flex items-center justify-between text-xs text-slate-500 pb-1">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pb-1">
                 <span className="flex items-center gap-1.5">
                     <Users size={12} />
                     {votedCount} de {memberCount} responderam
@@ -385,7 +385,7 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                         <span className="text-amber-500 font-semibold">· {notVoted.length} pendente{notVoted.length > 1 ? 's' : ''}</span>
                     )}
                 </span>
-                <span className="font-semibold text-slate-700">{totalVotes} voto{totalVotes !== 1 ? 's' : ''}</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{totalVotes} voto{totalVotes !== 1 ? 's' : ''}</span>
             </div>
 
             {sorted.length === 0 && (
@@ -406,7 +406,7 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                     <div
                         key={opt.id}
                         className={`rounded-2xl border-2 p-3.5 transition-all ${
-                            isLeader ? 'border-slate-900/20 bg-slate-50/80 shadow-sm' : 'border-slate-100 bg-white'
+                            isLeader ? 'border-slate-900/20 dark:border-white/20 bg-slate-50/80 dark:bg-slate-700/50 shadow-sm' : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800'
                         }`}
                     >
                         {/* Top row */}
@@ -421,11 +421,11 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                                 <img
                                     src={opt.imageUrl}
                                     alt={opt.text}
-                                    className="h-9 w-9 rounded-lg object-cover shrink-0 border border-slate-200"
+                                    className="h-9 w-9 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-600"
                                 />
                             )}
                             <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-semibold leading-snug ${isLeader ? 'text-slate-900' : 'text-slate-700'}`}>
+                                <p className={`text-sm font-semibold leading-snug ${isLeader ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
                                     {opt.text}
                                 </p>
                                 {opt.description && (
@@ -441,7 +441,7 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                         </div>
 
                         {/* Progress bar */}
-                        <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
                             <div
                                 className="h-full rounded-full transition-all duration-700"
                                 style={{ width: `${p}%`, backgroundColor: color }}
@@ -492,10 +492,10 @@ function VoteBar({ count, total, color }: { count: number; total: number; color:
     return (
         <div className="mt-2">
             <div className="flex items-center justify-between text-[11px] mb-1">
-                <span className="text-slate-500">{count} voto{count !== 1 ? 's' : ''}</span>
+                <span className="text-slate-500 dark:text-slate-400">{count} voto{count !== 1 ? 's' : ''}</span>
                 <span className="font-semibold" style={{ color }}>{p}%</span>
             </div>
-            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
                 <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${p}%`, backgroundColor: color }}
@@ -650,17 +650,17 @@ function PollDetailModal({
     return (
     <>
         <ModalBackdrop onClose={onClose}>
-            <div className="w-full sm:max-w-lg max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden">
+            <div className="w-full sm:max-w-lg max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-800 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700 flex flex-col overflow-hidden">
                 {/* Drag handle */}
                 <div className="sm:hidden flex justify-center pt-2">
-                    <div className="w-8 h-1 rounded-full bg-slate-200" />
+                    <div className="w-8 h-1 rounded-full bg-slate-200 dark:bg-slate-600" />
                 </div>
 
                 {/* Header */}
-                <div className="px-5 py-4 border-b flex items-start justify-between gap-3 shrink-0">
+                <div className="px-5 py-4 border-b dark:border-slate-700 flex items-start justify-between gap-3 shrink-0">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600'}`}>
                                 {isOpen ? 'Aberta' : 'Encerrada'}
                             </span>
                             {poll.allowMultipleVotes && (
@@ -673,9 +673,9 @@ function PollDetailModal({
                                 {poll.showVotes ? 'Votos visíveis' : 'Votos anônimos'}
                             </span>
                         </div>
-                        <h2 className="text-base font-bold text-slate-900 leading-snug">{poll.title}</h2>
-                        {poll.description && <p className="text-xs text-slate-500 mt-0.5">{poll.description}</p>}
-                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                        <h2 className="text-base font-bold text-slate-900 dark:text-white leading-snug">{poll.title}</h2>
+                        {poll.description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{poll.description}</p>}
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                             <span className="flex items-center gap-1"><Users size={11} /> {poll.totalVoters} votante{poll.totalVoters !== 1 ? 's' : ''}</span>
                             {poll.deadlineDate && (
                                 <span className={`flex items-center gap-1 font-medium ${deadlinePassed ? 'text-rose-500' : 'text-amber-600'}`}>
@@ -685,21 +685,21 @@ function PollDetailModal({
                             )}
                         </p>
                     </div>
-                    <button onClick={onClose} className="h-8 w-8 rounded-xl hover:bg-slate-100 flex items-center justify-center shrink-0" type="button">
+                    <button onClick={onClose} className="h-8 w-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white" type="button">
                         <X size={16} />
                     </button>
                 </div>
 
                 {/* Admin tab switcher */}
                 {isAdmin && (
-                    <div className="flex border-b shrink-0">
+                    <div className="flex border-b dark:border-slate-700 shrink-0">
                         <button
                             type="button"
                             onClick={() => setDetailTab('options')}
                             className={`flex-1 py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border-b-2 ${
                                 detailTab === 'options'
-                                    ? 'text-slate-900 border-slate-900'
-                                    : 'text-slate-400 border-transparent hover:text-slate-600'
+                                    ? 'text-slate-900 dark:text-white border-slate-900 dark:border-white'
+                                    : 'text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600 dark:hover:text-slate-300'
                             }`}
                         >
                             <CheckSquare size={12} /> Opções
@@ -709,8 +709,8 @@ function PollDetailModal({
                             onClick={() => setDetailTab('resultado')}
                             className={`flex-1 py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border-b-2 ${
                                 detailTab === 'resultado'
-                                    ? 'text-slate-900 border-slate-900'
-                                    : 'text-slate-400 border-transparent hover:text-slate-600'
+                                    ? 'text-slate-900 dark:text-white border-slate-900 dark:border-white'
+                                    : 'text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600 dark:hover:text-slate-300'
                             }`}
                         >
                             <BarChart2 size={12} /> Resultado
@@ -759,10 +759,10 @@ function PollDetailModal({
                                 key={opt.id}
                                 className={[
                                     'rounded-2xl border-2 overflow-hidden transition-all shadow-sm',
-                                    isOpen ? 'cursor-pointer hover:shadow-md hover:border-slate-400' : '',
+                                    isOpen ? 'cursor-pointer hover:shadow-md hover:border-slate-400 dark:hover:border-slate-500' : '',
                                     isSelected
-                                        ? 'border-slate-900 bg-slate-900/5 shadow-md'
-                                        : 'border-slate-200 bg-white',
+                                        ? 'border-slate-900 dark:border-white bg-slate-900/5 dark:bg-white/5 shadow-md'
+                                        : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800',
                                 ].join(' ')}
                                 onClick={() => isOpen && toggleOption(opt.id)}
                             >
@@ -796,17 +796,17 @@ function PollDetailModal({
                                             <div className={[
                                                 'h-5 w-5 rounded shrink-0 mt-0.5 flex items-center justify-center border-2 transition-colors',
                                                 poll.allowMultipleVotes ? 'rounded-md' : 'rounded-full',
-                                                isSelected ? 'bg-slate-900 border-slate-900' : 'border-slate-300',
+                                                isSelected ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white' : 'border-slate-300 dark:border-slate-500',
                                             ].join(' ')}>
-                                                {isSelected && <Check size={11} className="text-white" strokeWidth={3} />}
+                                                {isSelected && <Check size={11} className="text-white dark:text-slate-900" strokeWidth={3} />}
                                             </div>
                                         )}
 
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-900">{opt.text}</p>
-                                                    {opt.description && <p className="text-xs text-slate-500 mt-0.5">{opt.description}</p>}
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{opt.text}</p>
+                                                    {opt.description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{opt.description}</p>}
                                                 </div>
 
                                                 {/* Admin actions */}
@@ -816,7 +816,7 @@ function PollDetailModal({
                                                             type="button"
                                                             title="Editar"
                                                             onClick={() => startEditOption(opt)}
-                                                            className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
+                                                            className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                                                         >
                                                             <Pencil size={12} />
                                                         </button>
@@ -840,7 +840,7 @@ function PollDetailModal({
                                             {(poll.showVotes || isAdmin) && votersForOpt.length > 0 && (
                                                 <div className="mt-2 flex flex-wrap gap-1">
                                                     {votersForOpt.map(v => (
-                                                        <span key={v.playerId} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                                                        <span key={v.playerId} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                                                             {v.playerName}
                                                         </span>
                                                     ))}
@@ -870,7 +870,7 @@ function PollDetailModal({
                         <button
                             type="button"
                             onClick={() => { setAddingOption(true); setOptionDraft(EMPTY_OPTION_DRAFT); }}
-                            className="w-full rounded-xl border-2 border-dashed border-slate-200 py-3 text-sm text-slate-400 hover:border-slate-300 hover:text-slate-600 transition-colors flex items-center justify-center gap-2"
+                            className="w-full rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 py-3 text-sm text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex items-center justify-center gap-2"
                         >
                             <Plus size={15} /> Adicionar opção
                         </button>
@@ -878,7 +878,7 @@ function PollDetailModal({
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3 border-t bg-slate-50/80 flex items-center gap-2 flex-wrap shrink-0">
+                <div className="px-5 py-3 border-t dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/30 flex items-center gap-2 flex-wrap shrink-0">
                     {/* Vote button (members) */}
                     {isOpen && (
                         <>
@@ -887,7 +887,7 @@ function PollDetailModal({
                                     type="button"
                                     onClick={submitVote}
                                     disabled={voting}
-                                    className="flex-1 rounded-xl bg-slate-900 text-white text-sm font-semibold py-2.5 hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="flex-1 rounded-xl bg-slate-900 text-white text-sm font-semibold py-2.5 hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {voting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                                     {selectedIds.length === 0 ? 'Remover meu voto' : 'Confirmar voto'}

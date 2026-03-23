@@ -4,7 +4,7 @@ export function Section({ title, right, children }: { title: string; right?: Rea
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between gap-4">
-        <div className="text-lg font-semibold text-slate-900">{title}</div>
+        <div className="text-lg font-semibold text-slate-900 dark:text-white">{title}</div>
         {right}
       </div>
       <div className="mt-4">{children}</div>

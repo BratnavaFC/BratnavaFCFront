@@ -23,9 +23,9 @@ export function Stepper({ steps, activeKey }: { steps: Step[]; activeKey: string
                   {/* circle */}
                   <div className={[
                     "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200",
-                    active ? "bg-slate-900 text-white ring-4 ring-slate-200"
+                    active ? "bg-slate-900 text-white ring-4 ring-slate-200 dark:bg-white dark:text-slate-900 dark:ring-slate-700"
                            : done  ? "bg-emerald-500 text-white"
-                                   : "bg-slate-100 text-slate-400 border border-slate-200",
+                                   : "bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700",
                   ].join(" ")}>
                     {done ? <Check size={13} strokeWidth={3} /> : idx + 1}
                   </div>
@@ -34,7 +34,7 @@ export function Stepper({ steps, activeKey }: { steps: Step[]; activeKey: string
                   <div className="text-center px-0.5">
                     <div className={[
                       "text-[11px] font-semibold leading-tight",
-                      active ? "text-slate-900"
+                      active ? "text-slate-900 dark:text-white"
                              : done  ? "text-emerald-600"
                                      : "text-slate-400",
                     ].join(" ")}>
@@ -63,12 +63,12 @@ export function Stepper({ steps, activeKey }: { steps: Step[]; activeKey: string
 
       {/* mobile: active step summary */}
       <div className="mt-2.5 flex items-center justify-center gap-1.5 sm:hidden">
-        <span className="text-[11px] text-slate-400">Etapa</span>
-        <span className="text-[11px] font-bold text-slate-800">
-          {activeIdx + 1}<span className="font-normal text-slate-400">/{steps.length}</span>
+        <span className="text-[11px] text-slate-400 dark:text-slate-500">Etapa</span>
+        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
+          {activeIdx + 1}<span className="font-normal text-slate-400 dark:text-slate-500">/{steps.length}</span>
         </span>
-        <span className="text-[11px] text-slate-500">—</span>
-        <span className="text-[11px] font-semibold text-slate-700">{steps[activeIdx]?.title}</span>
+        <span className="text-[11px] text-slate-500 dark:text-slate-400">—</span>
+        <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">{steps[activeIdx]?.title}</span>
       </div>
     </div>
   );

@@ -1144,12 +1144,12 @@ export default function MatchesPage() {
 
             {/* ── Conteúdo ── */}
             {!groupId ? (
-                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 shadow-sm">
+                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                     <CalendarDays size={36} className="opacity-30" />
                     <span className="text-sm">Selecione um grupo no Dashboard.</span>
                 </div>
             ) : (
-                <div className="card p-5 shadow-sm">
+                <div className="card p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                     <MatchWizard
                         admin={admin}
                         stepKey={stepKey}

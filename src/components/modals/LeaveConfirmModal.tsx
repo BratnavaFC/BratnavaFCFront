@@ -41,20 +41,20 @@ export function LeaveConfirmModal({
             />
 
             <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl border flex flex-col overflow-hidden">
+                <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-800 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700 border dark:border-slate-700 flex flex-col overflow-hidden">
 
                     {/* header */}
-                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                    <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
                                 <LogOut size={17} />
                             </div>
-                            <div className="text-base font-semibold text-slate-900">Sair da patota</div>
+                            <div className="text-base font-semibold text-slate-900 dark:text-white">Sair da patota</div>
                         </div>
                         <button
                             type="button"
                             onClick={onClose}
-                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center"
                             aria-label="Fechar"
                         >
                             <X size={18} />
@@ -63,7 +63,7 @@ export function LeaveConfirmModal({
 
                     {/* body */}
                     <div className="px-5 py-5">
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
                             Tem certeza? Seu perfil será convertido para convidado e você perderá o status de mensalista.
                         </p>
                     </div>

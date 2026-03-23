@@ -185,7 +185,7 @@ export default function TeamColorsPage() {
                     {canManage && (
                         <button
                             onClick={startCreate}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-white text-slate-900 border-transparent hover:bg-slate-100 transition-colors shrink-0 shadow-sm"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 shadow-sm"
                         >
                             <Plus size={15} /> Nova cor
                         </button>
@@ -195,19 +195,19 @@ export default function TeamColorsPage() {
 
             {/* ── Conteúdo ── */}
             {!groupId ? (
-                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 shadow-sm">
+                <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                     <Palette size={36} className="opacity-30" />
                     <span className="text-sm">Selecione um grupo no Dashboard.</span>
                 </div>
             ) : (
-                <div className="card p-0 overflow-hidden shadow-sm">
+                <div className="card p-0 overflow-hidden shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
 
                     {/* Carousel */}
                     <div className="p-5">
                         {!isMobile && (
                             <div className="flex justify-end mb-4">
                                 <button
-                                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shadow-sm dark:shadow-none"
                                     onClick={openSelectedPreview}
                                     disabled={!selectedColor}
                                 >
@@ -227,9 +227,9 @@ export default function TeamColorsPage() {
 
                     {/* Barra de ações */}
                     {canManage ? (
-                        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60 flex-wrap">
+                        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 flex-wrap">
                             <button
-                                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shadow-sm dark:shadow-none disabled:opacity-50"
                                 onClick={startEditSelected}
                                 disabled={!selectedColor}
                             >
@@ -254,7 +254,7 @@ export default function TeamColorsPage() {
                             )}
                         </div>
                     ) : isMobile ? (
-                        <div className="flex justify-end px-5 py-4 border-t border-slate-100 bg-slate-50/60">
+                        <div className="flex justify-end px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50">
                             <button
                                 className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
                                 onClick={openSelectedPreview}

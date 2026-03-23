@@ -90,11 +90,11 @@ function OptionDraftForm({
     const set = (key: keyof OptionDraft, val: any) => onChange({ ...draft, [key]: val });
 
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/40 p-4 shadow-sm space-y-3">
             <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Texto da opção *</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Texto da opção *</label>
                 <input
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                     placeholder="Ex: Churrasco no domingo"
                     value={draft.text}
                     onChange={e => set('text', e.target.value)}
@@ -102,9 +102,9 @@ function OptionDraftForm({
             </div>
 
             <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Descrição <span className="font-normal text-slate-400">(opcional)</span></label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Descrição <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span></label>
                 <textarea
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                     rows={2}
                     placeholder="Detalhes sobre esta opção..."
                     value={draft.description}
@@ -113,15 +113,15 @@ function OptionDraftForm({
             </div>
 
             <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                     <Image size={11} className="inline mr-1" />
-                    Foto <span className="font-normal text-slate-400">(opcional)</span>
+                    Foto <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span>
                 </label>
                 <label
                     className={`flex flex-col items-center justify-center gap-1 cursor-pointer w-full rounded-lg border-2 border-dashed px-3 py-4 text-sm transition-colors
                         ${draft._dragOver
-                            ? 'border-slate-500 bg-slate-100 text-slate-700'
-                            : 'border-slate-300 text-slate-500 hover:border-slate-400 hover:bg-slate-50'}`}
+                            ? 'border-slate-500 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                            : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                     onDragOver={e => { e.preventDefault(); set('_dragOver', true); }}
                     onDragLeave={() => set('_dragOver', false)}
                     onDrop={e => {
@@ -156,7 +156,7 @@ function OptionDraftForm({
                         <img
                             src={draft.imageUrl}
                             alt="Preview"
-                            className="h-32 w-full object-cover rounded-lg border border-slate-200"
+                            className="h-32 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-600"
                         />
                         <button
                             type="button"
@@ -173,7 +173,7 @@ function OptionDraftForm({
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                 >
                     Cancelar
                 </button>
@@ -181,7 +181,7 @@ function OptionDraftForm({
                     type="button"
                     onClick={onSave}
                     disabled={saving || !draft.text.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center gap-1.5"
                 >
                     {saving && <Loader2 size={12} className="animate-spin" />}
                     {isEdit ? 'Salvar' : 'Adicionar'}
@@ -255,21 +255,21 @@ function PollCreatePollModal({
 
     return (
         <ModalBackdrop onClose={onClose}>
-            <div className="w-full sm:max-w-md max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden">
+            <div className="w-full sm:max-w-md max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-800 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700 flex flex-col overflow-hidden">
                 {/* Drag handle */}
                 <div className="sm:hidden flex justify-center pt-2">
-                    <div className="w-8 h-1 rounded-full bg-slate-200" />
+                    <div className="w-8 h-1 rounded-full bg-slate-200 dark:bg-slate-600" />
                 </div>
 
                 {/* Header */}
-                <div className="px-5 py-4 border-b flex items-center justify-between shrink-0">
+                <div className="px-5 py-4 border-b dark:border-slate-700 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0">
                             <Vote size={17} />
                         </div>
                         <div>
-                            <p className="text-[11px] text-slate-400 font-medium">Passo {step} de 2</p>
-                            <p className="text-sm font-semibold text-slate-900">
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Passo {step} de 2</p>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">
                                 {step === 1 ? 'Configurar votação' : 'Adicionar opções'}
                             </p>
                         </div>
@@ -277,10 +277,10 @@ function PollCreatePollModal({
                     {/* Step dots */}
                     <div className="flex items-center gap-1.5 mr-2">
                         {[1, 2].map(s => (
-                            <div key={s} className={`h-1.5 rounded-full transition-all ${s === step ? 'w-5 bg-slate-900' : 'w-1.5 bg-slate-200'}`} />
+                            <div key={s} className={`h-1.5 rounded-full transition-all ${s === step ? 'w-5 bg-slate-900 dark:bg-white' : 'w-1.5 bg-slate-200 dark:bg-slate-600'}`} />
                         ))}
                     </div>
-                    <button onClick={onClose} className="h-8 w-8 rounded-xl hover:bg-slate-100 flex items-center justify-center" type="button">
+                    <button onClick={onClose} className="h-8 w-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white" type="button">
                         <X size={16} />
                     </button>
                 </div>
@@ -290,18 +290,18 @@ function PollCreatePollModal({
                     {step === 1 ? (
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Título *</label>
+                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Título *</label>
                                 <input
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                                     placeholder="Ex: Onde vamos comemorar?"
                                     value={title}
                                     onChange={e => setTitle(e.target.value)}
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Descrição <span className="font-normal text-slate-400">(opcional)</span></label>
+                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Descrição <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span></label>
                                 <textarea
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900"
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                                     rows={2}
                                     placeholder="Contexto da votação..."
                                     value={description}
@@ -310,80 +310,80 @@ function PollCreatePollModal({
                             </div>
 
                             {/* Opções de configuração */}
-                            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Configurações</p>
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/60 dark:bg-slate-700/30 p-4 space-y-3">
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Configurações</p>
 
                                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                                     <div>
-                                        <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                                             {allowMultiple ? <CheckSquare size={15} /> : <Square size={15} />}
                                             Múltipla escolha
                                         </p>
-                                        <p className="text-xs text-slate-400 mt-0.5">Permitir votar em mais de uma opção</p>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Permitir votar em mais de uma opção</p>
                                     </div>
                                     <div
                                         onClick={() => setAllowMultiple(p => !p)}
-                                        className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${allowMultiple ? 'bg-slate-900' : 'bg-slate-200'}`}
+                                        className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${allowMultiple ? 'bg-slate-900' : 'bg-slate-200 dark:bg-slate-600'}`}
                                     >
                                         <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${allowMultiple ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                     </div>
                                 </label>
 
-                                <div className="h-px bg-slate-200" />
+                                <div className="h-px bg-slate-200 dark:bg-slate-600" />
 
                                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                                     <div>
-                                        <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                                             {showVotes ? <Eye size={15} /> : <EyeOff size={15} />}
                                             Votos visíveis
                                         </p>
-                                        <p className="text-xs text-slate-400 mt-0.5">Mostrar quem votou em cada opção</p>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Mostrar quem votou em cada opção</p>
                                     </div>
                                     <div
                                         onClick={() => setShowVotes(p => !p)}
-                                        className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${showVotes ? 'bg-slate-900' : 'bg-slate-200'}`}
+                                        className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${showVotes ? 'bg-slate-900' : 'bg-slate-200 dark:bg-slate-600'}`}
                                     >
                                         <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${showVotes ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                     </div>
                                 </label>
 
-                                <div className="h-px bg-slate-200" />
+                                <div className="h-px bg-slate-200 dark:bg-slate-600" />
 
                                 <div>
-                                    <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5 mb-2">
+                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5 mb-2">
                                         <Clock size={15} />
-                                        Prazo de votação <span className="text-xs font-normal text-slate-400">(opcional)</span>
+                                        Prazo de votação <span className="text-xs font-normal text-slate-400 dark:text-slate-500">(opcional)</span>
                                     </p>
                                     <div className="grid grid-cols-2 gap-2">
                                         <input
                                             type="date"
-                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                                             value={deadlineDate}
                                             onChange={e => { setDeadlineDate(e.target.value); if (!e.target.value) setAddToCalendar(false); }}
                                         />
                                         <input
                                             type="time"
-                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                                             value={deadlineTime}
                                             onChange={e => setDeadlineTime(e.target.value)}
                                             placeholder="Hora (opcional)"
                                         />
                                     </div>
-                                    <p className="text-[11px] text-slate-400 mt-1">Após esse prazo, ninguém poderá mais votar.</p>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Após esse prazo, ninguém poderá mais votar.</p>
                                 </div>
 
                                 {deadlineDate && (
                                     <>
-                                        <div className="h-px bg-slate-200" />
+                                        <div className="h-px bg-slate-200 dark:bg-slate-600" />
                                         <label className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => setAddToCalendar(p => !p)}>
                                             <div>
-                                                <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                                                     {addToCalendar ? <CheckSquare size={15} /> : <Square size={15} />}
                                                     Adicionar ao calendário
                                                 </p>
-                                                <p className="text-xs text-slate-400 mt-0.5">Cria um lembrete no calendário com a data do prazo</p>
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Cria um lembrete no calendário com a data do prazo</p>
                                             </div>
-                                            <div className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${addToCalendar ? 'bg-slate-900' : 'bg-slate-200'}`}>
+                                            <div className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${addToCalendar ? 'bg-slate-900' : 'bg-slate-200 dark:bg-slate-600'}`}>
                                                 <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${addToCalendar ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                             </div>
                                         </label>
@@ -397,12 +397,12 @@ function PollCreatePollModal({
                             {(currentPoll?.options ?? []).length > 0 && (
                                 <div className="space-y-2">
                                     {(currentPoll?.options ?? []).map((opt, i) => (
-                                        <div key={opt.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-100 bg-slate-50">
+                                        <div key={opt.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
                                             <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'][i % 6] }}>
                                                 {i + 1}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-slate-800 truncate">{opt.text}</p>
+                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{opt.text}</p>
                                             </div>
                                             <Check size={14} className="text-emerald-500 shrink-0" />
                                         </div>
@@ -424,7 +424,7 @@ function PollCreatePollModal({
                                 <button
                                     type="button"
                                     onClick={() => { setAddingOption(true); setOptionDraft(EMPTY_OPTION_DRAFT); }}
-                                    className="w-full rounded-xl border-2 border-dashed border-slate-200 py-3 text-sm text-slate-400 hover:border-slate-300 hover:text-slate-600 transition-colors flex items-center justify-center gap-2"
+                                    className="w-full rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 py-3 text-sm text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Plus size={15} /> Adicionar opção
                                 </button>
@@ -440,17 +440,17 @@ function PollCreatePollModal({
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3 border-t flex gap-2 justify-end shrink-0">
+                <div className="px-5 py-3 border-t dark:border-slate-700 flex gap-2 justify-end shrink-0">
                     {step === 1 ? (
                         <>
-                            <button onClick={onClose} type="button" className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50">
+                            <button onClick={onClose} type="button" className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleCreatePoll}
                                 disabled={saving || !title.trim()}
                                 type="button"
-                                className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 flex items-center gap-2"
+                                className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center gap-2"
                             >
                                 {saving ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
                                 Próximo
@@ -462,7 +462,7 @@ function PollCreatePollModal({
                                 onClick={handleFinish}
                                 disabled={(currentPoll?.options ?? []).length === 0 || addingOption}
                                 type="button"
-                                className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 flex items-center gap-2"
+                                className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center gap-2"
                             >
                                 <Check size={14} />
                                 Concluir votação

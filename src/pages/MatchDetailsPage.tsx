@@ -100,7 +100,7 @@ function ColorSwatch({
         <span
             title={title}
             className={cn(
-                "relative inline-block rounded border border-slate-300 overflow-hidden shadow-sm shrink-0",
+                "relative inline-block rounded border border-slate-300 dark:border-slate-600 overflow-hidden shadow-sm shrink-0",
                 className
             )}
             style={{ width: px, height: px }}
@@ -142,8 +142,8 @@ function TabButton({
             className={cn(
                 "px-3 py-1.5 text-sm rounded-lg border transition whitespace-nowrap",
                 active
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white"
+                    : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50"
             )}
         >
             {children}
@@ -360,8 +360,8 @@ export function MatchTimeSimulationTimeline({
             disabled={disabled}
             className={cls(
                 "inline-flex items-center justify-center h-8 w-8 rounded-lg border text-sm transition",
-                disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-50",
-                "border-slate-200 bg-white text-slate-700"
+                disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-50 dark:hover:bg-slate-800",
+                "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             )}
         >
             {children}
@@ -403,20 +403,20 @@ export function MatchTimeSimulationTimeline({
                                     : undefined,
                             }}
                         />
-                        <span className="text-xs font-semibold text-slate-600 truncate">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate">
                             {teamLabel}
                         </span>
                     </div>
                     <span className="text-xs tabular-nums font-semibold shrink-0">
                         <span style={{ color: safeLabelColor }}>{currentTeamGoals}</span>
-                        <span className="text-slate-300 font-normal"> / {totalTeamGoals}</span>
+                        <span className="text-slate-300 dark:text-slate-600 font-normal"> / {totalTeamGoals}</span>
                     </span>
                 </div>
 
                 {/* Timeline track */}
                 <div className="relative h-12">
                     {/* Background rail */}
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-100 border border-slate-200" />
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
 
                     {/* Progress fill — no CSS transition: rAF drives this at 60fps */}
                     <div
@@ -437,7 +437,7 @@ export function MatchTimeSimulationTimeline({
                     {/* Minute tick marks (every ~10 min out of 60) */}
                     <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none">
                         {Array.from({ length: 7 }).map((_, i) => (
-                            <div key={i} className="h-4 w-px bg-slate-200" />
+                            <div key={i} className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
                         ))}
                     </div>
 
@@ -484,18 +484,18 @@ export function MatchTimeSimulationTimeline({
     };
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
 
             {/* ── Controls bar ────────────────────────────────────── */}
-            <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
-                <span className="font-mono text-xs font-semibold text-slate-600 tabular-nums shrink-0 w-14">
+            <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-3">
+                <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 tabular-nums shrink-0 w-14">
                     {simMinuteInt}'
-                    <span className="text-slate-400 font-normal">/{totalMinutes}</span>
+                    <span className="text-slate-400 dark:text-slate-500 font-normal">/{totalMinutes}</span>
                 </span>
 
-                <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                     <div
-                        className="h-full rounded-full bg-slate-400"
+                        className="h-full rounded-full bg-slate-400 dark:bg-slate-500"
                         style={{ width: `${progressPct}%` }}
                     />
                 </div>
@@ -649,14 +649,14 @@ export default function MatchDetailsPage() {
     if (!data) {
         return (
             <div className="space-y-4">
-                <div className="h-8 w-36 rounded-xl bg-slate-100 animate-pulse" />
-                <div className="h-56 rounded-2xl bg-slate-200 animate-pulse" />
-                <div className="h-36 rounded-2xl bg-slate-100 animate-pulse" />
+                <div className="h-8 w-36 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                <div className="h-56 rounded-2xl bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                <div className="h-36 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
-                    <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
+                    <div className="h-48 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                    <div className="h-48 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
                 </div>
-                <div className="h-36 rounded-2xl bg-slate-100 animate-pulse" />
+                <div className="h-36 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
             </div>
         );
     }
@@ -739,7 +739,7 @@ export default function MatchDetailsPage() {
             <button
                 type="button"
                 onClick={() => nav(-1)}
-                className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition"
+                className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition"
             >
                 <ChevronLeft size={16} />
                 Voltar ao histórico
@@ -758,16 +758,16 @@ export default function MatchDetailsPage() {
                     <div className="flex items-center justify-between gap-4 mb-5">
                         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
                             <ColorSwatch color={aColor} size={22} />
-                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 truncate">
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 truncate">
                                 {aName}
                             </span>
                         </div>
 
-                        <span className="text-slate-600 text-base font-light shrink-0">vs</span>
+                        <span className="text-slate-600 dark:text-slate-400 text-base font-light shrink-0">vs</span>
 
                         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
                             <ColorSwatch color={bColor} size={22} />
-                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 truncate">
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 truncate">
                                 {bName}
                             </span>
                         </div>
@@ -778,14 +778,14 @@ export default function MatchDetailsPage() {
                         <span className="text-6xl sm:text-7xl font-extrabold text-white tabular-nums leading-none">
                             {scoreA}
                         </span>
-                        <span className="text-3xl text-slate-600 font-light">×</span>
+                        <span className="text-3xl text-slate-600 dark:text-slate-400 font-light">×</span>
                         <span className="text-6xl sm:text-7xl font-extrabold text-white tabular-nums leading-none">
                             {scoreB}
                         </span>
                     </div>
 
                     {/* Match info */}
-                    <div className="mt-5 flex items-center justify-center gap-2 sm:gap-3 flex-wrap text-sm text-slate-400">
+                    <div className="mt-5 flex items-center justify-center gap-2 sm:gap-3 flex-wrap text-sm text-slate-400 dark:text-slate-500">
                         {data.placeName && (
                             <span className="flex items-center gap-1.5">
                                 <MapPin size={13} className="shrink-0" />
@@ -793,7 +793,7 @@ export default function MatchDetailsPage() {
                             </span>
                         )}
                         {data.placeName && data.playedAt && (
-                            <span className="text-slate-700">·</span>
+                            <span className="text-slate-700 dark:text-slate-500">·</span>
                         )}
                         {data.playedAt && (
                             <span className="flex items-center gap-1.5">
@@ -803,7 +803,7 @@ export default function MatchDetailsPage() {
                         )}
                         {(data.statusName || data.status) && (
                             <>
-                                <span className="text-slate-700">·</span>
+                                <span className="text-slate-700 dark:text-slate-500">·</span>
                                 <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/70 border border-white/10">
                                     {data.statusName ?? data.status}
                                 </span>
@@ -860,19 +860,19 @@ export default function MatchDetailsPage() {
             <Section title="Escalação">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Team A */}
-                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                             <ColorSwatch color={aColor} size={14} />
                             <span className="font-semibold text-sm" style={teamTextStyle(aColor)}>
                                 {aName}
                             </span>
-                            <span className="ml-auto text-xs text-slate-400">
+                            <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                                 {teamAPlayers.length} jog.
                             </span>
                         </div>
-                        <ul className="divide-y divide-slate-100">
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                             {teamAPlayers.length === 0 ? (
-                                <li className="px-4 py-3 text-sm text-slate-400">Nenhum jogador.</li>
+                                <li className="px-4 py-3 text-sm text-slate-400 dark:text-slate-500">Nenhum jogador.</li>
                             ) : (
                                 teamAPlayers.map((p: any) => (
                                     <li
@@ -885,7 +885,7 @@ export default function MatchDetailsPage() {
                                                 <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={15} />
                                             </span>
                                         )}
-                                        <span className="text-sm text-slate-800 truncate flex-1">
+                                        <span className="text-sm text-slate-800 dark:text-slate-100 truncate flex-1">
                                             {p.playerName}
                                         </span>
                                         {p.isMvp && (
@@ -900,19 +900,19 @@ export default function MatchDetailsPage() {
                     </div>
 
                     {/* Team B */}
-                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                             <ColorSwatch color={bColor} size={14} />
                             <span className="font-semibold text-sm" style={teamTextStyle(bColor)}>
                                 {bName}
                             </span>
-                            <span className="ml-auto text-xs text-slate-400">
+                            <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                                 {teamBPlayers.length} jog.
                             </span>
                         </div>
-                        <ul className="divide-y divide-slate-100">
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                             {teamBPlayers.length === 0 ? (
-                                <li className="px-4 py-3 text-sm text-slate-400">Nenhum jogador.</li>
+                                <li className="px-4 py-3 text-sm text-slate-400 dark:text-slate-500">Nenhum jogador.</li>
                             ) : (
                                 teamBPlayers.map((p: any) => (
                                     <li
@@ -925,7 +925,7 @@ export default function MatchDetailsPage() {
                                                 <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={15} />
                                             </span>
                                         )}
-                                        <span className="text-sm text-slate-800 truncate flex-1">
+                                        <span className="text-sm text-slate-800 dark:text-slate-100 truncate flex-1">
                                             {p.playerName}
                                         </span>
                                         {p.isMvp && (
@@ -943,7 +943,7 @@ export default function MatchDetailsPage() {
 
             {/* ── Gols ──────────────────────────────────────────────── */}
             <Section title={`Gols (${sortedGoals.length})`}>
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
                     {/* Tabs */}
                     <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
                         <TabButton active={goalsTab === "gols"} onClick={() => setGoalsTab("gols")}>
@@ -987,9 +987,9 @@ export default function MatchDetailsPage() {
 
                                 {/* Time field */}
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-600 shrink-0">Tempo:</span>
+                                    <span className="text-xs text-slate-600 dark:text-slate-400 shrink-0">Tempo:</span>
                                     <input
-                                        className="border border-slate-200 rounded-lg px-2 py-1 text-sm w-24 text-center tabular-nums bg-white"
+                                        className="border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-24 text-center tabular-nums bg-white dark:bg-slate-800 dark:text-white"
                                         value={editTime}
                                         onChange={(e) => setEditTime(e.target.value)}
                                         placeholder="21:04"
@@ -997,7 +997,7 @@ export default function MatchDetailsPage() {
                                     <div className="flex flex-col gap-0.5">
                                         <button
                                             type="button"
-                                            className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+                                            className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
                                             onClick={() => setEditTime(incrementEditTime(editTime, 1))}
                                             title="+1 minuto"
                                         >
@@ -1005,7 +1005,7 @@ export default function MatchDetailsPage() {
                                         </button>
                                         <button
                                             type="button"
-                                            className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+                                            className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
                                             onClick={() => setEditTime(incrementEditTime(editTime, -1))}
                                             title="-1 minuto"
                                         >
@@ -1029,7 +1029,7 @@ export default function MatchDetailsPage() {
                                                         "w-full text-left rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
                                                         editScorerId === p.playerId
                                                             ? "border-emerald-400 bg-emerald-100 text-emerald-900"
-                                                            : "border-slate-200 bg-white hover:bg-blue-50 text-slate-700"
+                                                            : "border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
                                                     )}
                                                     onClick={() => {
                                                         setEditScorerId(p.playerId);
@@ -1055,7 +1055,7 @@ export default function MatchDetailsPage() {
                                                         "w-full text-left rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
                                                         editScorerId === p.playerId
                                                             ? "border-emerald-400 bg-emerald-100 text-emerald-900"
-                                                            : "border-slate-200 bg-white hover:bg-red-50 text-slate-700"
+                                                            : "border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
                                                     )}
                                                     onClick={() => {
                                                         setEditScorerId(p.playerId);
@@ -1083,7 +1083,7 @@ export default function MatchDetailsPage() {
                                                     setEditAssistId(null);
                                                 }}
                                             />
-                                            <span className="text-sm text-slate-700">Gol contra</span>
+                                            <span className="text-sm text-slate-700 dark:text-slate-300">Gol contra</span>
                                             {editIsOwnGoal && (
                                                 <span className="text-xs text-orange-600 font-medium">
                                                     (ponto para o time adversário)
@@ -1093,7 +1093,7 @@ export default function MatchDetailsPage() {
 
                                         {editAssistCandidates.length > 0 && (
                                             <div>
-                                                <div className="text-xs text-slate-500 mb-1.5">
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
                                                     {editIsOwnGoal ? "Quem forçou (opcional):" : "Assistência (opcional):"}
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5">
@@ -1105,7 +1105,7 @@ export default function MatchDetailsPage() {
                                                                 "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                                                                 editAssistId === p.playerId
                                                                     ? "border-emerald-400 bg-emerald-200 text-emerald-900"
-                                                                    : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"
+                                                                    : "border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
                                                             )}
                                                             onClick={() =>
                                                                 setEditAssistId((prev) =>
@@ -1157,25 +1157,25 @@ export default function MatchDetailsPage() {
                                     "flex items-center gap-3 rounded-xl border px-3 py-2.5",
                                     editingGoalId === g.goalId
                                         ? "border-blue-300 bg-blue-50"
-                                        : "border-slate-100 bg-slate-50"
+                                        : "border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
                                 )}
                             >
                                 <GoalDot team={g.team} />
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-sm font-medium text-slate-900 truncate">
+                                    <div className="text-sm font-medium text-slate-900 dark:text-white truncate">
                                         <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{g.scorerName ?? "—"}
                                         {g.isOwnGoal && (
                                             <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
                                         )}
                                     </div>
                                     {g.assistName && (
-                                        <div className="text-xs text-slate-500 truncate">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                                             <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{g.assistName}
                                         </div>
                                     )}
                                 </div>
                                 {g.time && (
-                                    <span className="text-xs text-slate-400 font-mono shrink-0">
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 font-mono shrink-0">
                                         {g.time}
                                     </span>
                                 )}
@@ -1190,7 +1190,7 @@ export default function MatchDetailsPage() {
                                             "flex items-center justify-center w-7 h-7 rounded-lg border transition-colors shrink-0",
                                             editingGoalId === g.goalId
                                                 ? "border-blue-300 bg-blue-100 text-blue-700"
-                                                : "border-slate-200 bg-white hover:bg-slate-100 text-slate-400"
+                                                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500"
                                         )}
                                     >
                                         <Pencil size={12} />
@@ -1200,7 +1200,7 @@ export default function MatchDetailsPage() {
                         );
 
                         const emptyMsg = (msg: string) => (
-                            <div className="py-4 text-center text-sm text-slate-400">{msg}</div>
+                            <div className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">{msg}</div>
                         );
 
                         if (goalsTab === "gols") {
@@ -1245,12 +1245,12 @@ export default function MatchDetailsPage() {
                                     (timelineGoals as any[]).map((t) => (
                                         <div
                                             key={t.goalId}
-                                            className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+                                            className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5"
                                         >
                                             <GoalDot team={t.team} />
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-sm font-medium text-slate-900">
-                                                    <span className="text-slate-400 text-xs mr-1">
+                                                <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                                    <span className="text-slate-400 dark:text-slate-500 text-xs mr-1">
                                                         #{t.idx}
                                                     </span>
                                                     <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{t.scorerName ?? "—"}
@@ -1259,7 +1259,7 @@ export default function MatchDetailsPage() {
                                                     )}
                                                 </div>
                                                 {t.assistName && (
-                                                    <div className="text-xs text-slate-500">
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
                                                         <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{t.assistName}
                                                     </div>
                                                 )}
@@ -1267,10 +1267,10 @@ export default function MatchDetailsPage() {
                                             <div className="text-right shrink-0">
                                                 <div className="font-bold text-sm tabular-nums">
                                                     <span style={teamTextStyle(aColor)}>{t.scoreA}</span>
-                                                    <span className="text-slate-400 mx-1">×</span>
+                                                    <span className="text-slate-400 dark:text-slate-500 mx-1">×</span>
                                                     <span style={teamTextStyle(bColor)}>{t.scoreB}</span>
                                                 </div>
-                                                <div className="text-[10px] text-slate-400 hidden sm:block">
+                                                <div className="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:block">
                                                     {t.leader}
                                                 </div>
                                             </div>
@@ -1294,26 +1294,26 @@ export default function MatchDetailsPage() {
                             const cardTeam = canSeeMvp ? (mvp?.team ?? mvpPlayer?.team) : mvpPlayer?.team;
                             const cardTeamName = cardTeam === 1 ? aName : cardTeam === 2 ? bName : (mvpPlayerTeamName ?? "");
                             if (!cardName) return (
-                                <div className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
-                                    <IconRenderer value={resolveIcon(_icons, 'mvp')} size={28} lucideProps={{ className: "mx-auto text-slate-300 mb-2" }} />
-                                    <div className="text-sm text-slate-400">MVP não definido</div>
+                                <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-8 text-center">
+                                    <IconRenderer value={resolveIcon(_icons, 'mvp')} size={28} lucideProps={{ className: "mx-auto text-slate-300 dark:text-slate-600 mb-2" }} />
+                                    <div className="text-sm text-slate-400 dark:text-slate-500">MVP não definido</div>
                                 </div>
                             );
                             return (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+                                <div className="rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-950/30 px-4 py-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 border border-amber-200 shrink-0">
-                                            <IconRenderer value={resolveIcon(_icons, 'mvp')} size={20} lucideProps={{ className: "text-amber-500" }} />
+                                        <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 shrink-0">
+                                            <IconRenderer value={resolveIcon(_icons, 'mvp')} size={20} lucideProps={{ className: "text-amber-500 dark:text-amber-400" }} />
                                         </div>
                                         <div>
-                                            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">
+                                            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-0.5">
                                                 Melhor do jogo
                                             </div>
-                                            <div className="font-bold text-slate-900 text-xl leading-none">
+                                            <div className="font-bold text-slate-900 dark:text-amber-50 text-xl leading-none">
                                                 {cardName}
                                             </div>
                                             {cardTeamName && (
-                                                <div className="text-xs text-slate-500 mt-1">{cardTeamName}</div>
+                                                <div className="text-xs text-amber-700 dark:text-amber-400/70 mt-1">{cardTeamName}</div>
                                             )}
                                         </div>
                                     </div>
@@ -1323,8 +1323,8 @@ export default function MatchDetailsPage() {
 
                         {/* Apuração de votos — apenas admin / god mode */}
                         {canSeeMvp && voteCounts.length > 0 && (
-                            <div className="rounded-xl border border-slate-200 bg-white p-4">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
                                     Apuração de votos
                                 </div>
                                 <div className="space-y-2.5">
@@ -1333,13 +1333,13 @@ export default function MatchDetailsPage() {
                                         const isWinner = vc.votedForName === mvp?.playerName;
                                         return (
                                             <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
-                                                <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 truncate flex items-center gap-1.5 shrink-0">
+                                                <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5 shrink-0">
                                                     {isWinner && (
                                                         <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} lucideProps={{ className: "text-amber-400 shrink-0" }} />
                                                     )}
                                                     {vc.votedForName}
                                                 </div>
-                                                <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                                                     <div
                                                         className={cn(
                                                             "h-full rounded-full transition-all",
@@ -1348,7 +1348,7 @@ export default function MatchDetailsPage() {
                                                         style={{ width: `${pct}%` }}
                                                     />
                                                 </div>
-                                                <div className="text-sm font-bold text-slate-700 tabular-nums w-5 text-right shrink-0">
+                                                <div className="text-sm font-bold text-slate-700 dark:text-slate-300 tabular-nums w-5 text-right shrink-0">
                                                     {vc.count}
                                                 </div>
                                             </div>

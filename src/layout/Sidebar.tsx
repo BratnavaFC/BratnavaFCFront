@@ -11,7 +11,6 @@ import { GroupInvitesApi } from "../api/endpoints";
 type Item = { to: string; label: string; icon: any; badge?: number; end?: boolean };
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
-    // Selectors reativos diretos — evita o problema do getActive() que usa closure interno
     const userId       = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
     const roles        = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.roles ?? []);
     const activeGrpId  = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupId ?? null);
@@ -19,14 +18,11 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
 
     const isAdminOrGod = roles.includes("Admin") || roles.includes("GodMode");
     const isGod        = roles.includes("GodMode");
-    // Admin/GodMode global: sempre vê itens de admin (independente de grupo)
-    // Admin de grupo: precisa ter activeGrpId dentro de grpAdminIds
     const isGroupAdm   = isAdminOrGod || (!!activeGrpId && grpAdminIds.includes(activeGrpId));
 
-    const pendingCount = useInviteStore((s) => s.pendingCount);
+    const pendingCount    = useInviteStore((s) => s.pendingCount);
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
 
-    // Buscar contagem de convites ao montar / quando userId muda
     useEffect(() => {
         if (!userId) return;
         GroupInvitesApi.mineCount()
@@ -41,7 +37,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
         { to: "/app/history",     label: "Histórico",     icon: History },
         ...(isGroupAdm || isGod ? [{ to: "/app/calendar",  label: "Calendário",  icon: CalendarCheck }] : []),
-        ...(isGroupAdm || isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
+        ...(isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight",   icon: Presentation }] : []),
         ...((isGroupAdm || isGod) && activeGrpId ? [{
@@ -60,28 +56,29 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     ], [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount]);
 
     return (
-        <aside className={`bg-white border-r transition-all duration-300 ${open ? "w-64" : "w-16"}`}>
+        <aside className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${open ? "w-64" : "w-16"}`}>
             <div className="h-full flex flex-col">
-                {/* Sidebar header / toggle */}
+                {/* Header */}
                 <div className={[
-                    "flex items-center border-b border-slate-100 shrink-0 transition-all duration-300",
+                    "flex items-center border-b border-slate-100 dark:border-slate-800 shrink-0 transition-all duration-300",
                     open ? "px-4 py-3 gap-3 justify-between" : "px-2 py-3 justify-center",
                 ].join(" ")}>
                     {open && (
-                        <span className="text-sm font-bold text-slate-900 tracking-widest uppercase select-none">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white tracking-widest uppercase select-none">
                             Bratnava FC
                         </span>
                     )}
                     <button
                         onClick={onToggle}
                         aria-label={open ? "Recolher menu" : "Expandir menu"}
-                        className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.98] transition grid place-items-center shrink-0"
+                        className="h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] transition grid place-items-center shrink-0"
                     >
-                        {open ? <X size={18} className="text-slate-700" /> : <Menu size={18} className="text-slate-700" />}
+                        {open ? <X size={18} className="text-slate-700 dark:text-slate-300" /> : <Menu size={18} className="text-slate-700 dark:text-slate-300" />}
                     </button>
                 </div>
 
-                <nav className="flex-1 p-2 space-y-1">
+                {/* Nav items */}
+                <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
                     {items.map((item) => {
                         const Icon = item.icon;
                         const hasBadge = !!item.badge && item.badge > 0;
@@ -95,13 +92,14 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                                 className={({ isActive }) =>
                                     [
                                         "relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition",
-                                        isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100",
+                                        isActive
+                                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900"
+                                            : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800",
                                     ].join(" ")
                                 }
                             >
                                 {({ isActive }) => (
                                     <>
-                                        {/* ícone + bolinha */}
                                         <span className="relative shrink-0">
                                             <Icon size={18} />
                                             {hasBadge && (
@@ -111,7 +109,6 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                                             )}
                                         </span>
 
-                                        {/* label + badge (só quando sidebar aberto) */}
                                         {open && (
                                             <span className="flex-1 flex items-center justify-between min-w-0">
                                                 <span className="truncate">{item.label}</span>
@@ -119,7 +116,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                                                     <span className={[
                                                         "ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full text-[11px] font-bold shrink-0",
                                                         isActive
-                                                            ? "bg-white text-slate-900"
+                                                            ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                                                             : "bg-rose-500 text-white",
                                                     ].join(" ")}>
                                                         {item.badge! > 99 ? "99+" : item.badge}
@@ -133,6 +130,8 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                         );
                     })}
                 </nav>
+
+
             </div>
         </aside>
     );

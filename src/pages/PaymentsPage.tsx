@@ -45,17 +45,17 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
     return (
         <div className={cls(
             'border rounded-xl overflow-hidden',
-            charge.isCancelled ? 'opacity-50 border-slate-200 bg-white' :
-            finalized ? 'border-green-200 bg-green-50/30' : 'border-slate-200 bg-white'
+            charge.isCancelled ? 'opacity-50 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900' :
+            finalized ? 'border-green-200 bg-green-50/30' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
         )}>
             <div className="flex items-center gap-3 px-4 py-3">
                 <button className="flex-1 text-left" onClick={onToggle}>
                     <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-900">{charge.name}</span>
-                        {charge.isCancelled && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Cancelada</span>}
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white">{charge.name}</span>
+                        {charge.isCancelled && <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Cancelada</span>}
                         {finalized && !charge.isCancelled && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={10}/>Finalizada</span>}
                     </div>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500">
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                         <span>R$ {charge.amount.toFixed(2)}</span>
                         {charge.dueDate && <span>Venc. {new Date(charge.dueDate).toLocaleDateString('pt-BR')}</span>}
                         <span className="text-green-600 font-medium">{paidCt} pago{paidCt !== 1 ? 's' : ''}</span>
@@ -65,33 +65,33 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                 <div className="flex items-center gap-2">
                     {!charge.isCancelled && charge.payments.length > 0 && (
                         <button onClick={e => { e.stopPropagation(); onBulkDiscount(); }}
-                            className="flex items-center gap-1 px-2 py-1 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-medium transition"
+                            className="flex items-center gap-1 px-2 py-1 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg text-xs font-medium transition"
                             title="Desconto em massa">
                             <DollarSign size={12} /> Desc. massa
                         </button>
                     )}
                     {!charge.isCancelled && (
                         <button onClick={onCancel}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                            className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                             title="Cancelar cobrança">
                             <Trash2 size={14} />
                         </button>
                     )}
-                    {open ? <ChevronUp size={16} className="text-slate-400"/> : <ChevronDown size={16} className="text-slate-400"/>}
+                    {open ? <ChevronUp size={16} className="text-slate-400 dark:text-slate-500"/> : <ChevronDown size={16} className="text-slate-400 dark:text-slate-500"/>}
                 </div>
             </div>
             {open && (
-                <div className="border-t border-slate-100 divide-y divide-slate-50">
+                <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50 dark:divide-slate-800">
                     {charge.payments.length === 0 && (
-                        <p className="text-xs text-slate-400 px-4 py-3">Nenhum jogador atribuído.</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 px-4 py-3">Nenhum jogador atribuído.</p>
                     )}
                     {charge.payments.map(payment => {
                         const paid = payment.status === 1;
                         return (
                             <div key={payment.playerId} className="flex items-center gap-3 px-4 py-2.5">
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-800 truncate">{payment.playerName}</p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{payment.playerName}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
                                         R$ {payment.finalAmount.toFixed(2)}
                                         {payment.discount > 0 && <span className="text-green-600 ml-1">(desconto R$ {payment.discount.toFixed(2)})</span>}
                                         {payment.paidAt && <span className="ml-2">· {new Date(payment.paidAt).toLocaleDateString('pt-BR')}</span>}
@@ -107,7 +107,7 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                                                 link.href = `data:${mimeType};base64,${base64}`;
                                                 link.download = fileName; link.click();
                                             } catch { toast.error('Erro ao baixar comprovante'); }
-                                        }} title="Baixar comprovante" className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+                                        }} title="Baixar comprovante" className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                                             <Download size={13} />
                                         </button>
                                     )}
@@ -120,7 +120,7 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                                     </span>
                                     {!charge.isCancelled && (
                                         <button onClick={() => onEditPayment(payment)}
-                                            className="text-xs px-2 py-1 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition">
+                                            className="text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
                                             Editar
                                         </button>
                                     )}
@@ -269,7 +269,7 @@ export default function PaymentsPage() {
 
     if (!groupId) {
         return (
-            <div className="p-6 text-slate-500 text-sm">Selecione uma patota para ver os pagamentos.</div>
+            <div className="p-6 text-slate-500 dark:text-slate-400 text-sm">Selecione uma patota para ver os pagamentos.</div>
         );
     }
 
@@ -321,18 +321,18 @@ export default function PaymentsPage() {
                 {!isAdmin && tab === 'monthly' && paymentMode === 0 && (
                     <div>
                         <div className="flex items-center gap-3 mb-4 flex-wrap">
-                            <h2 className="text-base font-semibold text-slate-800">📅 Minhas mensalidades</h2>
-                            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-                                <button onClick={() => setYear(y => y - 1)} className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">‹</button>
-                                <span className="px-3 text-sm font-semibold text-slate-800">{year}</span>
-                                <button onClick={() => setYear(y => y + 1)} className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">›</button>
+                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">📅 Minhas mensalidades</h2>
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                                <button onClick={() => setYear(y => y - 1)} className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">‹</button>
+                                <span className="px-3 text-sm font-semibold text-slate-800 dark:text-slate-100">{year}</span>
+                                <button onClick={() => setYear(y => y + 1)} className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">›</button>
                             </div>
                         </div>
 
                                 {myRow === undefined ? (
                                     <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
                                 ) : myRow === null ? (
-                                    <div className="text-center py-10 text-slate-400 text-sm">
+                                    <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
                                         Você não tem um jogador vinculado nesta patota.
                                     </div>
                                 ) : (
@@ -351,12 +351,12 @@ export default function PaymentsPage() {
                                                         'rounded-xl border p-3 text-center transition hover:shadow-sm',
                                                         paid ? 'border-green-200 bg-green-50' : 'border-red-100 bg-red-50/60'
                                                     )}>
-                                                    <div className="text-xs font-semibold text-slate-500 mb-1">{MONTHS[cell.month - 1]}</div>
+                                                    <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">{MONTHS[cell.month - 1]}</div>
                                                     {paid
                                                         ? <CheckCircle2 size={20} className="text-green-500 mx-auto" />
                                                         : <XCircle size={20} className="text-red-400 mx-auto" />}
                                                     {cell.amount > 0 && (
-                                                        <div className="text-[10px] text-slate-400 mt-1">R$ {cell.amount.toFixed(2)}</div>
+                                                        <div className="text-[10px] text-slate-500 dark:text-slate-300 mt-1">R$ {cell.amount.toFixed(2)}</div>
                                                     )}
                                                 </button>
                                             );
@@ -371,10 +371,10 @@ export default function PaymentsPage() {
                     <div>
                         {/* Seletor de ano+mês */}
                         <div className="flex items-center gap-2 mb-4 flex-wrap">
-                            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-                                <button onClick={() => setExtraYear(y => y - 1)} className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">‹</button>
-                                <span className="px-3 text-sm font-semibold text-slate-800">{extraYear}</span>
-                                <button onClick={() => setExtraYear(y => y + 1)} className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">›</button>
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                                <button onClick={() => setExtraYear(y => y - 1)} className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">‹</button>
+                                <span className="px-3 text-sm font-semibold text-slate-800 dark:text-slate-100">{extraYear}</span>
+                                <button onClick={() => setExtraYear(y => y + 1)} className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">›</button>
                             </div>
                         </div>
                         <div className="grid grid-cols-6 sm:grid-cols-12 gap-1 mb-5">
@@ -382,7 +382,7 @@ export default function PaymentsPage() {
                                 <button key={month} onClick={() => setExtraMonth(month)}
                                     className={cls(
                                         'rounded-lg py-1.5 text-center text-xs transition border flex flex-col items-center gap-0.5',
-                                        extraMonth === month ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 hover:bg-slate-50',
+                                        extraMonth === month ? 'border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50',
                                         count === 0 && extraMonth !== month && 'opacity-40'
                                     )}>
                                     <span className="font-medium">{MONTHS[month - 1]}</span>
@@ -397,7 +397,7 @@ export default function PaymentsPage() {
                         </div>
 
                         {myCurrentCharges.length === 0 && myFinalizedCharges.length === 0 ? (
-                            <div className="text-center py-10 text-slate-400">
+                            <div className="text-center py-10 text-slate-400 dark:text-slate-500">
                                 <DollarSign size={32} className="mx-auto mb-2 opacity-40" />
                                 <p className="text-sm">Nenhuma cobrança em {MONTHS[extraMonth - 1]}/{extraYear}.</p>
                             </div>
@@ -405,17 +405,17 @@ export default function PaymentsPage() {
                             <div className="space-y-6">
                                 {myCurrentCharges.length > 0 && (
                                     <div>
-                                        <h3 className="text-sm font-semibold text-slate-700 mb-2">📌 Pendentes</h3>
+                                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">📌 Pendentes</h3>
                                         <div className="space-y-2">
                                             {myCurrentCharges.map(charge => {
                                                 const payment = charge.payments[0];
                                                 if (!payment) return null;
                                                 const paid = payment.status === 1;
                                                 return (
-                                                    <div key={charge.id} className="border border-slate-200 rounded-xl bg-white p-4 flex items-center gap-4">
+                                                    <div key={charge.id} className="border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 p-4 flex items-center gap-4">
                                                         <div className="flex-1 min-w-0">
-                                                            <span className="font-semibold text-sm text-slate-900">{charge.name}</span>
-                                                            <div className="text-xs text-slate-500 mt-0.5 flex gap-3 flex-wrap">
+                                                            <span className="font-semibold text-sm text-slate-900 dark:text-white">{charge.name}</span>
+                                                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex gap-3 flex-wrap">
                                                                 <span>R$ {payment.finalAmount.toFixed(2)}</span>
                                                                 {payment.discount > 0 && <span className="text-green-600">Desconto: R$ {payment.discount.toFixed(2)}</span>}
                                                                 {charge.dueDate && <span>Venc. {new Date(charge.dueDate).toLocaleDateString('pt-BR')}</span>}
@@ -426,7 +426,7 @@ export default function PaymentsPage() {
                                                                 <XCircle size={11}/> Pendente
                                                             </span>
                                                             <button onClick={() => setExtraModal({ charge, payment })}
-                                                                className="text-xs px-2 py-1 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                                                                className="text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                                                 {paid ? 'Ver' : 'Pagar'}
                                                             </button>
                                                         </div>
@@ -438,7 +438,7 @@ export default function PaymentsPage() {
                                 )}
                                 {myFinalizedCharges.length > 0 && (
                                     <div>
-                                        <h3 className="text-sm font-semibold text-slate-700 mb-2">✅ Pagas</h3>
+                                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">✅ Pagas</h3>
                                         <div className="space-y-2">
                                             {myFinalizedCharges.map(charge => {
                                                 const payment = charge.payments[0];
@@ -446,8 +446,8 @@ export default function PaymentsPage() {
                                                 return (
                                                     <div key={charge.id} className="border border-green-100 rounded-xl bg-green-50/40 p-4 flex items-center gap-4">
                                                         <div className="flex-1 min-w-0">
-                                                            <span className="font-semibold text-sm text-slate-700">{charge.name}</span>
-                                                            <div className="text-xs text-slate-500 mt-0.5 flex gap-3 flex-wrap">
+                                                            <span className="font-semibold text-sm text-slate-700 dark:text-slate-300">{charge.name}</span>
+                                                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex gap-3 flex-wrap">
                                                                 <span>R$ {payment.finalAmount.toFixed(2)}</span>
                                                                 {payment.discount > 0 && <span className="text-green-600">Desconto: R$ {payment.discount.toFixed(2)}</span>}
                                                                 {payment.paidAt && <span>Pago em {new Date(payment.paidAt).toLocaleDateString('pt-BR')}</span>}
@@ -461,7 +461,7 @@ export default function PaymentsPage() {
                                                                         const { base64, fileName, mimeType } = res.data.data as any;
                                                                         const link = document.createElement('a'); link.href = `data:${mimeType};base64,${base64}`; link.download = fileName; link.click();
                                                                     } catch { toast.error('Erro ao baixar comprovante'); }
-                                                                }} title="Baixar comprovante" className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-white rounded-lg">
+                                                                }} title="Baixar comprovante" className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg">
                                                                     <Download size={14} />
                                                                 </button>
                                                             )}
@@ -469,7 +469,7 @@ export default function PaymentsPage() {
                                                                 <CheckCircle2 size={11}/> Pago
                                                             </span>
                                                             <button onClick={() => setExtraModal({ charge, payment })}
-                                                                className="text-xs px-2 py-1 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                                                                className="text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                                                 Ver
                                                             </button>
                                                         </div>
@@ -488,15 +488,15 @@ export default function PaymentsPage() {
                 {isAdmin && tab === 'monthly' && (
                     <div>
                         <div className="flex items-center gap-3 mb-4 flex-wrap">
-                            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
                                 <button onClick={() => setYear(y => y - 1)}
-                                    className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">‹</button>
-                                <span className="px-3 text-sm font-semibold text-slate-800">{year}</span>
+                                    className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">‹</button>
+                                <span className="px-3 text-sm font-semibold text-slate-800 dark:text-slate-100">{year}</span>
                                 <button onClick={() => setYear(y => y + 1)}
-                                    className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">›</button>
+                                    className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">›</button>
                             </div>
                             {grid?.monthlyFee != null && (
-                                <span className="text-sm text-slate-500">
+                                <span className="text-sm text-slate-500 dark:text-slate-400">
                                     Mensalidade: <strong>R$ {grid.monthlyFee.toFixed(2)}</strong>
                                 </span>
                             )}
@@ -512,7 +512,7 @@ export default function PaymentsPage() {
                                 <Loader2 size={28} className="animate-spin text-slate-400" />
                             </div>
                         ) : !grid || grid.players.length === 0 ? (
-                            <div className="text-center py-16 text-slate-400">
+                            <div className="text-center py-16 text-slate-400 dark:text-slate-500">
                                 <Users size={40} className="mx-auto mb-2 opacity-40" />
                                 <p className="text-sm">Nenhum mensalista encontrado nesta patota.</p>
                                 <p className="text-xs mt-1">Jogadores sem conta vinculada ou convidados não aparecem aqui.</p>
@@ -522,20 +522,20 @@ export default function PaymentsPage() {
                             (() => {
                                 const currentMonth = year < new Date().getFullYear() ? 12 : new Date().getMonth() + 1;
                                 return (
-                                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                                         <table className="w-full text-xs border-collapse">
                                             <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-200">
-                                                    <th className="text-left px-3 py-2 font-semibold text-slate-600 sticky left-0 bg-slate-50 z-10 min-w-[120px]">Jogador</th>
+                                                <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                                                    <th className="text-left px-3 py-2 font-semibold text-slate-600 dark:text-slate-400 sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 min-w-[120px]">Jogador</th>
                                                     {MONTHS.map((m, i) => (
-                                                        <th key={i} className={cls('px-2 py-2 font-semibold text-center w-10', i + 1 <= currentMonth ? 'text-slate-500' : 'text-slate-300')}>{m}</th>
+                                                        <th key={i} className={cls('px-2 py-2 font-semibold text-center w-10', i + 1 <= currentMonth ? 'text-slate-500 dark:text-slate-400' : 'text-slate-300 dark:text-slate-600')}>{m}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-100">
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                                 {grid.players.map(row => (
-                                                    <tr key={row.playerId} className="hover:bg-slate-50/50">
-                                                        <td className="px-3 py-2 font-medium text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap border-r border-slate-100">
+                                                    <tr key={row.playerId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                                                        <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100 sticky left-0 bg-white dark:bg-slate-900 z-10 whitespace-nowrap border-r border-slate-100 dark:border-slate-800">
                                                             {row.playerName}
                                                         </td>
                                                         {MONTHS.map((_, i) => {
@@ -582,13 +582,13 @@ export default function PaymentsPage() {
                         {/* Toolbar */}
                         <div className="flex items-center gap-3 mb-4 flex-wrap">
                             <button onClick={() => { if (!grid) { loadMonthly(); } setCreateModal(true); }}
-                                className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-700 transition">
+                                className="flex items-center gap-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-700 dark:hover:bg-slate-100 transition">
                                 <Plus size={16} /> Nova cobrança
                             </button>
-                            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-                                <button onClick={() => setExtraYear(y => y - 1)} className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">‹</button>
-                                <span className="px-3 text-sm font-semibold text-slate-800">{extraYear}</span>
-                                <button onClick={() => setExtraYear(y => y + 1)} className="px-2 py-1 rounded text-slate-600 hover:bg-white text-sm">›</button>
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                                <button onClick={() => setExtraYear(y => y - 1)} className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">‹</button>
+                                <span className="px-3 text-sm font-semibold text-slate-800 dark:text-slate-100">{extraYear}</span>
+                                <button onClick={() => setExtraYear(y => y + 1)} className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">›</button>
                             </div>
                         </div>
 
@@ -598,7 +598,7 @@ export default function PaymentsPage() {
                                 <button key={month} onClick={() => setExtraMonth(month)}
                                     className={cls(
                                         'rounded-lg py-1.5 text-center text-xs transition border flex flex-col items-center gap-0.5',
-                                        extraMonth === month ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 hover:bg-slate-50',
+                                        extraMonth === month ? 'border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50',
                                         count === 0 && extraMonth !== month && 'opacity-40'
                                     )}>
                                     <span className="font-medium">{MONTHS[month - 1]}</span>
@@ -617,7 +617,7 @@ export default function PaymentsPage() {
                                 <Loader2 size={28} className="animate-spin text-slate-400" />
                             </div>
                         ) : currentAdminCharges.length === 0 && finalizedAdminCharges.length === 0 ? (
-                            <div className="text-center py-16 text-slate-400">
+                            <div className="text-center py-16 text-slate-400 dark:text-slate-500">
                                 <DollarSign size={40} className="mx-auto mb-2 opacity-40" />
                                 <p className="text-sm">Nenhuma cobrança em {MONTHS[extraMonth - 1]}/{extraYear}.</p>
                             </div>
@@ -626,7 +626,7 @@ export default function PaymentsPage() {
                                 {/* Cobranças correntes */}
                                 {currentAdminCharges.length > 0 && (
                                     <div>
-                                        <h3 className="text-sm font-semibold text-slate-700 mb-2">📌 Cobranças correntes</h3>
+                                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">📌 Cobranças correntes</h3>
                                         <div className="space-y-2">
                                             {currentAdminCharges.map(charge => {
                                                 const open   = expanded.has(charge.id);
@@ -646,7 +646,7 @@ export default function PaymentsPage() {
                                 {/* Cobranças finalizadas */}
                                 {finalizedAdminCharges.length > 0 && (
                                     <div>
-                                        <h3 className="text-sm font-semibold text-slate-700 mb-2">✅ Cobranças finalizadas</h3>
+                                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">✅ Cobranças finalizadas</h3>
                                         <div className="space-y-2">
                                             {finalizedAdminCharges.map(charge => {
                                                 const open   = expanded.has(charge.id);

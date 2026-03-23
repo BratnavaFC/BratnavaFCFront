@@ -255,22 +255,22 @@ export default function GroupsPage() {
             const pendingTotal = pmt ? pmt.pendingMonths + pmt.pendingExtras : 0;
             return (
                 <div className={[
-                    "rounded-xl border bg-white p-3 flex flex-col gap-2 shadow-sm transition-all",
+                    "rounded-xl border bg-white dark:bg-slate-900 p-3 flex flex-col gap-2 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 transition-all",
                     dim ? "opacity-50" : "",
-                    isMe ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200",
+                    isMe ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200 dark:border-slate-700",
                 ].join(" ")}>
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`h-9 w-9 rounded-full text-xs font-bold flex items-center justify-center shrink-0 select-none ${isMe ? 'bg-emerald-600 text-white' : p.isGuest ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-700'}`}>
+                        <div className={`h-9 w-9 rounded-full text-xs font-bold flex items-center justify-center shrink-0 select-none ${isMe ? 'bg-emerald-600 text-white' : p.isGuest ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
                             {initials}
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1 min-w-0">
-                                <span className="text-sm font-semibold text-slate-900 truncate">{p.name}</span>
+                                <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{p.name}</span>
                                 <span className="shrink-0 leading-none">
                                     <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />
                                 </span>
                             </div>
-                            {p.userName && <div className="text-[11px] text-slate-400 truncate">@{p.userName}</div>}
+                            {p.userName && <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate">@{p.userName}</div>}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                             {isMe && (
@@ -278,7 +278,7 @@ export default function GroupsPage() {
                             )}
                             {canEdit && (
                                 <button type="button" onClick={() => setEditPlayer(p)}
-                                    className="h-6 w-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                    className="h-6 w-6 rounded-lg flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                     title="Editar jogador" aria-label="Editar jogador">
                                     <Pencil size={11} />
                                 </button>
@@ -325,7 +325,7 @@ export default function GroupsPage() {
                             <div className="h-5 w-5 rounded-md bg-emerald-500 flex items-center justify-center shrink-0">
                                 <Check size={11} className="text-white" />
                             </div>
-                            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Mensalistas</span>
+                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Mensalistas</span>
                             <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">{activePlayers.length}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
@@ -341,7 +341,7 @@ export default function GroupsPage() {
                             <div className="h-5 w-5 rounded-md bg-amber-400 flex items-center justify-center shrink-0">
                                 <UserPlus size={11} className="text-white" />
                             </div>
-                            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Convidados</span>
+                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Convidados</span>
                             <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">{guestPlayers.length}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
@@ -357,8 +357,8 @@ export default function GroupsPage() {
                             <div className="h-5 w-5 rounded-md bg-slate-400 flex items-center justify-center shrink-0">
                                 <X size={11} className="text-white" />
                             </div>
-                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inativos</span>
-                            <span className="text-xs font-semibold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">{inactivePlayers.length}</span>
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Inativos</span>
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2 py-0.5">{inactivePlayers.length}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                             {inactivePlayers.map((p) => <PlayerCard key={p.id} p={p} dim />)}
@@ -460,7 +460,7 @@ export default function GroupsPage() {
                                 : group ? <HeaderButtons /> : null}
                         </div>
                     </div>
-                    <div className="card p-5 shadow-sm">
+                    <div className="card p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                         <GroupContent />
                     </div>
                 </div>
@@ -487,21 +487,21 @@ export default function GroupsPage() {
                             const isAdminHere = isGroupAdmin(groupId) || isGod;
                             const myPlayerHere = myPlayers.find(p => p.groupId === groupId);
                             return (
-                                <div key={groupId} className={["card p-0 overflow-hidden transition-shadow", isExpanded ? "shadow-md ring-1 ring-slate-900/10" : "shadow-sm"].join(" ")}>
+                                <div key={groupId} className={["card p-0 overflow-hidden transition-shadow", isExpanded ? "shadow-md ring-1 ring-slate-900/10 dark:ring-slate-700/50" : "shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"].join(" ")}>
                                     {/* Linha clicável */}
                                     <button
                                         type="button"
                                         onClick={() => toggleGroup(groupId)}
-                                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className={["h-9 w-9 rounded-xl text-sm font-black flex items-center justify-center shrink-0 select-none transition-colors", isExpanded ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"].join(" ")}>
+                                            <div className={["h-9 w-9 rounded-xl text-sm font-black flex items-center justify-center shrink-0 select-none transition-colors", isExpanded ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"].join(" ")}>
                                                 {groupName.charAt(0)}
                                             </div>
                                             <div className="min-w-0">
-                                                <div className="font-semibold text-slate-900 text-sm truncate">{groupName}</div>
+                                                <div className="font-semibold text-slate-900 dark:text-white text-sm truncate">{groupName}</div>
                                                 {isAdminHere && (
-                                                    <div className="text-[11px] text-slate-400">Você administra</div>
+                                                    <div className="text-[11px] text-slate-400 dark:text-slate-500">Você administra</div>
                                                 )}
                                             </div>
                                         </div>
@@ -532,14 +532,14 @@ export default function GroupsPage() {
                                             )}
                                             <ChevronDown
                                                 size={16}
-                                                className={["text-slate-400 transition-transform duration-200", isExpanded ? "rotate-180" : ""].join(" ")}
+                                                className={["text-slate-400 dark:text-slate-500 transition-transform duration-200", isExpanded ? "rotate-180" : ""].join(" ")}
                                             />
                                         </div>
                                     </button>
 
                                     {/* Conteúdo expandido */}
                                     {isExpanded && (
-                                        <div className="border-t border-slate-100 p-5">
+                                        <div className="border-t border-slate-100 dark:border-slate-800 p-5">
                                             <GroupContent />
                                         </div>
                                     )}

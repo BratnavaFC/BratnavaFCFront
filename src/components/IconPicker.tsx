@@ -31,7 +31,7 @@ export function IconPicker({ options, value, onChange }: IconPickerProps) {
                             'flex items-center justify-center w-10 h-10 rounded-xl border text-lg transition-all',
                             selected
                                 ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-300 shadow-sm scale-110'
-                                : 'border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50',
+                                : 'border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-violet-500 dark:hover:bg-violet-900/20',
                         ].join(' ')}
                     >
                         <IconRenderer value={opt.value} size={18} />

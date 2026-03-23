@@ -89,7 +89,7 @@ export function StepAccept({
                 </div>
 
                 <div className="card p-4">
-                    {admin ? (
+                    {admin && (
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div className="flex items-center gap-2 shrink-0">
                                 {onAddGuest && (
@@ -114,10 +114,6 @@ export function StepAccept({
                                     Ir para MatchMaking
                                 </button>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="muted text-sm">
-                            Você só pode aceitar/recusar <b>seu próprio nome</b>. Depois, aguarde o admin avançar as etapas.
                         </div>
                     )}
                 </div>

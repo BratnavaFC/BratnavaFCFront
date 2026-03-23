@@ -67,7 +67,7 @@ type ConfirmState = {
 
 function statusBadge(status: number) {
     return status === 2 ? (
-        <span className="pill bg-slate-100 text-slate-500 text-xs">Inativo</span>
+        <span className="pill bg-slate-100 text-slate-500 text-xs dark:bg-slate-800 dark:text-slate-400">Inativo</span>
     ) : (
         <span className="pill bg-green-100 text-green-700 text-xs">Ativo</span>
     );
@@ -248,7 +248,7 @@ export default function GodModeAdminPage() {
     return (
         <div className="p-4 max-w-4xl mx-auto space-y-4">
             <Section title="Painel GodMode">
-                <p className="text-sm text-slate-500 mb-3">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
                     Visão completa do sistema. Todos os grupos, jogadores, partidas e cores.
                 </p>
 
@@ -268,7 +268,7 @@ export default function GodModeAdminPage() {
                 )}
 
                 {filtered.length === 0 && (
-                    <p className="text-sm text-slate-400 text-center py-8">Nenhum grupo encontrado.</p>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">Nenhum grupo encontrado.</p>
                 )}
 
                 {/* Lista de grupos */}
@@ -283,15 +283,15 @@ export default function GodModeAdminPage() {
                             <div key={groupId} className="card overflow-hidden">
                                 {/* Cabeçalho do grupo */}
                                 <div
-                                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-50"
+                                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                     onClick={() => toggleExpand(groupId)}
                                 >
-                                    <span className="text-slate-400">
+                                    <span className="text-slate-400 dark:text-slate-500">
                                         {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                     </span>
                                     <span className="flex-1 font-medium text-sm">{group.name}</span>
                                     {statusBadge(group.status)}
-                                    <span className="text-xs text-slate-400">
+                                    <span className="text-xs text-slate-400 dark:text-slate-500">
                                         {group.players.length} jogador(es)
                                     </span>
                                     <button
@@ -305,9 +305,9 @@ export default function GodModeAdminPage() {
 
                                 {/* Conteúdo expandido */}
                                 {isOpen && (
-                                    <div className="border-t">
+                                    <div className="border-t dark:border-slate-700">
                                         {/* Tabs */}
-                                        <div className="flex border-b bg-slate-50 text-xs">
+                                        <div className="flex border-b bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 text-xs">
                                             {(["players", "matches", "colors"] as Tab[]).map((t) => {
                                                 const icons: Record<Tab, React.ReactNode> = {
                                                     players: <Users size={13} />,
@@ -326,8 +326,8 @@ export default function GodModeAdminPage() {
                                                         className={[
                                                             "flex items-center gap-1 px-4 py-2 border-b-2 transition",
                                                             tab === t
-                                                                ? "border-slate-900 text-slate-900 font-medium"
-                                                                : "border-transparent text-slate-500 hover:text-slate-700",
+                                                                ? "border-slate-900 text-slate-900 font-medium dark:border-white dark:text-white"
+                                                                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300",
                                                         ].join(" ")}
                                                     >
                                                         {icons[t]} {labels[t]}
@@ -340,14 +340,14 @@ export default function GodModeAdminPage() {
                                         {tab === "players" && (
                                             <div className="p-3 space-y-1">
                                                 {group.players.length === 0 && (
-                                                    <p className="text-xs text-slate-400 text-center py-4">
+                                                    <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-4">
                                                         Sem jogadores.
                                                     </p>
                                                 )}
                                                 {group.players.map((p) => (
                                                     <div
                                                         key={p.id}
-                                                        className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50"
+                                                        className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                                     >
                                                         <span className="flex-1 text-sm">{p.name}</span>
                                                         {p.isGuest && (
@@ -357,7 +357,7 @@ export default function GodModeAdminPage() {
                                                             <span className="pill bg-blue-100 text-blue-700 text-xs">GK</span>
                                                         )}
                                                         {statusBadge(p.status)}
-                                                        <span className="text-xs text-slate-400 w-8 text-right">
+                                                        <span className="text-xs text-slate-400 dark:text-slate-500 w-8 text-right">
                                                             {p.skillPoints}pts
                                                         </span>
                                                         <button
@@ -380,14 +380,14 @@ export default function GodModeAdminPage() {
                                                         <Loader2 className="animate-spin text-slate-400" size={18} />
                                                     </div>
                                                 ) : (lazyData.matches ?? []).length === 0 ? (
-                                                    <p className="text-xs text-slate-400 text-center py-4">
+                                                    <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-4">
                                                         Sem partidas.
                                                     </p>
                                                 ) : (
                                                     (lazyData.matches ?? []).map((m) => (
                                                         <div
                                                             key={m.matchId}
-                                                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50"
+                                                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                                         >
                                                             <span className="flex-1 text-sm">
                                                                 {m.placeName ?? "Sem local"}{" "}
@@ -395,7 +395,7 @@ export default function GodModeAdminPage() {
                                                                     ? `· ${new Date(m.playedAt).toLocaleDateString("pt-BR")}`
                                                                     : ""}
                                                             </span>
-                                                            <span className="pill bg-slate-100 text-slate-600 text-xs">
+                                                            <span className="pill bg-slate-100 text-slate-600 text-xs dark:bg-slate-800 dark:text-slate-400">
                                                                 {m.statusName ?? matchStatusLabel(m.status)}
                                                             </span>
                                                             <button
@@ -419,23 +419,23 @@ export default function GodModeAdminPage() {
                                                         <Loader2 className="animate-spin text-slate-400" size={18} />
                                                     </div>
                                                 ) : (lazyData.colors ?? []).length === 0 ? (
-                                                    <p className="text-xs text-slate-400 text-center py-4">
+                                                    <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-4">
                                                         Sem cores.
                                                     </p>
                                                 ) : (
                                                     (lazyData.colors ?? []).map((c) => (
                                                         <div
                                                             key={c.id}
-                                                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50"
+                                                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                                         >
                                                             <span
-                                                                className="w-5 h-5 rounded-full border border-slate-200 shrink-0"
+                                                                className="w-5 h-5 rounded-full border border-slate-200 dark:border-slate-700 shrink-0"
                                                                 style={{ background: c.hexValue }}
                                                             />
                                                             <span className="flex-1 text-sm">{c.name}</span>
-                                                            <span className="text-xs text-slate-400 font-mono">{c.hexValue}</span>
+                                                            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">{c.hexValue}</span>
                                                             {!c.isActive && (
-                                                                <span className="pill bg-slate-100 text-slate-500 text-xs">Inativa</span>
+                                                                <span className="pill bg-slate-100 text-slate-500 text-xs dark:bg-slate-800 dark:text-slate-400">Inativa</span>
                                                             )}
                                                             <button
                                                                 className="btn btn-danger py-0.5 px-1.5 text-xs"
@@ -465,8 +465,8 @@ export default function GodModeAdminPage() {
                             <AlertTriangle size={22} />
                             <span className="font-semibold text-base">Confirmar exclusão</span>
                         </div>
-                        <p className="text-sm text-slate-700">{confirm.label}</p>
-                        <p className="text-xs text-slate-400">Esta ação não pode ser desfeita.</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{confirm.label}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Esta ação não pode ser desfeita.</p>
                         <div className="flex gap-2 justify-end">
                             <button
                                 className="btn py-1.5 px-4 text-sm"

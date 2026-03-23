@@ -110,21 +110,21 @@ function Modal({
                 onClick={onClose}
             />
             <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className={`w-full ${widthClass} rounded-2xl bg-white shadow-2xl border overflow-hidden`}>
-                    <div className="flex items-center justify-between px-5 py-4 border-b">
+                <div className={`w-full ${widthClass} rounded-2xl bg-white dark:bg-slate-900 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700/50 border dark:border-slate-700 overflow-hidden`}>
+                    <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700">
                         <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center">
                                 <Shield size={18} />
                             </div>
                             <div>
-                                <div className="text-base font-semibold text-slate-900">{title}</div>
-                                <div className="text-xs text-slate-500">Bratnava FC</div>
+                                <div className="text-base font-semibold text-slate-900 dark:text-white">{title}</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">Bratnava FC</div>
                             </div>
                         </div>
 
                         <button
                             onClick={onClose}
-                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
                             aria-label="Fechar"
                             type="button"
                         >
@@ -142,7 +142,7 @@ function Modal({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-600">{label}</div>
+            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</div>
             {children}
         </div>
     );
@@ -167,8 +167,8 @@ function Input({
             className={[
                 "w-full rounded-xl border px-3 py-2 text-sm outline-none transition",
                 disabled
-                    ? "bg-slate-50 text-slate-500 border-slate-200"
-                    : "bg-white border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-200",
+                    ? "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400"
+                    : "bg-white border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-slate-500",
             ].join(" ")}
             value={value}
             placeholder={placeholder}
@@ -194,8 +194,8 @@ function Select({
             className={[
                 "w-full rounded-xl border px-3 py-2 text-sm outline-none transition",
                 disabled
-                    ? "bg-slate-50 text-slate-500 border-slate-200"
-                    : "bg-white border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-200",
+                    ? "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400"
+                    : "bg-white border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-white",
             ].join(" ")}
             value={value}
             disabled={disabled}
@@ -223,12 +223,12 @@ function Button({
 }) {
     const cls =
         variant === "primary"
-            ? "bg-slate-900 text-white hover:bg-slate-800"
+            ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
             : variant === "secondary"
-                ? "bg-white border border-slate-200 hover:bg-slate-50 text-slate-900"
+                ? "bg-white border border-slate-200 hover:bg-slate-50 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
                 : variant === "danger"
                     ? "bg-rose-600 text-white hover:bg-rose-500"
-                    : "bg-transparent hover:bg-slate-100 text-slate-800";
+                    : "bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100";
 
     return (
         <button
@@ -360,11 +360,11 @@ function EditUserModal({
     return (
         <Modal open={open} onClose={onClose} title={canEditAdminFields ? "Editar usuário" : "Alterar meus dados"} widthClass="max-w-3xl">
             {!user ? (
-                <div className="text-sm text-slate-600">Nenhum usuário selecionado.</div>
+                <div className="text-sm text-slate-600 dark:text-slate-400">Nenhum usuário selecionado.</div>
             ) : (
                 <div className="space-y-4">
                     {error && (
-                        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300">
                             {error}
                         </div>
                     )}
@@ -405,7 +405,7 @@ function EditUserModal({
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
                             <div><span className="font-medium">Status:</span> {statusLabel(user.status)} {user.inactivatedAt ? `(desde ${fmtDate(user.inactivatedAt)})` : ""}</div>
                             <div><span className="font-medium">Role:</span> {roleLabel(user.role)}</div>
                             {user.createDate && <div><span className="font-medium">Criado:</span> {fmtDate(user.createDate)}</div>}
@@ -500,7 +500,7 @@ function ChangePasswordModal({
         <Modal open={open} onClose={onClose} title="Alterar senha" widthClass="max-w-xl">
             <div className="space-y-4">
                 {error && (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300">
                         {error}
                     </div>
                 )}
@@ -757,18 +757,18 @@ export default function AdminUsersPage() {
                     <div className="card p-0 overflow-hidden shadow-sm">
 
                         {/* Search + filters */}
-                        <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 border-b border-slate-100 bg-slate-50/80">
+                        <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
                             <div className="flex-1 relative">
                                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                 <input
-                                    className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                                    className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder-slate-500"
                                     placeholder="Buscar por nome, usuário ou email..."
                                     value={search}
                                     onChange={(e) => { setPage(1); setSearch(e.target.value); }}
                                 />
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
-                                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+                                <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none">
                                     <input
                                         type="checkbox"
                                         checked={includeInactive}
@@ -798,20 +798,20 @@ export default function AdminUsersPage() {
                                     const isMe = u.id === myUserId;
                                     const isInativo = u.status === 2;
                                     const initials = [u.firstName?.[0], u.lastName?.[0]].filter(Boolean).join('').toUpperCase() || u.userName?.[0]?.toUpperCase() || '?';
-                                    const avatarCls = isMe ? 'bg-emerald-600 text-white' : u.role === 3 ? 'bg-violet-600 text-white' : u.role === 2 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-700';
+                                    const avatarCls = isMe ? 'bg-emerald-600 text-white' : u.role === 3 ? 'bg-violet-600 text-white' : u.role === 2 ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
                                     return (
                                         <div key={u.id} className={[
-                                            "rounded-xl border bg-white p-3 flex flex-col gap-2 shadow-sm transition-all",
+                                            "rounded-xl border bg-white dark:bg-slate-900 p-3 flex flex-col gap-2 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 transition-all",
                                             isInativo ? "opacity-50" : "",
-                                            isMe ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200",
+                                            isMe ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200 dark:border-slate-700",
                                         ].join(" ")}>
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 <div className={`h-9 w-9 rounded-full text-xs font-bold flex items-center justify-center shrink-0 select-none ${avatarCls}`}>
                                                     {initials}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-semibold text-slate-900 truncate">{fullName(u)}</div>
-                                                    <div className="text-[11px] text-slate-400 truncate">
+                                                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">{fullName(u)}</div>
+                                                    <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
                                                         {[u.userName && `@${u.userName}`, u.email].filter(Boolean).join(' · ')}
                                                     </div>
                                                 </div>
@@ -820,7 +820,7 @@ export default function AdminUsersPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => openEdit(u)}
-                                                        className="h-6 w-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                                        className="h-6 w-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-300 transition-colors"
                                                         title="Editar usuário"
                                                     >
                                                         <Pencil size={11} />
@@ -832,7 +832,7 @@ export default function AdminUsersPage() {
                                                     "text-[10px] px-2 py-0.5 rounded-full border leading-none font-medium",
                                                     u.role === 3 ? "bg-violet-50 border-violet-200 text-violet-700"
                                                         : u.role === 2 ? "bg-amber-50 border-amber-200 text-amber-700"
-                                                        : "bg-slate-50 border-slate-200 text-slate-600",
+                                                        : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400",
                                                 ].join(" ")}>
                                                     {roleLabel(u.role)}
                                                 </span>
@@ -849,16 +849,16 @@ export default function AdminUsersPage() {
                         )}
 
                         {/* Pagination footer */}
-                        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50/60">
-                            <div className="text-xs text-slate-500">
+                        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50">
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
                                 Mostrando{' '}
-                                <span className="font-semibold text-slate-700">{result?.items?.length ?? 0}</span>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">{result?.items?.length ?? 0}</span>
                                 {' '}de{' '}
-                                <span className="font-semibold text-slate-700">{result?.total ?? 0}</span>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">{result?.total ?? 0}</span>
                                 {' '}· Pág.{' '}
-                                <span className="font-semibold text-slate-700">{result?.page ?? page}</span>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">{result?.page ?? page}</span>
                                 {' '}de{' '}
-                                <span className="font-semibold text-slate-700">{totalPages}</span>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">{totalPages}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button
@@ -911,19 +911,19 @@ export default function AdminUsersPage() {
                     ) : (
                         /* ── Perfil ── */
                         <div className="card p-0 overflow-hidden shadow-sm">
-                            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
                                 <div className="h-8 w-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
                                     <User size={15} />
                                 </div>
                                 <div className="flex-1">
-                                    <div className="font-semibold text-slate-900 text-sm">Perfil</div>
-                                    <div className="text-xs text-slate-400">Seus dados pessoais</div>
+                                    <div className="font-semibold text-slate-900 dark:text-white text-sm">Perfil</div>
+                                    <div className="text-xs text-slate-400 dark:text-slate-500">Seus dados pessoais</div>
                                 </div>
                                 <div className="flex gap-2 shrink-0">
                                     <button
                                         type="button"
                                         onClick={() => { setEditUser(myUser); setEditOpen(true); }}
-                                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 transition shadow-sm"
+                                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 transition shadow-sm dark:shadow-none"
                                     >
                                         <Pencil size={14} />
                                         <span className="hidden sm:inline">Alterar dados</span>
@@ -931,7 +931,7 @@ export default function AdminUsersPage() {
                                     <button
                                         type="button"
                                         onClick={() => setPassOpen(true)}
-                                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 transition shadow-sm"
+                                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition shadow-sm dark:shadow-none"
                                     >
                                         <KeyRound size={14} />
                                         <span className="hidden sm:inline">Alterar senha</span>
@@ -953,8 +953,8 @@ export default function AdminUsersPage() {
                                     { label: 'Inativado em',   value: myUser.inactivatedAt ? fmtDate(myUser.inactivatedAt) : null },
                                 ].map(({ label, value }) => (
                                     <div key={label}>
-                                        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</div>
-                                        <div className="text-sm font-medium text-slate-900">{value || '—'}</div>
+                                        <div className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">{label}</div>
+                                        <div className="text-sm font-medium text-slate-900 dark:text-white">{value || '—'}</div>
                                     </div>
                                 ))}
                             </div>
@@ -962,10 +962,10 @@ export default function AdminUsersPage() {
                     )}
 
                     {/* ── Convites pendentes ── */}
-                    <div className="rounded-2xl border bg-white overflow-hidden">
-                        <div className="px-5 py-4 border-b flex items-center gap-3">
-                            <Bell size={16} className="text-slate-500" />
-                            <span className="text-sm font-semibold text-slate-900">
+                    <div className="rounded-2xl border bg-white dark:bg-slate-900 dark:border-slate-700 overflow-hidden">
+                        <div className="px-5 py-4 border-b dark:border-slate-700 flex items-center gap-3">
+                            <Bell size={16} className="text-slate-500 dark:text-slate-400" />
+                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
                                 Convites de patota
                             </span>
                             {invites.length > 0 && (
@@ -976,7 +976,7 @@ export default function AdminUsersPage() {
                         </div>
 
                         {inviteActionErr && (
-                            <div className="mx-5 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                            <div className="mx-5 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300">
                                 {inviteActionErr}
                             </div>
                         )}
@@ -988,7 +988,7 @@ export default function AdminUsersPage() {
                         ) : invites.length === 0 ? (
                             <div className="p-6 text-sm text-slate-400">Nenhum convite pendente.</div>
                         ) : (
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {invites.map((inv) => {
                                     const isAccepting = acceptingId === inv.id;
                                     const isRejecting = rejectingId === inv.id;
@@ -996,14 +996,14 @@ export default function AdminUsersPage() {
                                     return (
                                         <div key={inv.id} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
                                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <div className="h-10 w-10 rounded-xl bg-slate-100 text-slate-700 text-sm font-black flex items-center justify-center shrink-0 select-none">
+                                                <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-black flex items-center justify-center shrink-0 select-none">
                                                     {inv.groupName?.charAt(0) ?? '?'}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <div className="text-sm font-semibold text-slate-900 truncate">{inv.groupName}</div>
+                                                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">{inv.groupName}</div>
                                                     {inv.guestPlayerName && (
                                                         <div className="text-xs text-slate-500">
-                                                            Perfil: <span className="font-medium text-slate-700">{inv.guestPlayerName}</span>
+                                                            Perfil: <span className="font-medium text-slate-700 dark:text-slate-300">{inv.guestPlayerName}</span>
                                                         </div>
                                                     )}
                                                     <div className="text-xs text-slate-400">{new Date(inv.createDate).toLocaleDateString("pt-BR")}</div>

@@ -145,7 +145,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen grid place-items-center p-6">
+        <div className="min-h-screen grid place-items-center p-6 bg-slate-50 dark:bg-slate-950">
             <div className="card w-full max-w-md p-6">
                 <div className="text-2xl font-black tracking-tight">
                     {addMode ? "Adicionar conta" : "Entrar"}
@@ -175,7 +175,7 @@ export default function LoginPage() {
                         {isSubmitting ? "Entrando..." : "Entrar"}
                     </button>
 
-                    <div className="text-sm text-slate-600">
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
                         Não tem usuário?{" "}
                         <Link className="underline" to="/register">
                             Criar usuário

@@ -123,20 +123,20 @@ export function CreatorLeaveModal({
         <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
             <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border overflow-hidden flex flex-col">
+                <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700 border dark:border-slate-700 overflow-hidden flex flex-col">
 
                     {/* Header fixo */}
-                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                    <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
                                 <LogOut size={16} />
                             </div>
                             <div>
-                                <div className="text-base font-semibold text-slate-900">Sair da patota</div>
-                                <div className="text-xs text-slate-500 truncate max-w-[200px]">{group?.name}</div>
+                                <div className="text-base font-semibold text-slate-900 dark:text-white">Sair da patota</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px]">{group?.name}</div>
                             </div>
                         </div>
-                        <button type="button" onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center">
+                        <button type="button" onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white">
                             <X size={18} />
                         </button>
                     </div>
@@ -145,7 +145,7 @@ export function CreatorLeaveModal({
                     {step === 'confirm_single' && (
                         <>
                             <div className="px-5 py-5 space-y-4">
-                                <p className="text-sm text-slate-700">
+                                <p className="text-sm text-slate-700 dark:text-slate-300">
                                     <span className="font-semibold">{otherAdminPlayers[0]?.name}</span> assumirá como responsável pela patota.
                                     Seu perfil será convertido para convidado.
                                 </p>
@@ -168,9 +168,9 @@ export function CreatorLeaveModal({
                     {step === 'pick_admin' && (
                         <>
                             <div className="px-5 py-5 space-y-4">
-                                <p className="text-sm text-slate-700">Escolha quem assumirá como responsável pela patota:</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">Escolha quem assumirá como responsável pela patota:</p>
                                 <select
-                                    className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                    className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-500"
                                     value={selectedAdminId}
                                     onChange={e => setSelectedAdminId(e.target.value)}
                                     disabled={loading}
@@ -199,15 +199,15 @@ export function CreatorLeaveModal({
                     {step === 'no_admins_choice' && (
                         <>
                             <div className="px-5 py-5 space-y-3">
-                                <p className="text-sm text-slate-700">Você é o único admin da patota. Escolha o que fazer:</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">Você é o único admin da patota. Escolha o que fazer:</p>
                                 <button
                                     type="button"
-                                    className="w-full flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 hover:bg-slate-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-600 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                                     onClick={() => setStep('pick_promote')}
                                     disabled={eligibleForPromotion.length === 0}
                                 >
-                                    <div className="text-sm font-medium text-slate-900">Promover um jogador como admin</div>
-                                    <span className="ml-auto text-slate-400 text-xs">
+                                    <div className="text-sm font-medium text-slate-900 dark:text-white">Promover um jogador como admin</div>
+                                    <span className="ml-auto text-slate-400 dark:text-slate-500 text-xs">
                                         {eligibleForPromotion.length === 0 ? "Nenhum elegível" : `${eligibleForPromotion.length} disponíveis`}
                                     </span>
                                 </button>
@@ -228,9 +228,9 @@ export function CreatorLeaveModal({
                     {step === 'pick_promote' && (
                         <>
                             <div className="px-5 py-5 space-y-4">
-                                <p className="text-sm text-slate-700">Escolha um jogador para promover a admin e assumir a patota:</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">Escolha um jogador para promover a admin e assumir a patota:</p>
                                 <select
-                                    className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                    className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-500"
                                     value={selectedPromoteId}
                                     onChange={e => setSelectedPromoteId(e.target.value)}
                                     disabled={loading}
@@ -259,10 +259,10 @@ export function CreatorLeaveModal({
                     {step === 'confirm_delete_1' && (
                         <>
                             <div className="px-5 py-5 space-y-3">
-                                <p className="text-sm text-slate-700">
+                                <p className="text-sm text-slate-700 dark:text-slate-300">
                                     Tem certeza que deseja <span className="font-semibold text-rose-600">excluir permanentemente</span> a patota <span className="font-semibold">{group?.name}</span>?
                                 </p>
-                                <p className="text-xs text-slate-400">Todos os dados da patota serão perdidos.</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500">Todos os dados da patota serão perdidos.</p>
                             </div>
                             <div className="px-5 pb-5 flex gap-2">
                                 <button type="button" className="btn btn-secondary flex-1" onClick={() => setStep('no_admins_choice')} disabled={loading}>Cancelar</button>
@@ -281,7 +281,7 @@ export function CreatorLeaveModal({
                         <>
                             <div className="px-5 py-5 space-y-3">
                                 <p className="text-sm font-semibold text-rose-700">Confirmação final</p>
-                                <p className="text-sm text-slate-700">
+                                <p className="text-sm text-slate-700 dark:text-slate-300">
                                     Essa ação é <span className="font-semibold">irreversível</span>. A patota e todos os seus dados serão excluídos para sempre.
                                 </p>
                                 {err && <p className="text-sm text-rose-500">{err}</p>}

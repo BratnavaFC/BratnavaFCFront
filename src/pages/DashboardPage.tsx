@@ -103,11 +103,11 @@ function getOutcome(team: number, teamAGoals?: number | null, teamBGoals?: numbe
 
 function ColorDot({ hex, lg }: { hex?: string | null; lg?: boolean }) {
   const color = normalizeHex(hex);
-  if (!color) return <span className={`inline-block rounded-full bg-slate-200 shrink-0 ${lg ? 'h-5 w-5' : 'h-3.5 w-3.5'}`} />;
+  if (!color) return <span className={`inline-block rounded-full bg-slate-200 dark:bg-slate-700 shrink-0 ${lg ? 'h-5 w-5' : 'h-3.5 w-3.5'}`} />;
   const isWhite = color.toLowerCase() === '#ffffff';
   return (
     <span
-      className={`inline-block rounded-full border shrink-0 ${lg ? 'h-5 w-5' : 'h-3.5 w-3.5'} ${isWhite ? 'border-slate-300 shadow-sm' : 'border-white/30'}`}
+      className={`inline-block rounded-full border shrink-0 ${lg ? 'h-5 w-5' : 'h-3.5 w-3.5'} ${isWhite ? 'border-slate-300 dark:border-slate-600 shadow-sm' : 'border-white/30'}`}
       style={{ backgroundColor: color }}
     />
   );
@@ -115,7 +115,7 @@ function ColorDot({ hex, lg }: { hex?: string | null; lg?: boolean }) {
 
 function StatusBadge({ text }: { text?: string }) {
   const s = (text ?? '').toLowerCase();
-  let cls = 'bg-slate-50 text-slate-600 border-slate-200';
+  let cls = 'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700';
   if (s.includes('final') || s.includes('done'))          cls = 'bg-emerald-50 text-emerald-700 border-emerald-200';
   else if (s.includes('jog') || s.includes('play') || s.includes('live'))
                                                            cls = 'bg-blue-50 text-blue-700 border-blue-200';
@@ -261,19 +261,19 @@ export default function DashboardPage() {
 
       {/* ── Partida atual ── */}
       <div className="card p-0 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="h-6 w-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
               <CalendarDays size={13} className="text-blue-600" />
             </div>
-            <span className="text-sm font-semibold text-slate-800">Partida atual</span>
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Partida atual</span>
           </div>
           {groupId && (
             <button
               type="button"
               onClick={loadCurrentMatch}
               disabled={currentLoading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
             >
               <RefreshCw size={12} className={currentLoading ? 'animate-spin' : ''} />
               Atualizar
@@ -282,14 +282,14 @@ export default function DashboardPage() {
         </div>
         <div className="p-5">
           {!groupId ? (
-            <p className="text-sm text-slate-400 text-center py-6">Selecione uma patota para ver a partida atual.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">Selecione uma patota para ver a partida atual.</p>
           ) : currentLoading ? (
-            <div className="h-32 rounded-2xl bg-slate-100 animate-pulse" />
+            <div className="h-32 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
           ) : noCurrentMatch || !currentMatch ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
-              <Calendar size={32} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-medium text-slate-500">Nenhuma partida em andamento</p>
-              <p className="text-xs text-slate-400 mt-1">
+            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 py-12 text-center">
+              <Calendar size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhuma partida em andamento</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                 Inicie uma partida na seção <b>Partidas</b>.
               </p>
             </div>
@@ -301,12 +301,12 @@ export default function DashboardPage() {
 
       {/* ── Últimas partidas ── */}
       <div className="card p-0 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="h-6 w-6 rounded-lg bg-violet-500/10 flex items-center justify-center">
               <History size={13} className="text-violet-600" />
             </div>
-            <span className="text-sm font-semibold text-slate-800">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               Últimas partidas{selectedPlayer ? ` · ${selectedPlayer.playerName}` : ''}
             </span>
           </div>
@@ -315,7 +315,7 @@ export default function DashboardPage() {
               type="button"
               onClick={loadRecentMatches}
               disabled={recentLoading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
             >
               <RefreshCw size={12} className={recentLoading ? 'animate-spin' : ''} />
               Atualizar
@@ -324,16 +324,16 @@ export default function DashboardPage() {
         </div>
         <div className="p-5">
           {!selectedPlayerId ? (
-            <p className="text-sm text-slate-400 text-center py-6">Selecione um jogador para ver suas últimas partidas.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">Selecione um jogador para ver suas últimas partidas.</p>
           ) : recentLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />)}
+              {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />)}
             </div>
           ) : recentMatches.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
-              <Calendar size={32} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-medium text-slate-500">Nenhuma partida encontrada</p>
-              <p className="text-xs text-slate-400 mt-1">As últimas partidas do jogador aparecerão aqui.</p>
+            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 py-12 text-center">
+              <Calendar size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhuma partida encontrada</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">As últimas partidas do jogador aparecerão aqui.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -360,7 +360,7 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
 
   return (
     <div
-      className="rounded-2xl border border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all"
+      className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all"
       onClick={() => nav('/app/matches')}
       role="button"
     >
@@ -368,7 +368,7 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
       {/* Header bar */}
       <div className="flex items-center justify-between gap-3 bg-slate-900 px-5 py-3">
         <div className="flex items-center gap-2 text-sm text-white min-w-0">
-          <Clock size={14} className="text-slate-400 shrink-0" />
+          <Clock size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
           <span className="font-medium truncate">{dates?.full ?? '—'}</span>
         </div>
         <StatusBadge text={match.statusName} />
@@ -380,8 +380,8 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
         {/* Left — match info */}
         <div className="flex-1 space-y-3 min-w-0">
           {match.placeName && (
-            <div className="flex items-center gap-1.5 text-sm text-slate-600">
-              <MapPin size={14} className="text-slate-400 shrink-0" />
+            <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
+              <MapPin size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
               {match.placeName}
             </div>
           )}
@@ -393,7 +393,7 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
               label="Time A"
               count={match.teamAPlayers?.length ?? 0}
             />
-            <span className="text-xs font-bold text-slate-300">VS</span>
+            <span className="text-xs font-bold text-slate-300 dark:text-slate-600">VS</span>
             <TeamBlock
               color={match.teamBColor}
               label="Time B"
@@ -404,10 +404,10 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
           {/* Score if available */}
           {typeof match.teamAGoals === 'number' && typeof match.teamBGoals === 'number' && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Placar:</span>
-              <div className="flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Placar:</span>
+              <div className="flex items-center gap-1 rounded-lg bg-slate-900 dark:bg-slate-700 px-2.5 py-1">
                 <span className="text-sm font-extrabold text-white tabular-nums">{match.teamAGoals}</span>
-                <span className="text-slate-500 text-xs mx-0.5">×</span>
+                <span className="text-slate-500 dark:text-slate-400 text-xs mx-0.5">×</span>
                 <span className="text-sm font-extrabold text-white tabular-nums">{match.teamBGoals}</span>
               </div>
             </div>
@@ -416,14 +416,14 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
 
         {/* Right — player status */}
         {playerId && (
-          <div className="sm:border-l sm:border-slate-100 sm:pl-5 shrink-0 min-w-[170px]">
+          <div className="sm:border-l sm:border-slate-100 dark:sm:border-slate-800 sm:pl-5 shrink-0 min-w-[170px]">
             <div className="label mb-3">Sua situação</div>
 
             {!found ? (
-              <p className="text-sm text-slate-400">Não está nesta partida.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">Não está nesta partida.</p>
             ) : isUnassigned ? (
               <div className="space-y-2">
-                <p className="text-sm text-slate-500">Aguardando alocação de time.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Aguardando alocação de time.</p>
                 <InviteBadge response={found.player.inviteResponse} />
               </div>
             ) : isAssigned && found ? (
@@ -447,8 +447,8 @@ function TeamBlock({ color, label, count }: { color?: TeamColor | null; label: s
     <div className="flex items-center gap-2">
       <ColorDot hex={color?.hexValue} lg />
       <div className="text-xs">
-        <div className="font-medium text-slate-700">{color?.name ?? label}</div>
-        <div className="text-slate-400">{count} jogador{count !== 1 ? 'es' : ''}</div>
+        <div className="font-medium text-slate-700 dark:text-slate-300">{color?.name ?? label}</div>
+        <div className="text-slate-400 dark:text-slate-500">{count} jogador{count !== 1 ? 'es' : ''}</div>
       </div>
     </div>
   );
@@ -493,17 +493,17 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
   return (
     <button
-      className="w-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden flex items-stretch cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all"
+      className="w-full text-left rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex items-stretch cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all"
       onClick={() => nav(`/app/history/${groupId}/${matchId}`)}
     >
       {/* Accent strip — neutra */}
-      <div className="w-1 shrink-0 bg-slate-200" />
+      <div className="w-1 shrink-0 bg-slate-200 dark:bg-slate-700" />
 
       {/* Date box */}
-      <div className="flex flex-col items-center justify-center bg-slate-50 border-r border-slate-100 px-4 py-3 shrink-0 min-w-[58px]">
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{dates?.month ?? '—'}</div>
-        <div className="text-xl font-extrabold text-slate-800 leading-none">{dates?.day ?? '—'}</div>
-        {dates?.time && <div className="text-[10px] text-slate-400 mt-0.5">{dates.time}</div>}
+      <div className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800 px-4 py-3 shrink-0 min-w-[58px]">
+        <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{dates?.month ?? '—'}</div>
+        <div className="text-xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">{dates?.day ?? '—'}</div>
+        {dates?.time && <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{dates.time}</div>}
       </div>
 
       {/* Info */}
@@ -515,12 +515,12 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             {myHex || myName ? (
               <div className="flex items-center gap-1.5">
                 {myHex && <ColorDot hex={myHex} />}
-                <span className="text-[10px] text-slate-500 font-medium">{myName}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{myName}</span>
               </div>
             ) : (teamAHex || teamBHex) ? (
               <div className="flex items-center gap-1">
                 {teamAHex && <ColorDot hex={teamAHex} />}
-                <span className="text-[10px] text-slate-300 font-bold">vs</span>
+                <span className="text-[10px] text-slate-300 dark:text-slate-600 font-bold">vs</span>
                 {teamBHex && <ColorDot hex={teamBHex} />}
               </div>
             ) : null}
@@ -534,7 +534,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
             {/* Gols */}
             {goals !== null && goals > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
+              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'goal')} size={20} />
                 {goals}
               </span>
@@ -542,7 +542,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
             {/* Assistências */}
             {assists !== null && assists > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 font-medium">
+              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
                 {assists}
               </span>
@@ -552,9 +552,9 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
         {/* Placar */}
         {hasScore && (
-          <div className="flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 shrink-0">
+          <div className="flex items-center gap-1 rounded-xl bg-slate-900 dark:bg-slate-700 px-3 py-1.5 shrink-0">
             <span className="text-sm font-extrabold text-white tabular-nums leading-none">{scoreA}</span>
-            <span className="text-slate-500 text-xs mx-0.5">×</span>
+            <span className="text-slate-500 dark:text-slate-400 text-xs mx-0.5">×</span>
             <span className="text-sm font-extrabold text-white tabular-nums leading-none">{scoreB}</span>
           </div>
         )}

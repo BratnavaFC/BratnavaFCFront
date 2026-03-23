@@ -55,11 +55,11 @@ export default function PlayersPage(){
               </Field>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={isGoalkeeper} onChange={(e)=>setIsGoalkeeper(e.target.checked)} />
-                <span className="text-sm font-medium text-slate-700">Goleiro</span>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Goleiro</span>
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={isGuest} onChange={(e)=>setIsGuest(e.target.checked)} />
-                <span className="text-sm font-medium text-slate-700">Convidado</span>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Convidado</span>
               </label>
 
               <button className="btn btn-primary" onClick={create}>Criar perfil neste grupo</button>

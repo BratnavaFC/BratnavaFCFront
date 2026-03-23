@@ -261,8 +261,8 @@ export function MatchTimeSimulationTimeline({
             disabled={disabled}
             className={cls(
                 "h-9 px-3 rounded-lg border text-sm font-medium transition",
-                disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50",
-                "border-slate-200 bg-white text-slate-800"
+                disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50 dark:hover:bg-slate-800",
+                "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
             )}
         >
             {children}
@@ -325,8 +325,8 @@ export function MatchTimeSimulationTimeline({
         if (white) {
             return cls(
                 "relative z-10 h-7 w-7 rounded-full grid place-items-center cursor-pointer",
-                "bg-white border-2 border-slate-400",
-                "ring-2 ring-slate-300/60",
+                "bg-white dark:bg-slate-700 border-2 border-slate-400 dark:border-slate-500",
+                "ring-2 ring-slate-300/60 dark:ring-slate-600/60",
                 "shadow-[0_10px_22px_rgba(15,23,42,0.18),inset_0_1px_0_rgba(255,255,255,0.95)]",
                 "transition-transform duration-200 group-hover:scale-110"
             );
@@ -334,7 +334,7 @@ export function MatchTimeSimulationTimeline({
 
         return cls(
             "relative z-10 h-7 w-7 rounded-full grid place-items-center cursor-pointer",
-            "bg-white border-2",
+            "bg-white dark:bg-slate-700 border-2",
             "shadow-[0_10px_22px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]",
             "transition-transform duration-200 group-hover:scale-110"
         );
@@ -365,14 +365,14 @@ export function MatchTimeSimulationTimeline({
             <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                     <div className={cls("font-semibold", team === 1 ? "text-blue-700" : "text-orange-700")}>{teamLabel}</div>
-                    <div className="text-slate-600 font-medium">
+                    <div className="text-slate-600 dark:text-slate-400 font-medium">
                         {currentTeamGoals}/{totalTeamGoals}
                     </div>
                 </div>
 
                 <div className="relative h-10">
                     {/* trilho */}
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 rounded-full bg-slate-100 border border-slate-200" />
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
 
                     {/* ✅ fill (agora com left:0 SEMPRE) */}
                     <div className="absolute top-1/2 -translate-y-1/2 h-3 rounded-full" style={progressFillStyle(c)} />
@@ -380,7 +380,7 @@ export function MatchTimeSimulationTimeline({
                     {/* ticks */}
                     <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-1 pointer-events-none">
                         {Array.from({ length: 13 }).map((_, i) => (
-                            <div key={i} className="h-5 w-px bg-slate-200" />
+                            <div key={i} className="h-5 w-px bg-slate-200 dark:bg-slate-700" />
                         ))}
                     </div>
 
@@ -464,18 +464,18 @@ export function MatchTimeSimulationTimeline({
     const endLabel = inferredStart == null ? "--:--" : toHHMM(inferredStart + totalMinutes);
 
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
             <div className="flex items-start justify-between gap-3">
                 <div>
-                    <div className="font-semibold text-slate-900">Simulação do jogo</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="font-semibold text-slate-900 dark:text-white">Simulação do jogo</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                         {totalMinutes} minutos em <b>{Math.round(SIM_DURATION_MS / 1000)}s</b> • jogo inferido:{" "}
                         <b>{startLabel}</b> → <b>{endLabel}</b>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-mono text-sm text-slate-900">
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 font-mono text-sm text-slate-900 dark:text-white">
                         ⏱ {simMinuteInt}/{totalMinutes}
                     </div>
 

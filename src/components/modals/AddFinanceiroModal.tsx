@@ -107,18 +107,18 @@ export function AddFinanceiroModal({
         <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
             <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border overflow-hidden flex flex-col max-h-[85vh]">
-                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700 border overflow-hidden flex flex-col max-h-[85vh]">
+                    <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
                                 <Wallet size={17} />
                             </div>
                             <div>
-                                <div className="text-base font-semibold text-slate-900">Adicionar financeiro</div>
-                                <div className="text-xs text-slate-500 truncate max-w-[220px]">{groupName}</div>
+                                <div className="text-base font-semibold text-slate-900 dark:text-white">Adicionar financeiro</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]">{groupName}</div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center" aria-label="Fechar" type="button">
+                        <button onClick={onClose} className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white" aria-label="Fechar" type="button">
                             <X size={18} />
                         </button>
                     </div>
@@ -152,16 +152,16 @@ export function AddFinanceiroModal({
                                 const err       = addErr[u.id];
                                 return (
                                     <div key={u.id} className="space-y-1">
-                                        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
-                                            <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                        <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-3">
+                                            <div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center shrink-0 select-none">
                                                 {initials(u)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-semibold text-slate-900 truncate">{fullName(u)}</div>
-                                                <div className="text-xs text-slate-400">@{u.userName}</div>
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">{fullName(u)}</div>
+                                                <div className="text-xs text-slate-400 dark:text-slate-500">@{u.userName}</div>
                                             </div>
                                             {isAlready ? (
-                                                <span className="text-xs font-medium text-slate-400 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 shrink-0">Já é financeiro</span>
+                                                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 shrink-0">Já é financeiro</span>
                                             ) : isAdded ? (
                                                 <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 shrink-0">
                                                     <Check size={13} /> Adicionado

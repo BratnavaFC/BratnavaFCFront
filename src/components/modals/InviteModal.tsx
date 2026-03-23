@@ -147,22 +147,22 @@ export function InviteModal({
             />
 
             <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border overflow-hidden flex flex-col max-h-[85vh]">
+                <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700 border dark:border-slate-700 overflow-hidden flex flex-col max-h-[85vh]">
 
                     {/* header */}
-                    <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+                    <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700 shrink-0">
                         <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                            <div className="h-9 w-9 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center">
                                 <UserPlus size={17} />
                             </div>
                             <div>
-                                <div className="text-base font-semibold text-slate-900">Convidar jogador</div>
-                                <div className="text-xs text-slate-500 truncate max-w-[220px]">{groupName}</div>
+                                <div className="text-base font-semibold text-slate-900 dark:text-white">Convidar jogador</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]">{groupName}</div>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center"
                             aria-label="Fechar"
                             type="button"
                         >
@@ -196,13 +196,13 @@ export function InviteModal({
                     {/* results */}
                     <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2">
                         {!showResults ? (
-                            <p className="text-sm text-slate-400 text-center py-6">
+                            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">
                                 {q.length === 1 ? "Continue digitando..." : "Digite para buscar usuarios."}
                             </p>
                         ) : searchErr ? (
                             <p className="text-sm text-rose-500 text-center py-6">{searchErr}</p>
                         ) : searching ? null : results.length === 0 ? (
-                            <p className="text-sm text-slate-400 text-center py-6">
+                            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">
                                 Nenhum usuario encontrado para "{query}".
                             </p>
                         ) : (
@@ -214,25 +214,25 @@ export function InviteModal({
 
                                 return (
                                     <div key={u.id} className="space-y-1">
-                                        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                                        <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-3">
                                             {/* avatar */}
-                                            <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                                            <div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center shrink-0 select-none">
                                                 {initials(u)}
                                             </div>
 
                                             {/* info */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                                                     {fullName(u)}
                                                 </div>
-                                                <div className="text-xs text-slate-400">
+                                                <div className="text-xs text-slate-400 dark:text-slate-500">
                                                     @{u.userName}
                                                 </div>
                                             </div>
 
                                             {/* action */}
                                             {isMember ? (
-                                                <span className="text-xs font-medium text-slate-400 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 shrink-0">
+                                                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 shrink-0">
                                                     Membro
                                                 </span>
                                             ) : isInvited ? (
@@ -258,9 +258,9 @@ export function InviteModal({
                                         {/* guest player selector */}
                                         {!isMember && !isInvited && guestPlayers.length > 0 && (
                                             <div className="flex items-center gap-2 px-1">
-                                                <label className="text-xs text-slate-400 shrink-0">Perfil:</label>
+                                                <label className="text-xs text-slate-400 dark:text-slate-500 shrink-0">Perfil:</label>
                                                 <select
-                                                    className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                                    className="flex-1 text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-700 text-slate-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-slate-400"
                                                     value={guestChoice[u.id] ?? ""}
                                                     onChange={(e) =>
                                                         setGuestChoice((prev) => ({ ...prev, [u.id]: e.target.value }))

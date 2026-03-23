@@ -10,28 +10,13 @@ import EventDetailModal from "../components/modals/EventDetailModal";
 import CreateEditEventModal from "../components/modals/CreateEditEventModal";
 import CategoryManagerModal from "../components/modals/CategoryManagerModal";
 import DayDetailModal from "../components/modals/DayDetailModal";
+import type { CalendarEvent } from "../types/calendar";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 type ViewMode = "month" | "week" | "day";
-
-interface CalendarEvent {
-    id?: string;
-    type: "manual" | "birthday" | "match" | "holiday" | "event";
-    title: string;
-    date: string;        // "YYYY-MM-DD"
-    time?: string | null;
-    timeTBD: boolean;
-    categoryId?: string | null;
-    categoryName?: string | null;
-    categoryColor?: string | null;
-    categoryIcon?: string | null;
-    icon?: string | null;          // ícone direto do evento (sobrepõe categoryIcon)
-    sourceId?: string | null;
-    description?: string | null;
-}
 
 interface CalendarCategory {
     id: string;
@@ -235,11 +220,11 @@ function MonthView({
     return (
         <div className="flex-1 flex flex-col min-h-0">
             {/* Day headers */}
-            <div className="grid grid-cols-7 border-b">
+            <div className="grid grid-cols-7 border-b dark:border-slate-700">
                 {dayNamesFull.map((d, i) => (
                     <div key={d} className="py-1.5 sm:py-2 text-center">
-                        <span className="sm:hidden text-[11px] font-semibold text-slate-500">{dayNamesShort[i]}</span>
-                        <span className="hidden sm:inline text-xs font-semibold text-slate-500">{d}</span>
+                        <span className="sm:hidden text-[11px] font-semibold text-slate-600 dark:text-slate-200">{dayNamesShort[i]}</span>
+                        <span className="hidden sm:inline text-xs font-semibold text-slate-600 dark:text-slate-200">{d}</span>
                     </div>
                 ))}
             </div>
@@ -259,14 +244,14 @@ function MonthView({
                                     onClick={() => onDayClick(day, dayEvs)}
                                     onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onDayClick(day, dayEvs)}
                                     className={cls(
-                                        "border-r border-b last:border-r-0 p-0.5 sm:p-1 text-left flex flex-col items-start gap-0.5 overflow-hidden hover:bg-slate-50 transition-colors cursor-pointer",
-                                        !isCurrentMonth && "bg-slate-50/50",
+                                        "border-r border-b last:border-r-0 p-0.5 sm:p-1 text-left flex flex-col items-start gap-0.5 overflow-hidden hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer",
+                                        !isCurrentMonth && "bg-slate-50/50 dark:bg-slate-800/30",
                                     )}
                                 >
                                     {/* Day number */}
                                     <span className={cls(
                                         "h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center rounded-full text-[11px] sm:text-xs font-semibold mb-0.5",
-                                        isToday(day) ? "bg-slate-900 text-white" : isCurrentMonth ? "text-slate-900" : "text-slate-300",
+                                        isToday(day) ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : isCurrentMonth ? "text-slate-900 dark:text-white" : "text-slate-300 dark:text-slate-600",
                                     )}>
                                         {day.getDate()}
                                     </span>
@@ -284,10 +269,10 @@ function MonthView({
                                     )}
                                     {/* +N more */}
                                     {dayEvs.length > 2 && (
-                                        <span className="hidden sm:inline text-[10px] text-slate-500 font-medium px-0.5">+{dayEvs.length - 2}</span>
+                                        <span className="hidden sm:inline text-[10px] text-slate-500 dark:text-slate-400 font-medium px-0.5">+{dayEvs.length - 2}</span>
                                     )}
                                     {dayEvs.length > 1 && (
-                                        <span className="sm:hidden text-[10px] text-slate-500 font-medium px-0.5">+{dayEvs.length - 1}</span>
+                                        <span className="sm:hidden text-[10px] text-slate-500 dark:text-slate-400 font-medium px-0.5">+{dayEvs.length - 1}</span>
                                     )}
                                 </div>
                             );
@@ -322,12 +307,12 @@ function WeekView({
                         {/* Header */}
                         <div className={cls(
                             "py-1.5 sm:py-2 px-1 sm:px-2 text-center border-b",
-                            isToday(day) ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-600",
+                            isToday(day) ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400",
                         )}>
                             <div className="text-[9px] sm:text-[10px] font-semibold uppercase">
                                 {day.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")}
                             </div>
-                            <div className={cls("text-base sm:text-lg font-bold leading-tight", isToday(day) ? "text-white" : "text-slate-900")}>
+                            <div className={cls("text-base sm:text-lg font-bold leading-tight", isToday(day) ? "text-white dark:text-slate-900" : "text-slate-900 dark:text-white")}>
                                 {day.getDate()}
                             </div>
                         </div>
@@ -366,13 +351,13 @@ function DayView({
 
     if (dayEvs.length === 0) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-3">
                 <CalendarCheck size={36} className="text-slate-200" />
                 <p className="text-sm">Nenhum evento neste dia.</p>
                 {isAdmin && (
                     <button
                         onClick={() => onNewEvent(ds)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-medium hover:bg-slate-700 dark:hover:bg-slate-100 transition-colors"
                         type="button"
                     >
                         <Plus size={14} />Criar evento
@@ -401,12 +386,12 @@ function DayView({
                         <span className="text-xl sm:text-2xl leading-none mt-0.5">{icon}</span>
                         <div className="flex-1 min-w-0">
                             <div className={`font-semibold text-sm ${s.text}`}>{ev.title}</div>
-                            <div className="text-xs text-slate-500 mt-0.5">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                 {ev.timeTBD ? "Horário a confirmar" : (ev.time ?? "Sem horário")}
                                 {ev.categoryName && ` · ${ev.categoryName}`}
                             </div>
                             {ev.description && (
-                                <div className="text-xs text-slate-500 mt-1 line-clamp-2">{ev.description}</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{ev.description}</div>
                             )}
                         </div>
                     </button>
@@ -467,7 +452,7 @@ export default function CalendarPage() {
 
     if (!groupId) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 gap-2">
                 <CalendarCheck size={40} className="text-slate-200" />
                 <p className="text-sm">Selecione um grupo para ver o calendário.</p>
             </div>

@@ -58,7 +58,7 @@ export default function Layout() {
     const showMobileSidebar = isMobile && sidebarOpen; // sidebar s� aparece quando abrir no mobile
 
     return (
-        <div className="flex h-dvh bg-slate-50">
+        <div className="flex h-dvh bg-slate-50 dark:bg-slate-800/50">
             {/* ===== Desktop: Sidebar sempre vis�vel ===== */}
             {showDesktopSidebar && (
                 <Sidebar

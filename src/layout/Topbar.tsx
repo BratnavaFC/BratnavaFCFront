@@ -108,20 +108,20 @@ function CreateGroupModal({
                 onClick={onClose}
             />
             <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-4 border-b">
+                <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700/50 border dark:border-slate-700 overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700">
                         <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
                                 <Users2 size={18} />
                             </div>
                             <div>
-                                <div className="text-base font-semibold text-slate-900">Criar grupo</div>
-                                <div className="text-xs text-slate-500">Bratnava FC</div>
+                                <div className="text-base font-semibold text-slate-900 dark:text-white">Criar grupo</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">Bratnava FC</div>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                            className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
                             aria-label="Fechar"
                             type="button"
                         >
@@ -235,25 +235,25 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
 
     return (
         <>
-            <header className="h-16 bg-white border-b border-slate-200 px-3 md:px-6 flex items-center justify-between gap-3">
+            <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-3 md:px-6 flex items-center justify-between gap-3">
                 {/* LEFT */}
                 <div className="flex items-center gap-3 min-w-0">
                     {isMobile ? (
                         <button
                             type="button"
-                            className="h-10 w-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.98] transition grid place-items-center"
+                            className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-[0.98] transition grid place-items-center"
                             onClick={onMenuClick}
                             aria-label="Abrir menu"
                         >
-                            <Menu size={18} className="text-slate-700" />
+                            <Menu size={18} className="text-slate-700 dark:text-slate-300" />
                         </button>
                     ) : null}
 
-                    <UserCircle2 className="text-slate-700 shrink-0" />
+                    <UserCircle2 className="text-slate-700 dark:text-slate-300 shrink-0" />
 
                     <div className="min-w-0">
                         <div className="font-semibold leading-tight truncate">{display.name}</div>
-                        <div className="text-xs text-slate-500 flex items-center gap-2">
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                             <span className="pill">{roleLabel(role)}</span>
                             {!isMobile ? <span>Conta ativa</span> : null}
                         </div>
@@ -268,16 +268,16 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                             type="button"
                             title="Criar grupo"
                             aria-label="Criar grupo"
-                            className="h-10 w-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-900 active:scale-[0.97] transition grid place-items-center"
+                            className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-slate-900 active:scale-[0.97] transition grid place-items-center"
                             onClick={() => setCreateGroupOpen(true)}
                         >
-                            <Plus size={18} className="text-slate-700" />
+                            <Plus size={18} className="text-slate-700 dark:text-slate-300" />
                         </button>
                     ) : null}
 
                     {/* Player selector — desktop only; shown in mobile dropdown */}
                     {!isMobile && myPlayers.length === 1 && (
-                        <span className="text-sm text-slate-600 font-medium px-2 truncate max-w-[200px]">
+                        <span className="text-sm text-slate-600 dark:text-slate-400 font-medium px-2 truncate max-w-[200px]">
                             {myPlayers[0].playerName} ({myPlayers[0].groupName})
                         </span>
                     )}
@@ -297,7 +297,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                             </select>
                             <ChevronDown
                                 size={16}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none"
                             />
                         </div>
                     )}
@@ -323,7 +323,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                         </select>
                         <ChevronDown
                             size={16}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none"
                         />
                     </div>
 
@@ -341,11 +341,11 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                         <div className="relative">
                             <button
                                 type="button"
-                                className="h-10 w-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.98] transition grid place-items-center"
+                                className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-[0.98] transition grid place-items-center"
                                 onClick={() => setMobileMenuOpen((v) => !v)}
                                 aria-label="Acoes"
                             >
-                                <ChevronDown size={18} className="text-slate-700" />
+                                <ChevronDown size={18} className="text-slate-700 dark:text-slate-300" />
                             </button>
 
                             {mobileMenuOpen ? (
@@ -355,17 +355,17 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                                         aria-label="Fechar acoes"
                                         onClick={() => setMobileMenuOpen(false)}
                                     />
-                                    <div className="absolute right-0 mt-2 z-50 w-64 rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden">
+                                    <div className="absolute right-0 mt-2 z-50 w-64 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg dark:shadow-none dark:ring-1 dark:ring-slate-700/50 overflow-hidden">
                                         {/* Player selector section (mobile only) */}
                                         {myPlayers.length > 0 && (
-                                            <div className="px-3 py-2.5 border-b border-slate-100">
-                                                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                                            <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
+                                                <div className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5">
                                                     Patota ativa
                                                 </div>
                                                 {myPlayers.length === 1 ? (
-                                                    <div className="text-sm text-slate-700 font-medium truncate">
+                                                    <div className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate">
                                                         {myPlayers[0].playerName}{" "}
-                                                        <span className="text-xs text-slate-400">({myPlayers[0].groupName})</span>
+                                                        <span className="text-xs text-slate-400 dark:text-slate-500">({myPlayers[0].groupName})</span>
                                                     </div>
                                                 ) : (
                                                     <select
@@ -383,18 +383,18 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                                             </div>
                                         )}
                                         <button
-                                            className="w-full px-3 py-2.5 text-sm text-left hover:bg-slate-50 flex items-center gap-2"
+                                            className="w-full px-3 py-2.5 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center gap-2"
                                             onClick={() => { setMobileMenuOpen(false); nav("/login?add=1"); }}
                                         >
-                                            <Plus size={16} className="text-slate-700" />
+                                            <Plus size={16} className="text-slate-700 dark:text-slate-300" />
                                             Adicionar conta
                                         </button>
                                         <button
-                                            className="w-full px-3 py-2.5 text-sm text-left hover:bg-slate-50 flex items-center gap-2 disabled:opacity-50"
+                                            className="w-full px-3 py-2.5 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center gap-2 disabled:opacity-50"
                                             onClick={() => { setMobileMenuOpen(false); onLogout(); }}
                                             disabled={!active}
                                         >
-                                            <LogOut size={16} className="text-slate-700" />
+                                            <LogOut size={16} className="text-slate-700 dark:text-slate-300" />
                                             Sair
                                         </button>
                                     </div>

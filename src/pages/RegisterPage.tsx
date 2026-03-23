@@ -36,7 +36,7 @@ export default function RegisterPage(){
   };
 
   return (
-    <div className="min-h-screen grid place-items-center p-6">
+    <div className="min-h-screen grid place-items-center p-6 bg-slate-50 dark:bg-slate-950">
       <div className="card w-full max-w-md p-6">
         <div className="text-2xl font-black tracking-tight">Criar usuário</div>
 
@@ -63,7 +63,7 @@ export default function RegisterPage(){
             {isSubmitting ? 'Criando...' : 'Criar'}
           </button>
 
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-slate-600 dark:text-slate-400">
             Já tem conta? <Link className="underline" to="/login">Entrar</Link>
           </div>
         </form>

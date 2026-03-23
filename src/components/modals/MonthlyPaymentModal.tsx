@@ -72,11 +72,11 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
 
     return (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl dark:shadow-none dark:ring-1 dark:ring-slate-700 p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                     {row.playerName} — {MONTHS[month-1]}
                 </h3>
-                <p className="text-sm text-slate-500 mb-4">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
                     Valor: <span className="font-semibold">R$ {(cell?.amount ?? 0).toFixed(2)}</span>
                     {(cell?.discount ?? 0) > 0 && <> · Desconto: <span className="text-green-600 font-semibold">R$ {cell!.discount.toFixed(2)}</span></>}
                 </p>
@@ -84,28 +84,28 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
                 {isAdmin && (
                     <div className="space-y-3 mb-4">
                         <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Desconto (R$)</label>
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Desconto (R$)</label>
                             <input type="number" min="0" step="0.01"
                                 value={discount} onChange={e => setDiscount(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400" />
                         </div>
                         <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">Motivo do desconto</label>
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Motivo do desconto</label>
                             <input type="text" value={discReason} onChange={e => setDiscReason(e.target.value)}
                                 placeholder="Opcional"
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400" />
                         </div>
                     </div>
                 )}
 
                 <div className="mb-5">
-                    <label className="text-xs font-medium text-slate-600 block mb-1">
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">
                         Comprovante {isAdmin ? '(opcional)' : '(opcional)'}
                     </label>
                     <input type="file" accept="image/*,application/pdf"
                         onChange={e => setFile(e.target.files?.[0] ?? null)}
-                        className="block w-full text-sm text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-                    {cell?.hasProof && <p className="text-xs text-slate-400 mt-1">Comprovante já enviado: {cell.proofFileName}</p>}
+                        className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-700 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 dark:hover:file:bg-slate-600" />
+                    {cell?.hasProof && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Comprovante já enviado: {cell.proofFileName}</p>}
                 </div>
 
                 <div className="flex gap-2">
@@ -125,12 +125,12 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
                     )}
                     {!isPaid && isAdmin && (
                         <button onClick={() => submit(0)} disabled={saving}
-                            className="flex-1 border border-slate-200 text-slate-700 rounded-lg py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
+                            className="flex-1 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700/50 disabled:opacity-50">
                             Só salvar desconto
                         </button>
                     )}
                     <button onClick={onClose}
-                        className="px-4 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+                        className="px-4 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         Cancelar
                     </button>
                 </div>

@@ -117,7 +117,7 @@ export function TeamColorEditModal({
                 </div>
 
                 {/* body */}
-                <div className="bg-white">
+                <div className="bg-white dark:bg-slate-800">
                     <div className="grid md:grid-cols-2">
 
                         {/* ── left: form ──────────────────────────────── */}
@@ -141,7 +141,7 @@ export function TeamColorEditModal({
 
                                 {/* color info bar */}
                                 <div
-                                    className="px-3 py-2 flex items-center gap-2.5 bg-slate-50"
+                                    className="px-3 py-2 flex items-center gap-2.5 bg-slate-50 dark:bg-slate-700/50"
                                     style={{ borderTop: `1px solid ${hex}30` }}
                                 >
                                     <div
@@ -151,10 +151,10 @@ export function TeamColorEditModal({
                                             boxShadow: "0 0 0 1px rgba(0,0,0,0.1)",
                                         }}
                                     />
-                                    <span className="text-xs font-mono text-slate-500 tracking-wide">
+                                    <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tracking-wide">
                                         {hex.toUpperCase()}
                                     </span>
-                                    <span className="ml-auto text-xs text-slate-500 font-medium truncate max-w-[110px]">
+                                    <span className="ml-auto text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[110px]">
                                         {preview.name}
                                     </span>
                                 </div>
@@ -189,7 +189,7 @@ export function TeamColorEditModal({
                                 </div>
                             </Field>
 
-                            <div className="text-xs text-slate-400">
+                            <div className="text-xs text-slate-400 dark:text-slate-500">
                                 {mode === "create"
                                     ? "Cria uma nova cor no grupo."
                                     : "Atualiza nome e cor do uniforme selecionado."}
@@ -215,10 +215,10 @@ export function TeamColorEditModal({
 
                         {/* ── right: color picker ─────────────────────── */}
                         <div
-                            className="p-5 flex flex-col items-center justify-center gap-3 border-l border-slate-100"
+                            className="p-5 flex flex-col items-center justify-center gap-3 border-l border-slate-100 dark:border-slate-700"
                             style={{ minHeight: 240 }}
                         >
-                            <div className="text-[10px] text-slate-400 uppercase tracking-widest self-start">
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest self-start">
                                 Escolher cor
                             </div>
                             <HexColorPicker

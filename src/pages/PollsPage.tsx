@@ -127,15 +127,15 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
             type="button"
             onClick={onClick}
             disabled={!!loadingId}
-            className="w-full text-left px-4 py-4 hover:bg-slate-50 transition-colors group flex items-stretch gap-3 disabled:opacity-70"
+            className="w-full text-left px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group flex items-stretch gap-3 disabled:opacity-70"
         >
             {/* Left: icon + date */}
             <div className="flex flex-col items-center gap-1 shrink-0 w-14">
-                <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">
+                <div className="h-12 w-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl">
                     {icon}
                 </div>
                 {poll.eventDate && (
-                    <span className="text-[10px] font-semibold text-slate-500 text-center leading-tight">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 text-center leading-tight">
                         {formatEventDate(poll.eventDate)}
                     </span>
                 )}
@@ -144,22 +144,22 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
             {/* Center: info */}
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{poll.title}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{poll.title}</p>
                     {poll.hasVoted && (
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-0.5">
                             <Check size={8} strokeWidth={3} /> Respondeu
                         </span>
                     )}
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                         {isOpen ? 'Aberto' : 'Encerrado'}
                     </span>
                 </div>
                 {poll.description && (
-                    <p className="text-xs text-slate-500 truncate">{poll.description}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{poll.description}</p>
                 )}
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
                     {poll.eventLocation && (
-                        <span className="text-xs text-slate-400 flex items-center gap-0.5">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-0.5">
                             <MapPin size={10} /> {poll.eventLocation}
                         </span>
                     )}
@@ -178,7 +178,7 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
 
             {/* Right: responses + chevron */}
             <div className="flex flex-col items-end justify-center gap-1 shrink-0">
-                <span className="text-xs text-slate-400 flex items-center gap-1">
+                <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                     <Users size={11} /> {poll.totalVoters} respostas
                 </span>
                 {isLoading
@@ -201,14 +201,14 @@ function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: ()
             type="button"
             onClick={onClick}
             disabled={!!loadingId}
-            className="w-full text-left px-5 py-4 hover:bg-slate-50 transition-colors group flex items-center gap-3 disabled:opacity-70"
+            className="w-full text-left px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group flex items-center gap-3 disabled:opacity-70"
         >
             {/* Status dot */}
             <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${isOpen ? 'bg-emerald-400' : 'bg-slate-300'}`} />
 
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{poll.title}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{poll.title}</p>
                     {poll.hasVoted && (
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-0.5">
                             <Check size={8} strokeWidth={3} /> Votou
@@ -216,9 +216,9 @@ function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: ()
                     )}
                 </div>
                 {poll.description && (
-                    <p className="text-xs text-slate-500 truncate">{poll.description}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{poll.description}</p>
                 )}
-                <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
+                <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 dark:text-slate-500 flex-wrap">
                     <span>{poll.optionCount} opç{poll.optionCount !== 1 ? 'ões' : 'ão'}</span>
                     <span>·</span>
                     <span>{poll.totalVoters} votante{poll.totalVoters !== 1 ? 's' : ''}</span>

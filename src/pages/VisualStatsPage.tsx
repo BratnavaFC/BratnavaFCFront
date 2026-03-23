@@ -87,12 +87,12 @@ function isActive(status: number) {
 /** Horizontal W / E / D proportional bar */
 function WDLBar({ wins, ties, losses }: { wins: number; ties: number; losses: number }) {
     const total = wins + ties + losses;
-    if (total === 0) return <div className="h-2 rounded-full bg-slate-100" />;
+    if (total === 0) return <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800" />;
     const wPct = (wins / total) * 100;
     const tPct = (ties / total) * 100;
     const lPct = (losses / total) * 100;
     return (
-        <div className="flex h-2 w-full rounded-full overflow-hidden gap-px bg-slate-100">
+        <div className="flex h-2 w-full rounded-full overflow-hidden gap-px bg-slate-100 dark:bg-slate-800">
             <div style={{ width: `${wPct}%`, backgroundColor: "#16a34a" }} />
             <div style={{ width: `${tPct}%`, backgroundColor: "#94a3b8" }} />
             <div style={{ width: `${lPct}%`, backgroundColor: "#dc2626" }} />
@@ -105,7 +105,7 @@ function WRBar({ value }: { value: number }) {
     const color = wrColor(value);
     return (
         <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${value}%`, backgroundColor: color }} />
             </div>
             <span className="text-xs font-bold tabular-nums w-9 text-right" style={{ color }}>
@@ -132,8 +132,8 @@ function Tab({
             className={cx(
                 "flex items-center gap-1.5 px-1 pb-2.5 text-sm font-semibold border-b-2 transition-colors",
                 active
-                    ? "border-slate-900 text-slate-900"
-                    : "border-transparent text-slate-400 hover:text-slate-600"
+                    ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
+                    : "border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
             )}
         >
             {children}
@@ -160,8 +160,8 @@ function SortChip({
             className={cx(
                 "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition",
                 active
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    ? "border-slate-900 dark:border-white bg-slate-900 dark:bg-white text-white dark:text-slate-900"
+                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
             )}
         >
             {children}
@@ -316,10 +316,10 @@ export default function VisualStatsPage() {
     if (loading) {
         return (
             <div className="space-y-4">
-                <div className="h-6 w-40 rounded-lg bg-slate-100 animate-pulse" />
-                <div className="h-4 w-64 rounded-lg bg-slate-100 animate-pulse" />
-                <div className="h-72 rounded-xl bg-slate-100 animate-pulse" />
-                <div className="h-48 rounded-xl bg-slate-100 animate-pulse" />
+                <div className="h-6 w-40 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                <div className="h-4 w-64 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                <div className="h-72 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                <div className="h-48 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
             </div>
         );
     }
@@ -333,7 +333,7 @@ export default function VisualStatsPage() {
     }
 
     if (!data) {
-        return <div className="text-sm text-slate-500">Nenhum dado retornado.</div>;
+        return <div className="text-sm text-slate-500 dark:text-slate-400">Nenhum dado retornado.</div>;
     }
 
     /* ── UI ── */
@@ -387,22 +387,22 @@ export default function VisualStatsPage() {
                 <div className="space-y-6">
 
                     {/* ── Player ranking table ─────────────────────── */}
-                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
 
                         {/* Table toolbar */}
-                        <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-3">
-                            <span className="text-sm font-semibold text-slate-800 shrink-0">
+                        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3">
+                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 shrink-0">
                                 Ranking de jogadores
                             </span>
 
                             {/* Search */}
-                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 flex-1 min-w-[150px] max-w-xs">
+                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 flex-1 min-w-[150px] max-w-xs">
                                 <Search size={13} className="text-slate-400 shrink-0" />
                                 <input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Buscar jogador…"
-                                    className="w-full bg-transparent text-sm outline-none text-slate-900 placeholder:text-slate-400"
+                                    className="w-full bg-transparent text-sm outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 />
                             </div>
 
@@ -435,7 +435,7 @@ export default function VisualStatsPage() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 bg-slate-50 border-b border-slate-100">
+                                    <tr className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                                         <th className="px-4 py-2.5 text-left w-10">#</th>
                                         <th className="px-4 py-2.5 text-left">Jogador</th>
                                         <th className="px-4 py-2.5 text-right w-10">J</th>
@@ -447,10 +447,10 @@ export default function VisualStatsPage() {
                                         <th className="px-4 py-2.5 text-right w-12" title="Gols contra"><IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} /></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-50">
+                                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                     {sorted.length === 0 ? (
                                         <tr>
-                                            <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-400">
+                                            <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                                                 Nenhum jogador encontrado.
                                             </td>
                                         </tr>
@@ -463,7 +463,7 @@ export default function VisualStatsPage() {
                                                 <tr
                                                     key={p.playerId}
                                                     className={cx(
-                                                        "hover:bg-slate-50 cursor-pointer transition-colors",
+                                                        "hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors",
                                                         inactive && "opacity-50"
                                                     )}
                                                     onClick={() => {
@@ -472,7 +472,7 @@ export default function VisualStatsPage() {
                                                     }}
                                                 >
                                                     {/* Rank */}
-                                                    <td className="px-4 py-2.5 text-xs font-mono text-slate-400 tabular-nums">
+                                                    <td className="px-4 py-2.5 text-xs font-mono text-slate-400 dark:text-slate-500 tabular-nums">
                                                         {idx + 1}
                                                     </td>
 
@@ -484,14 +484,14 @@ export default function VisualStatsPage() {
                                                                     <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={13} />
                                                                 </span>
                                                             )}
-                                                            <span className="font-semibold text-slate-900 truncate">
+                                                            <span className="font-semibold text-slate-900 dark:text-white truncate">
                                                                 {p.name}
                                                             </span>
                                                             {p.mvps > 0 && (
                                                                 <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} lucideProps={{ className: "text-amber-400 shrink-0" }} />
                                                             )}
                                                             {inactive && (
-                                                                <span className="text-[10px] text-slate-400 shrink-0">
+                                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
                                                                     inativo
                                                                 </span>
                                                             )}
@@ -499,23 +499,23 @@ export default function VisualStatsPage() {
                                                     </td>
 
                                                     {/* Games */}
-                                                    <td className="px-4 py-2.5 text-right text-slate-500 tabular-nums">
+                                                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400 tabular-nums">
                                                         {p.gamesPlayed}
                                                     </td>
 
                                                     {/* V/E/D */}
                                                     <td className="px-4 py-2.5 text-center tabular-nums text-xs">
                                                         <span className="text-green-600 font-semibold">{p.wins}</span>
-                                                        <span className="text-slate-300 mx-0.5">/</span>
-                                                        <span className="text-slate-500">{p.ties}</span>
-                                                        <span className="text-slate-300 mx-0.5">/</span>
+                                                        <span className="text-slate-300 dark:text-slate-600 mx-0.5">/</span>
+                                                        <span className="text-slate-500 dark:text-slate-400">{p.ties}</span>
+                                                        <span className="text-slate-300 dark:text-slate-600 mx-0.5">/</span>
                                                         <span className="text-red-500 font-semibold">{p.losses}</span>
                                                     </td>
 
                                                     {/* WR */}
                                                     <td className="px-4 py-2.5">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                                                                 <div
                                                                     className="h-full rounded-full"
                                                                     style={{ width: `${wr}%`, backgroundColor: color }}
@@ -537,29 +537,29 @@ export default function VisualStatsPage() {
                                                                 <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />{p.mvps}
                                                             </span>
                                                         ) : (
-                                                            <span className="text-slate-300 text-xs">—</span>
+                                                            <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
                                                         )}
                                                     </td>
 
                                                     {/* Goals */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
                                                         {(p.goals || 0) > 0
-                                                            ? <span className="font-semibold text-slate-700">{p.goals}</span>
-                                                            : <span className="text-slate-300">—</span>}
+                                                            ? <span className="font-semibold text-slate-700 dark:text-slate-300">{p.goals}</span>
+                                                            : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
 
                                                     {/* Assists */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
                                                         {(p.assists || 0) > 0
-                                                            ? <span className="font-semibold text-slate-700">{p.assists}</span>
-                                                            : <span className="text-slate-300">—</span>}
+                                                            ? <span className="font-semibold text-slate-700 dark:text-slate-300">{p.assists}</span>
+                                                            : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
 
                                                     {/* Own goals */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
                                                         {(p.ownGoals || 0) > 0
                                                             ? <span className="font-semibold text-red-500">{p.ownGoals}</span>
-                                                            : <span className="text-slate-300">—</span>}
+                                                            : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
                                                 </tr>
                                             );
@@ -572,43 +572,43 @@ export default function VisualStatsPage() {
 
                     {/* ── Melhores duplas ──────────────────────────── */}
                     {globalSynergy.length > 0 && (
-                        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                                 <div>
-                                    <span className="text-sm font-semibold text-slate-800">
+                                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                                         Melhores duplas
                                     </span>
-                                    <span className="ml-2 text-xs text-slate-400">
+                                    <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
                                         {Math.min(globalSynergy.length, 20)} pares · por win rate
                                     </span>
                                 </div>
                                 <Layers size={14} className="text-slate-400 shrink-0" />
                             </div>
 
-                            <div className="divide-y divide-slate-50">
+                            <div className="divide-y divide-slate-50 dark:divide-slate-800">
                                 {globalSynergy.slice(0, 20).map((row, idx) => (
                                     <div
                                         key={`${row.aId}|${row.bId}`}
-                                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                                     >
                                         {/* Rank */}
-                                        <span className="text-xs font-mono text-slate-400 tabular-nums w-5 shrink-0">
+                                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500 tabular-nums w-5 shrink-0">
                                             {idx + 1}
                                         </span>
 
                                         {/* Names */}
                                         <div className="flex-1 min-w-0">
-                                            <span className="text-sm font-medium text-slate-900">
+                                            <span className="text-sm font-medium text-slate-900 dark:text-white">
                                                 {row.aName}
                                             </span>
-                                            <span className="text-slate-300 mx-1.5 text-xs">+</span>
-                                            <span className="text-sm font-medium text-slate-900">
+                                            <span className="text-slate-300 dark:text-slate-600 mx-1.5 text-xs">+</span>
+                                            <span className="text-sm font-medium text-slate-900 dark:text-white">
                                                 {row.bName}
                                             </span>
                                         </div>
 
                                         {/* Matches + wins */}
-                                        <span className="text-xs text-slate-400 tabular-nums shrink-0 hidden sm:block">
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums shrink-0 hidden sm:block">
                                             {row.matches}j · {row.wins}V
                                         </span>
 
@@ -631,18 +631,18 @@ export default function VisualStatsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
                     {/* ── Left: player list ────────────────────────── */}
-                    <div className="lg:col-span-4 rounded-xl border border-slate-200 bg-white overflow-hidden">
+                    <div className="lg:col-span-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
 
                         {/* Sidebar toolbar */}
-                        <div className="px-3 py-2.5 border-b border-slate-100 space-y-2">
+                        <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 space-y-2">
                             {/* Search */}
-                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5">
                                 <Search size={13} className="text-slate-400 shrink-0" />
                                 <input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Buscar…"
-                                    className="w-full bg-transparent text-sm outline-none text-slate-900 placeholder:text-slate-400"
+                                    className="w-full bg-transparent text-sm outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 />
                             </div>
 
@@ -666,9 +666,9 @@ export default function VisualStatsPage() {
                         </div>
 
                         {/* Player list */}
-                        <div className="max-h-[72vh] overflow-y-auto divide-y divide-slate-50">
+                        <div className="max-h-[72vh] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800">
                             {sorted.length === 0 && (
-                                <div className="px-4 py-6 text-sm text-center text-slate-400">
+                                <div className="px-4 py-6 text-sm text-center text-slate-400 dark:text-slate-500">
                                     Nenhum jogador encontrado.
                                 </div>
                             )}
@@ -683,8 +683,8 @@ export default function VisualStatsPage() {
                                         className={cx(
                                             "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
                                             active
-                                                ? "bg-slate-900"
-                                                : "hover:bg-slate-50"
+                                                ? "bg-slate-900 dark:bg-white"
+                                                : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                         )}
                                     >
                                         {/* Avatar initial */}
@@ -692,8 +692,8 @@ export default function VisualStatsPage() {
                                             className={cx(
                                                 "h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
                                                 active
-                                                    ? "bg-white/10 text-white"
-                                                    : "bg-slate-100 text-slate-600"
+                                                    ? "bg-white/10 dark:bg-slate-900/10 text-white dark:text-slate-900"
+                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                                             )}
                                         >
                                             {p.name[0]?.toUpperCase()}
@@ -701,7 +701,7 @@ export default function VisualStatsPage() {
 
                                         {/* Name + sub-info */}
                                         <div className="flex-1 min-w-0">
-                                            <div className={cx("text-sm font-semibold truncate", active ? "text-white" : "text-slate-900")}>
+                                            <div className={cx("text-sm font-semibold truncate", active ? "text-white dark:text-slate-900" : "text-slate-900 dark:text-white")}>
                                                 {p.isGoalkeeper ? <><IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={13} />{" "}</> : null}{p.name}
                                             </div>
                                             <div className={cx("text-[11px] tabular-nums", active ? "text-slate-400" : "text-slate-400")}>
@@ -725,14 +725,14 @@ export default function VisualStatsPage() {
                     {/* ── Right: player detail ─────────────────────── */}
                     <div className="lg:col-span-8 space-y-4">
                         {!selectedPlayer ? (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-white py-12 text-center">
-                                <Users size={28} className="mx-auto text-slate-300 mb-2" />
-                                <div className="text-sm text-slate-400">Selecione um jogador</div>
+                            <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-12 text-center">
+                                <Users size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                                <div className="text-sm text-slate-400 dark:text-slate-500">Selecione um jogador</div>
                             </div>
                         ) : (
                             <>
                                 {/* Player header card */}
-                                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
                                     {/* Top strip with player's WR color */}
                                     <div
                                         className="h-1"
@@ -743,13 +743,13 @@ export default function VisualStatsPage() {
                                         {/* Name row */}
                                         <div className="flex items-start gap-3">
                                             {/* Avatar */}
-                                            <div className="h-11 w-11 rounded-full bg-slate-900 text-white flex items-center justify-center font-extrabold text-lg shrink-0">
+                                            <div className="h-11 w-11 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-extrabold text-lg shrink-0">
                                                 {selectedPlayer.name[0]?.toUpperCase()}
                                             </div>
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-bold text-slate-900 text-lg leading-none">
+                                                    <span className="font-bold text-slate-900 dark:text-white text-lg leading-none">
                                                         {selectedPlayer.name}
                                                     </span>
                                                     {selectedPlayer.isGoalkeeper && (
@@ -758,16 +758,16 @@ export default function VisualStatsPage() {
                                                         </span>
                                                     )}
                                                     {!isActive(selectedPlayer.status) && (
-                                                        <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                                                        <span className="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                                                             Inativo
                                                         </span>
                                                     )}
                                                 </div>
 
                                                 {/* Inline stats */}
-                                                <div className="mt-2 flex items-center gap-3 flex-wrap text-xs text-slate-500">
+                                                <div className="mt-2 flex items-center gap-3 flex-wrap text-xs text-slate-500 dark:text-slate-400">
                                                     <span className="tabular-nums">
-                                                        <span className="font-semibold text-slate-700">{selectedPlayer.gamesPlayed}</span> jogos
+                                                        <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedPlayer.gamesPlayed}</span> jogos
                                                     </span>
                                                     <span className="text-green-600 tabular-nums font-semibold">
                                                         {selectedPlayer.wins}V
@@ -784,12 +784,12 @@ export default function VisualStatsPage() {
                                                         </span>
                                                     )}
                                                     {(selectedPlayer.goals || 0) > 0 && (
-                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600">
+                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600 dark:text-slate-400">
                                                             <IconRenderer value={resolveIcon(_icons, 'goal')} size={12} />{selectedPlayer.goals}
                                                         </span>
                                                     )}
                                                     {(selectedPlayer.assists || 0) > 0 && (
-                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600">
+                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600 dark:text-slate-400">
                                                             <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{selectedPlayer.assists}
                                                         </span>
                                                     )}
@@ -809,7 +809,7 @@ export default function VisualStatsPage() {
                                                 >
                                                     {pct(normalizeWR(selectedPlayer.winRate))}
                                                 </div>
-                                                <div className="text-[10px] uppercase tracking-widest text-slate-400 mt-0.5">
+                                                <div className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-0.5">
                                                     Win Rate
                                                 </div>
                                             </div>
@@ -827,25 +827,25 @@ export default function VisualStatsPage() {
                                 </div>
 
                                 {/* Synergies card */}
-                                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-2">
-                                            <Layers size={14} className="text-slate-400" />
-                                            <span className="text-sm font-semibold text-slate-800">
+                                            <Layers size={14} className="text-slate-400 dark:text-slate-500" />
+                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                                                 Sinergias
                                             </span>
-                                            <span className="text-xs text-slate-400">
+                                            <span className="text-xs text-slate-400 dark:text-slate-500">
                                                 {synergies.length} parceiro{synergies.length !== 1 ? "s" : ""}
                                             </span>
                                         </div>
 
                                         {/* Min-together filter */}
                                         <div className="flex items-center gap-1.5 shrink-0">
-                                            <span className="text-xs text-slate-400">Mín.</span>
+                                            <span className="text-xs text-slate-400 dark:text-slate-500">Mín.</span>
                                             <select
                                                 value={minTogether}
                                                 onChange={(e) => setMinTogether(parseInt(e.target.value, 10))}
-                                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white px-2 py-1 text-xs outline-none"
                                             >
                                                 <option value={1}>1+ j</option>
                                                 <option value={2}>2+ j</option>
@@ -857,27 +857,27 @@ export default function VisualStatsPage() {
                                     </div>
 
                                     {synergies.length === 0 ? (
-                                        <div className="px-4 py-8 text-center text-sm text-slate-400">
+                                        <div className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                                             Sem sinergias com esse filtro.
                                         </div>
                                     ) : (
-                                        <div className="divide-y divide-slate-50">
+                                        <div className="divide-y divide-slate-50 dark:divide-slate-800">
                                             {synergies.map((s) => (
                                                 <div
                                                     key={s.withPlayerId}
-                                                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                                                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                                                 >
                                                     {/* Partner avatar */}
-                                                    <div className="h-7 w-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                                    <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center font-bold text-xs shrink-0">
                                                         {s.withPlayerName[0]?.toUpperCase()}
                                                     </div>
 
                                                     {/* Partner name + games */}
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="text-sm font-medium text-slate-900 truncate">
+                                                        <div className="text-sm font-medium text-slate-900 dark:text-white truncate">
                                                             {s.withPlayerName}
                                                         </div>
-                                                        <div className="text-[11px] text-slate-400 tabular-nums">
+                                                        <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
                                                             {s.matchesTogether}j · {s.winsTogether}V
                                                         </div>
                                                     </div>
