@@ -17,8 +17,8 @@ export function StepEnded({
             <div className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <div className="font-semibold text-slate-900">Encerrado</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="font-semibold text-slate-900 dark:text-white">Encerrado</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
                             {admin
                                 ? "Partida encerrada. Avance para o Pós-jogo."
                                 : "Partida encerrada. Aguardando admin ir para Pós-jogo."}
@@ -28,11 +28,11 @@ export function StepEnded({
                     {admin ? (
                         <div className="flex items-center gap-2">
                             <button
-                                className="btn flex items-center gap-1.5"
                                 onClick={onRefresh}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
                             >
-                                <RefreshCw size={14} />
-                                <span className="hidden sm:inline">Recarregar</span>
+                                <RefreshCw size={12} />
+                                Recarregar
                             </button>
 
                             <button

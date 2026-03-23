@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, CreditCard, Loader2 } from "lucide-react";
+import { Check, CreditCard, Loader2, RefreshCw } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto, VoteCountDto, VoteDto } from "../matchTypes";
 import { cls } from "../matchUtils";
 import { GoalTracker } from "./GoalTracker";
@@ -73,12 +73,12 @@ function PaymentSection({
         };
 
         return (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
                 <div className="flex items-center gap-2 mb-3">
                     <CreditCard size={15} className="text-indigo-500 shrink-0" />
-                    <div className="font-semibold text-slate-900">Cobrança do jogo</div>
+                    <div className="font-semibold text-slate-900 dark:text-white">Cobrança do jogo</div>
                 </div>
-                <div className="text-xs text-slate-500 mb-3">
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                     Crie uma cobrança para os {participantPlayerIds.length} jogadores desta partida.
                 </div>
                 <div className="flex items-end gap-3">
@@ -136,12 +136,12 @@ function PaymentSection({
         : "—";
 
     return (
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
             <div className="flex items-center gap-2 mb-3">
                 <CreditCard size={15} className="text-indigo-500 shrink-0" />
-                <div className="font-semibold text-slate-900">Mensalidade</div>
+                <div className="font-semibold text-slate-900 dark:text-white">Mensalidade</div>
             </div>
-            <div className="text-xs text-slate-500 mb-3">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 Lança cobranças de mensalidade para todos os mensalistas — {dateLabel}.
             </div>
 
@@ -293,18 +293,18 @@ export function StepPost({
                 </div>
 
                 {/* Score */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 text-center">
                     <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
                         Placar
                     </div>
-                    <div className="text-4xl font-extrabold text-slate-900">{scoreText}</div>
+                    <div className="text-4xl font-extrabold text-slate-900 dark:text-white">{scoreText}</div>
                 </div>
 
                 {/* Voting section */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
                     <div className="flex items-center gap-2 mb-3">
                         <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
-                        <div className="font-semibold text-slate-900 text-sm">Seu voto MVP</div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Seu voto MVP</div>
                     </div>
 
                     {!isParticipant ? (
@@ -319,9 +319,9 @@ export function StepPost({
                                     Você já votou no MVP
                                 </span>
                             </div>
-                            <div className="mt-1 text-sm text-slate-600 pl-[22px]">
+                            <div className="mt-1 text-sm text-slate-600 dark:text-slate-400 pl-[22px]">
                                 Votado:{" "}
-                                <b className="text-slate-900">{myVote!.votedForName}</b>
+                                <b className="text-slate-900 dark:text-slate-100">{myVote!.votedForName}</b>
                             </div>
                         </div>
                     ) : (
@@ -337,8 +337,8 @@ export function StepPost({
                                                 className={cls(
                                                     "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                                                     isSelected
-                                                        ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
-                                                        : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
+                                                        ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-300"
+                                                        : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
                                                 )}
                                                 onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
                                             >
@@ -400,7 +400,7 @@ export function StepPost({
         .map(p => p.playerId)
         .filter((id): id is string => !!id);
 
-    const showPaymentSection = paymentMode != null && groupId;
+    const showPaymentSection = paymentMode === 1 && groupId;
 
     return (
         <div className="space-y-4">
@@ -415,7 +415,11 @@ export function StepPost({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button className="btn" onClick={onRefresh}>
+                        <button
+                            onClick={onRefresh}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+                        >
+                            <RefreshCw size={12} />
                             Recarregar
                         </button>
                         <button className="btn btn-primary" onClick={onFinalize}>
@@ -439,10 +443,10 @@ export function StepPost({
                 )}
 
                 {/* MVP voting */}
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
                     <div className="flex items-center gap-2 mb-1">
                         <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
-                        <div className="font-semibold text-slate-900">Votar MVP</div>
+                        <div className="font-semibold text-slate-900 dark:text-white">Votar MVP</div>
                     </div>
                     <div className="text-xs text-slate-500">
                         Admin pode votar por qualquer jogador ainda não votado.
@@ -515,8 +519,8 @@ export function StepPost({
                                                 className={cls(
                                                     "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                                                     isSelected
-                                                        ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
-                                                        : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
+                                                        ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-300"
+                                                        : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
                                                 )}
                                                 onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
                                             >
@@ -552,7 +556,7 @@ export function StepPost({
 
                     {/* Vote counts + individual votes */}
                     <div className="mt-4">
-                        <div className="text-sm font-semibold text-slate-900">Parciais</div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Parciais</div>
                         <div className="mt-2 grid gap-2">
                             {voteCounts.length === 0 ? (
                                 <div className="muted">Sem votos ainda.</div>
@@ -560,9 +564,9 @@ export function StepPost({
                                 voteCounts.map((v) => (
                                     <div
                                         key={v.votedForMatchPlayerId}
-                                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                                        className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2"
                                     >
-                                        <div className="font-medium text-slate-900 truncate">
+                                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
                                             {v.votedForName}
                                         </div>
                                         <span className="pill">{v.count}</span>
@@ -573,21 +577,21 @@ export function StepPost({
 
                         {/* Who voted for whom (detailed breakdown) */}
                         {votes.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                                <div className="text-xs font-medium text-slate-500 mb-1.5">
+                            <div className="mt-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2">
+                                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
                                     Detalhamento
                                 </div>
                                 <div className="grid gap-1">
                                     {votes.map((v) => (
                                         <div
                                             key={v.voteId}
-                                            className="flex items-center gap-1.5 text-xs text-slate-600"
+                                            className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400"
                                         >
-                                            <span className="text-slate-400 truncate">
+                                            <span className="text-slate-400 dark:text-slate-500 truncate">
                                                 {v.voterName}
                                             </span>
-                                            <span className="text-slate-300">→</span>
-                                            <span className="font-medium text-slate-700 truncate">
+                                            <span className="text-slate-300 dark:text-slate-600">→</span>
+                                            <span className="font-medium text-slate-700 dark:text-slate-300 truncate">
                                                 {v.votedForName}
                                             </span>
                                         </div>
@@ -599,9 +603,9 @@ export function StepPost({
                 </div>
 
                 {/* Score */}
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="font-semibold text-slate-900">Placar</div>
-                    <div className="text-xs text-slate-500">
+                <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
+                    <div className="font-semibold text-slate-900 dark:text-white">Placar</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                         Você pode setar manualmente (ou deixar pelos gols).
                     </div>
 

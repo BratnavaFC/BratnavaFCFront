@@ -3,7 +3,15 @@ import { Check } from 'lucide-react';
 
 export type Step = { key: string; title: string; subtitle?: string; done?: boolean; };
 
-export function Stepper({ steps, activeKey }: { steps: Step[]; activeKey: string }) {
+export function Stepper({
+  steps,
+  activeKey,
+  onStepClick,
+}: {
+  steps: Step[];
+  activeKey: string;
+  onStepClick?: (key: string) => void;
+}) {
   const activeIdx = steps.findIndex(s => s.key === activeKey);
 
   return (
@@ -15,17 +23,24 @@ export function Stepper({ steps, activeKey }: { steps: Step[]; activeKey: string
             const active  = s.key === activeKey;
             const done    = s.done ?? false;
             const isLast  = idx === steps.length - 1;
+            const clickable = !!onStepClick;
 
             return (
               <React.Fragment key={s.key}>
                 {/* step node */}
-                <div className="flex flex-col items-center gap-1.5 flex-none" style={{ width: 76 }}>
+                <div
+                  className={["flex flex-col items-center gap-1.5 flex-none", clickable ? "cursor-pointer group" : ""].join(" ")}
+                  style={{ width: 76 }}
+                  onClick={clickable ? () => onStepClick(s.key) : undefined}
+                  title={clickable ? s.title : undefined}
+                >
                   {/* circle */}
                   <div className={[
                     "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200",
                     active ? "bg-slate-900 text-white ring-4 ring-slate-200 dark:bg-white dark:text-slate-900 dark:ring-slate-700"
                            : done  ? "bg-emerald-500 text-white"
                                    : "bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700",
+                    clickable && !active ? "group-hover:ring-2 group-hover:ring-slate-300 dark:group-hover:ring-slate-600" : "",
                   ].join(" ")}>
                     {done ? <Check size={13} strokeWidth={3} /> : idx + 1}
                   </div>

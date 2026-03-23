@@ -1,9 +1,7 @@
-import { useState } from "react";
-import { UserPlus } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import type { PlayerInMatchDto } from "../matchTypes";
 import { InviteList } from "../ui/InviteList";
 import { cls } from "../matchUtils";
-import { AddGuestModal } from "../../../components/modals/AddGuestModal";
 
 // ── StepAccept ───────────────────────────────────────────────────────────────
 
@@ -19,7 +17,6 @@ export function StepAccept({
     onReject,
     onRefresh,
     onGoToMatchMaking,
-    onAddGuest,
     onSetPlayerRole,
 }: {
     admin: boolean;
@@ -33,91 +30,68 @@ export function StepAccept({
     onReject: (playerId: string) => void;
     onRefresh: () => void;
     onGoToMatchMaking: () => void;
-    onAddGuest?: (name: string, isGoalkeeper: boolean, starRating: number | null) => Promise<void>;
     onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
 }) {
-    const [addGuestOpen, setAddGuestOpen] = useState(false);
-
-    async function handleGuestSubmit(name: string, isGoalkeeper: boolean, starRating: number | null) {
-        if (onAddGuest) await onAddGuest(name, isGoalkeeper, starRating);
-        onRefresh();
-    }
-
     return (
-        <>
-            <AddGuestModal
-                open={addGuestOpen}
-                onClose={() => setAddGuestOpen(false)}
-                onSubmit={handleGuestSubmit}
-            />
-
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <InviteList
-                        title="Aceitos"
-                        items={accepted}
-                        variant="accepted"
-                        isAdmin={admin}
-                        activePlayerId={activePlayerId}
-                        mutatingInvite={mutatingInvite}
-                        onAccept={onAccept}
-                        onReject={onReject}
-                        onSetPlayerRole={onSetPlayerRole}
-                    />
-                    <InviteList
-                        title="Não Aceitos"
-                        items={rejected}
-                        variant="rejected"
-                        isAdmin={admin}
-                        activePlayerId={activePlayerId}
-                        mutatingInvite={mutatingInvite}
-                        onAccept={onAccept}
-                        onReject={onReject}
-                        onSetPlayerRole={onSetPlayerRole}
-                    />
-                    <InviteList
-                        title="Pendentes"
-                        items={pending}
-                        variant="pending"
-                        isAdmin={admin}
-                        activePlayerId={activePlayerId}
-                        mutatingInvite={mutatingInvite}
-                        onAccept={onAccept}
-                        onReject={onReject}
-                        onSetPlayerRole={onSetPlayerRole}
-                    />
-                </div>
-
-                <div className="card p-4">
-                    {admin && (
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="flex items-center gap-2 shrink-0">
-                                {onAddGuest && (
-                                    <button
-                                        className="btn flex items-center gap-1.5"
-                                        onClick={() => setAddGuestOpen(true)}
-                                        title="Adicionar convidado diretamente na partida"
-                                    >
-                                        <UserPlus size={14} />
-                                        <span className="hidden sm:inline">Convidado</span>
-                                    </button>
-                                )}
-
-                                <button className="btn" onClick={onRefresh}>Recarregar</button>
-
-                                <button
-                                    className={cls("btn btn-primary", (acceptedOverLimit || accepted.length < 2) && "opacity-50 pointer-events-none")}
-                                    disabled={acceptedOverLimit || accepted.length < 2}
-                                    onClick={onGoToMatchMaking}
-                                    title="Avança para MatchMaking (times/cores/swap)"
-                                >
-                                    Ir para MatchMaking
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+        <div className="space-y-4">
+            <div className="flex justify-end">
+                <button
+                    onClick={onRefresh}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+                >
+                    <RefreshCw size={12} />
+                    Recarregar
+                </button>
             </div>
-        </>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <InviteList
+                    title="Aceitos"
+                    items={accepted}
+                    variant="accepted"
+                    isAdmin={admin}
+                    activePlayerId={activePlayerId}
+                    mutatingInvite={mutatingInvite}
+                    onAccept={onAccept}
+                    onReject={onReject}
+                    onSetPlayerRole={onSetPlayerRole}
+                />
+                <InviteList
+                    title="Não Aceitos"
+                    items={rejected}
+                    variant="rejected"
+                    isAdmin={admin}
+                    activePlayerId={activePlayerId}
+                    mutatingInvite={mutatingInvite}
+                    onAccept={onAccept}
+                    onReject={onReject}
+                    onSetPlayerRole={onSetPlayerRole}
+                />
+                <InviteList
+                    title="Pendentes"
+                    items={pending}
+                    variant="pending"
+                    isAdmin={admin}
+                    activePlayerId={activePlayerId}
+                    mutatingInvite={mutatingInvite}
+                    onAccept={onAccept}
+                    onReject={onReject}
+                    onSetPlayerRole={onSetPlayerRole}
+                />
+            </div>
+
+            {admin && (
+                <div className="card p-4 flex justify-end">
+                    <button
+                        className={cls("btn btn-primary", (acceptedOverLimit || accepted.length < 2) && "opacity-50 pointer-events-none")}
+                        disabled={acceptedOverLimit || accepted.length < 2}
+                        onClick={onGoToMatchMaking}
+                        title="Avança para MatchMaking (times/cores/swap)"
+                    >
+                        Ir para MatchMaking
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }

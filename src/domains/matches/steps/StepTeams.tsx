@@ -111,7 +111,7 @@ function ColorPreviewChip({ hex, name }: { hex: string; name: string }) {
                 }}
             />
             <div>
-                <div className="text-xs font-semibold text-slate-700 leading-tight">{name}</div>
+                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">{name}</div>
                 <div className="text-[11px] text-slate-400 font-mono">{safe.toUpperCase()}</div>
             </div>
         </div>
@@ -284,10 +284,10 @@ export function StepTeams({
     const canSwapPlayers = !!sel1 && !!sel2Id;
 
     const teamsSetPanel = teamsAlreadyAssigned ? (
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden shadow-sm dark:shadow-none">
             {/* Panel header */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50/60">
-                <div className="text-sm font-semibold text-slate-900 flex-1">Times definidos</div>
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800">
+                <div className="text-sm font-semibold text-slate-900 dark:text-white flex-1">Times definidos</div>
                 {admin && (
                     <>
                         {/* 3-button action bar */}
@@ -341,7 +341,7 @@ export function StepTeams({
                                 "shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
                                 canStartNow
                                     ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
-                                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    : "bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
                             )}
                         >
                             <Play size={12} />
@@ -352,15 +352,12 @@ export function StepTeams({
             </div>
 
             {/* Two team columns — stack on mobile, side-by-side on sm+ */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700">
                 {/* ── Team A ── */}
                 <div>
                     <div
-                        className="flex items-center justify-between px-4 py-2.5"
-                        style={{
-                            backgroundColor: hasAColor ? aHex + "18" : "#f8fafc",
-                            borderBottom: `2px solid ${hasAColor ? aHex : "#e2e8f0"}`,
-                        }}
+                        className="flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700"
+                        style={hasAColor ? { backgroundColor: aHex + "18", borderBottom: `2px solid ${aHex}` } : undefined}
                     >
                         <div className="flex items-center gap-2">
                             {hasAColor && (
@@ -375,14 +372,14 @@ export function StepTeams({
                             )}
                             <span
                                 className="text-sm font-bold"
-                                style={{ color: hasAColor && !isWhiteHex(aHex) ? aHex : "#0f172a" }}
+                                style={{ color: hasAColor && !isWhiteHex(aHex) ? aHex : undefined }}
                             >
                                 {aName}
                             </span>
                         </div>
                         <span className="text-xs text-slate-400">{sortedTeamAPlayers.length}j</span>
                     </div>
-                    <ul className="divide-y divide-slate-50">
+                    <ul className="divide-y divide-slate-50 dark:divide-slate-700/50">
                         {sortedTeamAPlayers.map((p) => {
                             const isSel1 = sel1?.id === p.playerId;
                             const isSel2 = sel2Id === p.playerId;
@@ -395,22 +392,22 @@ export function StepTeams({
                                     className={cls(
                                         "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
                                         admin && "cursor-pointer",
-                                        isSel1 ? "bg-amber-50 border-l-[3px] border-amber-400"
-                                        : isSel2 ? "bg-emerald-50 border-l-[3px] border-emerald-400"
-                                        : isOpposite ? "hover:bg-emerald-50"
-                                        : admin ? "hover:bg-slate-50" : ""
+                                        isSel1 ? "bg-amber-50 dark:bg-amber-900/20 border-l-[3px] border-amber-400"
+                                        : isSel2 ? "bg-emerald-50 dark:bg-emerald-900/20 border-l-[3px] border-emerald-400"
+                                        : isOpposite ? "hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                                        : admin ? "hover:bg-slate-50 dark:hover:bg-slate-700/50" : ""
                                     )}
                                 >
-                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 text-slate-500")}>
+                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
                                         {p.playerName.charAt(0).toUpperCase()}
                                     </span>
-                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900")}>
+                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
                                         {p.playerName}
                                     </span>
                                     {admin && onSetPlayerRole ? (
                                         <button
                                             title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
-                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 transition-colors"
+                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                                             onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
                                         >
                                             <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
@@ -431,11 +428,8 @@ export function StepTeams({
                 {/* ── Team B ── */}
                 <div>
                     <div
-                        className="flex items-center justify-between px-4 py-2.5"
-                        style={{
-                            backgroundColor: hasBColor ? bHex + "18" : "#f8fafc",
-                            borderBottom: `2px solid ${hasBColor ? bHex : "#e2e8f0"}`,
-                        }}
+                        className="flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700"
+                        style={hasBColor ? { backgroundColor: bHex + "18", borderBottom: `2px solid ${bHex}` } : undefined}
                     >
                         <div className="flex items-center gap-2">
                             {hasBColor && (
@@ -450,14 +444,14 @@ export function StepTeams({
                             )}
                             <span
                                 className="text-sm font-bold"
-                                style={{ color: hasBColor && !isWhiteHex(bHex) ? bHex : "#0f172a" }}
+                                style={{ color: hasBColor && !isWhiteHex(bHex) ? bHex : undefined }}
                             >
                                 {bName}
                             </span>
                         </div>
                         <span className="text-xs text-slate-400">{sortedTeamBPlayers.length}j</span>
                     </div>
-                    <ul className="divide-y divide-slate-50">
+                    <ul className="divide-y divide-slate-50 dark:divide-slate-700/50">
                         {sortedTeamBPlayers.map((p) => {
                             const isSel1 = sel1?.id === p.playerId;
                             const isSel2 = sel2Id === p.playerId;
@@ -470,22 +464,22 @@ export function StepTeams({
                                     className={cls(
                                         "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
                                         admin && "cursor-pointer",
-                                        isSel1 ? "bg-amber-50 border-l-[3px] border-amber-400"
-                                        : isSel2 ? "bg-emerald-50 border-l-[3px] border-emerald-400"
-                                        : isOpposite ? "hover:bg-emerald-50"
-                                        : admin ? "hover:bg-slate-50" : ""
+                                        isSel1 ? "bg-amber-50 dark:bg-amber-900/20 border-l-[3px] border-amber-400"
+                                        : isSel2 ? "bg-emerald-50 dark:bg-emerald-900/20 border-l-[3px] border-emerald-400"
+                                        : isOpposite ? "hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                                        : admin ? "hover:bg-slate-50 dark:hover:bg-slate-700/50" : ""
                                     )}
                                 >
-                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 text-slate-500")}>
+                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
                                         {p.playerName.charAt(0).toUpperCase()}
                                     </span>
-                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900")}>
+                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
                                         {p.playerName}
                                     </span>
                                     {admin && onSetPlayerRole ? (
                                         <button
                                             title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
-                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 transition-colors"
+                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                                             onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
                                         >
                                             <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
@@ -536,7 +530,7 @@ export function StepTeams({
                                         <button
                                             onClick={() => onAssignUnassigned(p.playerId, "A")}
                                             title={`Atribuir para ${aName}`}
-                                            className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                            className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white dark:bg-slate-800 transition-colors hover:brightness-95"
                                             style={{ color: hasAColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8", borderColor: hasAColor && !isWhiteHex(aHex) ? aHex : "#3b82f6" }}
                                         >
                                             → A
@@ -544,7 +538,7 @@ export function StepTeams({
                                         <button
                                             onClick={() => onAssignUnassigned(p.playerId, "B")}
                                             title={`Atribuir para ${bName}`}
-                                            className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                            className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white dark:bg-slate-800 transition-colors hover:brightness-95"
                                             style={{ color: hasBColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8", borderColor: hasBColor && !isWhiteHex(bHex) ? bHex : "#3b82f6" }}
                                         >
                                             → B
@@ -580,15 +574,18 @@ export function StepTeams({
             <div className="card p-4 space-y-3">
                 <div className="flex items-center justify-between">
                     <div className="font-semibold text-slate-900">Times</div>
-                    <button className="btn flex items-center gap-1.5 text-sm" onClick={onRefresh}>
-                        <RefreshCw size={13} />
-                        <span className="hidden sm:inline">Recarregar</span>
+                    <button
+                        onClick={onRefresh}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+                    >
+                        <RefreshCw size={12} />
+                        Recarregar
                     </button>
                 </div>
 
                 {/* Colors VS chip */}
                 {hasColors && (
-                    <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3">
                         <div className="flex items-center gap-2 flex-1">
                             <span
                                 className="w-5 h-5 rounded-full shrink-0 border-2"
@@ -624,7 +621,7 @@ export function StepTeams({
                 )}
 
                 {teamsSetPanel ?? (
-                    <div className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-sm text-slate-400">
+                    <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
                         {teamsAlreadyAssigned
                             ? "Carregando times..."
                             : "Times ainda não foram definidos."}
@@ -638,11 +635,13 @@ export function StepTeams({
     return (
         <div className="card p-4 space-y-4">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="font-semibold text-slate-900">MatchMaking</div>
-                <button className="btn flex items-center gap-1.5 text-sm" onClick={onRefresh}>
-                    <RefreshCw size={13} />
-                    <span className="hidden sm:inline">Recarregar</span>
+            <div className="flex justify-end">
+                <button
+                    onClick={onRefresh}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+                >
+                    <RefreshCw size={12} />
+                    Recarregar
                 </button>
             </div>
 
@@ -680,7 +679,7 @@ export function StepTeams({
                             checked={includeGoalkeepers}
                             onChange={(e) => setIncludeGoalkeepers(e.target.checked)}
                         />
-                        <span className="text-sm font-medium text-slate-700">Incluir goleiros</span>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Incluir goleiros</span>
                     </label>
                     <button className="btn btn-primary h-9 text-sm" onClick={onGenerateTeams}>
                         Gerar times
@@ -689,19 +688,19 @@ export function StepTeams({
             </div>
 
             {/* ── Colors ── */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
                 {/* Colors header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                     <div>
-                        <div className="text-sm font-semibold text-slate-900">Cores dos times</div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Cores dos times</div>
                         {colorsLocked && !allowEditColors && (
-                            <div className="text-xs text-slate-500 mt-0.5">Cores já definidas.</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Cores já definidas.</div>
                         )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                         {colorsLocked && (
-                            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                            <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
                                 <input
                                     type="checkbox"
                                     checked={allowEditColors}
@@ -712,7 +711,7 @@ export function StepTeams({
                         )}
 
                         {/* Mode toggle pill */}
-                        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5">
                             <button
                                 type="button"
                                 disabled={colorsReadOnly}
@@ -720,8 +719,8 @@ export function StepTeams({
                                 className={cls(
                                     "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
                                     colorMode === "manual"
-                                        ? "bg-white shadow-sm text-slate-900"
-                                        : "text-slate-500 hover:text-slate-700",
+                                        ? "bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
                                     colorsReadOnly && "pointer-events-none"
                                 )}
                             >
@@ -734,8 +733,8 @@ export function StepTeams({
                                 className={cls(
                                     "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
                                     colorMode === "random"
-                                        ? "bg-white shadow-sm text-slate-900"
-                                        : "text-slate-500 hover:text-slate-700",
+                                        ? "bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
                                     colorsReadOnly && "pointer-events-none"
                                 )}
                             >
@@ -846,14 +845,14 @@ export function StepTeams({
                     onSwapInOption={admin ? onSwapInOption : undefined}
                 />
             ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
+                <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                     Clique em <b>Gerar times</b> para ver as opções de sorteio.
                 </div>
             )}
 
             {/* ── Setar times — shown only when options exist ── */}
             {generatedOptions && generatedOptions.length > 0 && (
-                <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <div className="flex items-center justify-between rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3">
                     <div className="text-xs text-slate-500">
                         {teamsAlreadyAssigned ? (
                             <span className="flex items-center gap-1.5 font-medium text-emerald-700">

@@ -34,11 +34,11 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     }, [userId, setPendingCount]);
 
     const items: Item[] = useMemo(() => [
-        { to: "/app",             label: "Dashboard",     icon: LayoutDashboard, end: true },
-        { to: "/app/groups",      label: "Grupos",        icon: Users },
-        { to: "/app/team-colors", label: "Cores",         icon: Palette },
-        { to: "/app/matches",     label: "Partidas",      icon: CalendarDays },
-        { to: "/app/history",     label: "Histórico",     icon: History },
+        { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
+        { to: "/app/groups", label: "Grupos", icon: Users },
+        { to: "/app/team-colors", label: "Cores", icon: Palette },
+        { to: "/app/matches", label: "Partidas", icon: CalendarDays },
+        { to: "/app/history", label: "Histórico", icon: History },
         { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
         // ...(isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
         // ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
@@ -48,7 +48,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             label: "Visual Stats",
             icon: BarChart3,
         }] : []),
-        // ...(isGroupAdm || isGod ? [{ to: "/app/birthday-status", label: "Aniversários", icon: Cake }] : []),
+         ...(isGroupAdm || isGod ? [{ to: "/app/birthday-status", label: "Aniversários", icon: Cake }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/settings", label: "Configurações", icon: Settings }] : []),
         {
             to: "/app/admin/users",

@@ -117,15 +117,11 @@ export function TeamGenCarousel({
         const white = isWhiteHex(hex);
         const canInteract = adminView && (!!onMoveToTeam || !!onSwapInOption);
         return (
-            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden">
                 {/* Team header */}
                 <div
-                    className="flex items-center justify-between px-3 py-2.5"
-                    style={
-                        hasColor
-                            ? { backgroundColor: hex + "18", borderBottom: `2px solid ${hex}` }
-                            : { borderBottom: "2px solid #e2e8f0" }
-                    }
+                    className="flex items-center justify-between px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700"
+                    style={hasColor ? { backgroundColor: hex + "18", borderBottom: `2px solid ${hex}` } : undefined}
                 >
                     <div className="flex items-center gap-1.5">
                         {hasColor && (
@@ -139,17 +135,17 @@ export function TeamGenCarousel({
                             />
                         )}
                         <span
-                            className="text-sm font-semibold"
-                            style={{ color: hasColor && !white ? hex : "#0f172a" }}
+                            className="text-sm font-semibold text-slate-900 dark:text-white"
+                            style={{ color: hasColor && !white ? hex : undefined }}
                         >
                             {name}
                         </span>
                     </div>
-                    <span className="text-xs text-slate-400">{list.length}j</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{list.length}j</span>
                 </div>
 
                 {/* Player list */}
-                <ul className="divide-y divide-slate-50">
+                <ul className="divide-y divide-slate-50 dark:divide-slate-700/50">
                     {list.map((x) => {
                         const player = byPlayerId.get(x.playerId);
                         const playerName = player?.playerName ?? x.playerId;
@@ -165,13 +161,13 @@ export function TeamGenCarousel({
                                     "flex items-center gap-2.5 px-3 py-2 transition-colors select-none",
                                     canInteract && "cursor-pointer",
                                     isSel1
-                                        ? "bg-amber-50 border-l-[3px] border-amber-400"
+                                        ? "bg-amber-50 dark:bg-amber-900/20 border-l-[3px] border-amber-400"
                                         : isSel2
-                                        ? "bg-emerald-50 border-l-[3px] border-emerald-400"
+                                        ? "bg-emerald-50 dark:bg-emerald-900/20 border-l-[3px] border-emerald-400"
                                         : isOpposite
-                                        ? "hover:bg-emerald-50"
+                                        ? "hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                                         : canInteract
-                                        ? "hover:bg-slate-50"
+                                        ? "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                                         : ""
                                 )}
                             >
@@ -182,7 +178,7 @@ export function TeamGenCarousel({
                                             ? "bg-amber-400 text-white"
                                             : isSel2
                                             ? "bg-emerald-400 text-white"
-                                            : "bg-slate-100 text-slate-500"
+                                            : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
                                     )}
                                 >
                                     {playerName.charAt(0).toUpperCase()}
@@ -190,7 +186,11 @@ export function TeamGenCarousel({
                                 <span
                                     className={cls(
                                         "truncate flex-1 text-sm font-medium",
-                                        isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900"
+                                        isSel1
+                                            ? "text-amber-700 dark:text-amber-400"
+                                            : isSel2
+                                            ? "text-emerald-700 dark:text-emerald-400"
+                                            : "text-slate-900 dark:text-slate-100"
                                     )}
                                 >
                                     {playerName}
@@ -199,7 +199,7 @@ export function TeamGenCarousel({
                                     </span>
                                 </span>
                                 {adminView && (
-                                    <span className="text-xs font-mono text-slate-400 shrink-0">
+                                    <span className="text-xs font-mono text-slate-400 dark:text-slate-500 shrink-0">
                                         {fmtWeight(x.weight)}
                                     </span>
                                 )}
@@ -207,7 +207,7 @@ export function TeamGenCarousel({
                         );
                     })}
                     {list.length === 0 && (
-                        <li className="px-3 py-3 text-xs text-slate-400">Nenhum jogador</li>
+                        <li className="px-3 py-3 text-xs text-slate-400 dark:text-slate-500">Nenhum jogador</li>
                     )}
                 </ul>
             </div>
@@ -215,10 +215,10 @@ export function TeamGenCarousel({
     };
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-white">
-                <div className="font-semibold text-slate-900 text-sm flex-1">Opções geradas</div>
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-900/60">
+                <div className="font-semibold text-slate-900 dark:text-white text-sm flex-1">Opções geradas</div>
 
                 {/* Pagination controls */}
                 <div className="flex items-center gap-1.5">
@@ -226,20 +226,20 @@ export function TeamGenCarousel({
                         disabled={safeIdx <= 0}
                         onClick={() => onSelect(safeIdx - 1)}
                         className={cls(
-                            "w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors",
+                            "w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors",
                             safeIdx <= 0 && "opacity-40 pointer-events-none"
                         )}
                     >
                         <ChevronLeft size={15} />
                     </button>
-                    <span className="text-xs font-semibold text-slate-700 min-w-[44px] text-center tabular-nums">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 min-w-[44px] text-center tabular-nums">
                         {safeIdx + 1} / {options.length}
                     </span>
                     <button
                         disabled={safeIdx >= options.length - 1}
                         onClick={() => onSelect(safeIdx + 1)}
                         className={cls(
-                            "w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors",
+                            "w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors",
                             safeIdx >= options.length - 1 && "opacity-40 pointer-events-none"
                         )}
                     >
@@ -259,8 +259,8 @@ export function TeamGenCarousel({
                             className={cls(
                                 "rounded-full transition-all duration-200",
                                 i === safeIdx
-                                    ? "w-5 h-2 bg-slate-800"
-                                    : "w-2 h-2 bg-slate-300 hover:bg-slate-400"
+                                    ? "w-5 h-2 bg-slate-800 dark:bg-slate-300"
+                                    : "w-2 h-2 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500"
                             )}
                         />
                     ))}
@@ -268,21 +268,21 @@ export function TeamGenCarousel({
 
                 {/* Admin balance metrics — compact single row */}
                 {adminView && (
-                    <div className="flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden text-xs divide-x divide-slate-100">
+                    <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden text-xs divide-x divide-slate-100 dark:divide-slate-700">
                         <div className="flex-1 px-3 py-2">
-                            <div className="text-slate-400 mb-0.5">A weight</div>
-                            <div className="font-semibold text-slate-900 tabular-nums">
+                            <div className="text-slate-400 dark:text-slate-500 mb-0.5">A weight</div>
+                            <div className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
                                 {fmtWeight(opt.teamAWeight)}
                             </div>
                         </div>
                         <div className="flex-1 px-3 py-2">
-                            <div className="text-slate-400 mb-0.5">B weight</div>
-                            <div className="font-semibold text-slate-900 tabular-nums">
+                            <div className="text-slate-400 dark:text-slate-500 mb-0.5">B weight</div>
+                            <div className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
                                 {fmtWeight(opt.teamBWeight)}
                             </div>
                         </div>
                         <div className="flex-1 px-3 py-2">
-                            <div className="text-slate-400 mb-0.5">Diff</div>
+                            <div className="text-slate-400 dark:text-slate-500 mb-0.5">Diff</div>
                             <div
                                 className="font-semibold tabular-nums"
                                 style={{ color: diffColor(opt.balanceDiff) }}
@@ -295,11 +295,11 @@ export function TeamGenCarousel({
 
                 {/* Admin explanation */}
                 {adminView && opt.explanation && (
-                    <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 space-y-1 text-xs text-slate-700">
-                        <p><span className="font-semibold text-indigo-700">Resumo: </span>{opt.explanation.resumo}</p>
-                        <p><span className="font-semibold text-indigo-700">Time A: </span>{opt.explanation.analiseTimeA}</p>
-                        <p><span className="font-semibold text-indigo-700">Time B: </span>{opt.explanation.analiseTimeB}</p>
-                        <p><span className="font-semibold text-indigo-700">Conclusão: </span>{opt.explanation.conclusao}</p>
+                    <div className="rounded-lg border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/20 p-3 space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Resumo: </span>{opt.explanation.resumo}</p>
+                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Time A: </span>{opt.explanation.analiseTimeA}</p>
+                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Time B: </span>{opt.explanation.analiseTimeB}</p>
+                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Conclusão: </span>{opt.explanation.conclusao}</p>
                     </div>
                 )}
 
@@ -358,14 +358,14 @@ export function TeamGenCarousel({
 
                 {/* Unassigned players */}
                 {(opt.unassigned?.length ?? 0) > 0 && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
-                        <div className="flex items-center justify-between px-3 py-2.5 border-b border-amber-100">
-                            <span className="text-sm font-semibold text-amber-800">
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2.5 border-b border-amber-100 dark:border-amber-800/40">
+                            <span className="text-sm font-semibold text-amber-800 dark:text-amber-400">
                                 Não atribuídos
                             </span>
-                            <span className="text-xs text-amber-600">{opt.unassigned.length}j</span>
+                            <span className="text-xs text-amber-600 dark:text-amber-500">{opt.unassigned.length}j</span>
                         </div>
-                        <ul className="divide-y divide-amber-50/60">
+                        <ul className="divide-y divide-amber-50 dark:divide-amber-900/30">
                             {opt.unassigned.map((x) => {
                                 const player = byPlayerId.get(x.playerId);
                                 const playerName = player?.playerName ?? x.playerId;
@@ -375,17 +375,17 @@ export function TeamGenCarousel({
                                         key={x.playerId}
                                         className="flex items-center gap-2 px-3 py-2"
                                     >
-                                        <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                        <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold flex items-center justify-center shrink-0">
                                             {playerName.charAt(0).toUpperCase()}
                                         </span>
-                                        <span className="truncate flex-1 text-sm font-medium text-slate-900">
+                                        <span className="truncate flex-1 text-sm font-medium text-slate-900 dark:text-slate-100">
                                             {playerName}
                                             <span className="ml-1 text-xs">
                                                 <IconRenderer value={resolveIcon(_icons, isGk ? 'goalkeeper' : 'player')} size={13} />
                                             </span>
                                         </span>
                                         {adminView && (
-                                            <span className="text-xs font-mono text-amber-600 shrink-0">
+                                            <span className="text-xs font-mono text-amber-600 dark:text-amber-400 shrink-0">
                                                 {fmtWeight(x.weight)}
                                             </span>
                                         )}
@@ -394,16 +394,10 @@ export function TeamGenCarousel({
                                                 <button
                                                     onClick={() => onMoveToTeam(x.playerId, "A")}
                                                     title={`Mover para ${aName}`}
-                                                    className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                                    className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white dark:bg-slate-800 transition-colors hover:brightness-95"
                                                     style={{
-                                                        color:
-                                                            aHasColor && !isWhiteHex(aHex)
-                                                                ? aHex
-                                                                : "#1d4ed8",
-                                                        borderColor:
-                                                            aHasColor && !isWhiteHex(aHex)
-                                                                ? aHex
-                                                                : "#3b82f6",
+                                                        color: aHasColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8",
+                                                        borderColor: aHasColor && !isWhiteHex(aHex) ? aHex : "#3b82f6",
                                                     }}
                                                 >
                                                     → A
@@ -411,16 +405,10 @@ export function TeamGenCarousel({
                                                 <button
                                                     onClick={() => onMoveToTeam(x.playerId, "B")}
                                                     title={`Mover para ${bName}`}
-                                                    className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white transition-colors hover:brightness-95"
+                                                    className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg border-2 bg-white dark:bg-slate-800 transition-colors hover:brightness-95"
                                                     style={{
-                                                        color:
-                                                            bHasColor && !isWhiteHex(bHex)
-                                                                ? bHex
-                                                                : "#1d4ed8",
-                                                        borderColor:
-                                                            bHasColor && !isWhiteHex(bHex)
-                                                                ? bHex
-                                                                : "#3b82f6",
+                                                        color: bHasColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8",
+                                                        borderColor: bHasColor && !isWhiteHex(bHex) ? bHex : "#3b82f6",
                                                     }}
                                                 >
                                                     → B

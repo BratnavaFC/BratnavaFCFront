@@ -124,8 +124,8 @@ export function GoalTracker({
                 className={cls(
                     "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                     isSelected
-                        ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
-                        : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
+                        ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-300"
+                        : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
                 )}
                 style={isSelected ? {} : { borderLeftColor: tColor, borderLeftWidth: "3px" }}
                 onClick={() => (isSelected ? clearScorer() : selectScorer(p.playerId))}
@@ -151,10 +151,10 @@ export function GoalTracker({
         return (
             <div
                 key={g.goalId}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2"
             >
                 <div className="min-w-0">
-                    <div className="font-medium text-slate-900 truncate text-sm">
+                    <div className="font-medium text-slate-900 dark:text-slate-100 truncate text-sm">
                         <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{g.scorerName}
                         {g.isOwnGoal && (
                             <span className="ml-1 text-xs font-normal text-orange-500">
@@ -188,8 +188,8 @@ export function GoalTracker({
     }
 
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-            <div className="font-semibold text-slate-900">Gols da partida</div>
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 space-y-4">
+            <div className="font-semibold text-slate-900 dark:text-white">Gols da partida</div>
 
             {/* ── Campo de tempo — sempre visível ─────────────────────────────── */}
             <div className="flex items-center gap-2">
@@ -202,14 +202,14 @@ export function GoalTracker({
                 />
                 <div className="flex flex-col gap-0.5">
                     <button
-                        className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
+                        className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors"
                         onClick={() => setTime(incrementTime(time, 1))}
                         title="+1 minuto"
                     >
                         <ChevronUp size={12} />
                     </button>
                     <button
-                        className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
+                        className="flex items-center justify-center w-6 h-5 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors"
                         onClick={() => setTime(incrementTime(time, -1))}
                         title="-1 minuto"
                     >
@@ -263,10 +263,10 @@ export function GoalTracker({
 
             {/* ── Painel de confirmação (quando scorer selecionado) ─────────── */}
             {scorer && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
+                <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-3">
                     {/* Scorer selecionado */}
-                    <div className="text-xs text-slate-500">Marcou o gol:</div>
-                    <div className="font-semibold text-slate-900">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Marcou o gol:</div>
+                    <div className="font-semibold text-slate-900 dark:text-slate-100">
                         <IconRenderer value={resolveIcon(_icons, 'goal')} size={15} />{" "}{scorer.playerName}
                         {" "}<IconRenderer value={resolveIcon(_icons, scorer.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />
                     </div>
@@ -282,7 +282,7 @@ export function GoalTracker({
                                 setAssistId(null);
                             }}
                         />
-                        <span className="text-sm text-slate-700">Gol contra</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">Gol contra</span>
                         {isOwnGoal && (
                             <span className="text-xs text-orange-600 font-medium">
                                 (ponto para o time adversário)
@@ -305,8 +305,8 @@ export function GoalTracker({
                                         className={cls(
                                             "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                                             assistId === p.playerId
-                                                ? "border-emerald-400 bg-emerald-200 text-emerald-900"
-                                                : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"
+                                                ? "border-emerald-400 bg-emerald-200 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-300"
+                                                : "border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
                                         )}
                                         onClick={() => toggleAssist(p.playerId)}
                                     >
@@ -343,7 +343,7 @@ export function GoalTracker({
             )}
 
             {/* ── Lista de gols (agrupada pelo time que recebeu) ────────────── */}
-            <div className="border-t border-slate-100 pt-3">
+            <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
                 {goals.length === 0 ? (
                     <div className="text-xs text-slate-400">Nenhum gol registrado.</div>
                 ) : (

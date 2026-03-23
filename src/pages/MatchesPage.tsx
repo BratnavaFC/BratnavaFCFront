@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, Loader2, RotateCcw } from "lucide-react";
+import { CalendarDays, Loader2, RotateCcw, UserPlus } from "lucide-react";
+import { AddGuestModal } from "../components/modals/AddGuestModal";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
@@ -52,6 +53,8 @@ export default function MatchesPage() {
 
     const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
     const [current, setCurrent] = useState<MatchDetailsDto | null>(null);
+    const [godPreview, setGodPreview] = useState<StepKey | null>(null);
+    const [addGuestOpen, setAddGuestOpen] = useState(false);
 
     const [teamColors, setTeamColors] = useState<TeamColorDto[]>([]);
     const [groupSettings, setGroupSettings] = useState<GroupSettingsDto | null>(null);
@@ -397,6 +400,17 @@ export default function MatchesPage() {
         loadStepPayload(currentMatchId, stepKey);
         // eslint-disable-next-line
     }, [currentMatchId, stepKey]);
+
+    // Reset god preview when real step changes
+    useEffect(() => { setGodPreview(null); }, [stepKey]);
+
+    async function handleGodStepClick(key: string) {
+        const k = key as StepKey;
+        setGodPreview(k);
+        if (currentMatchId) await loadStepPayload(currentMatchId, k);
+    }
+
+    const displayStepKey: StepKey = (isGodMode() && godPreview) ? godPreview : stepKey;
 
     // auto load
     useEffect(() => {
@@ -1099,6 +1113,15 @@ export default function MatchesPage() {
     return (
         <div className="space-y-5">
 
+            <AddGuestModal
+                open={addGuestOpen}
+                onClose={() => setAddGuestOpen(false)}
+                onSubmit={async (name, isGoalkeeper, starRating) => {
+                    await addGuestToMatch(name, isGoalkeeper, starRating);
+                    setAddGuestOpen(false);
+                }}
+            />
+
             {/* ── Header ── */}
             <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
                 <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
@@ -1122,6 +1145,17 @@ export default function MatchesPage() {
                             </p>
                         </div>
                     </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                    {admin && currentMatchId && displayStepKey === "accept" && (
+                        <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors bg-white/10 border-white/20 text-white hover:bg-white/20"
+                            onClick={() => setAddGuestOpen(true)}
+                        >
+                            <UserPlus size={15} />
+                            <span className="hidden sm:inline">Convidado</span>
+                        </button>
+                    )}
                     {admin && currentMatchId && (
                         <button
                             type="button"
@@ -1139,6 +1173,7 @@ export default function MatchesPage() {
                             Voltar etapa
                         </button>
                     )}
+                    </div>
                 </div>
             </div>
 
@@ -1152,7 +1187,10 @@ export default function MatchesPage() {
                 <div className="card p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                     <MatchWizard
                         admin={admin}
-                        stepKey={stepKey}
+                        stepKey={displayStepKey}
+                        realStepKey={godPreview ? stepKey : undefined}
+                        onStepClick={isGodMode() && currentMatchId ? handleGodStepClick : undefined}
+                        onExitPreview={() => setGodPreview(null)}
                         steps={steps}
                         current={current}
                         loading={loading}
@@ -1179,7 +1217,6 @@ export default function MatchesPage() {
                         onRejectInvite={rejectInvite}
                         onRefresh={refreshCurrent}
                         onGoToMatchMaking={goToMatchMaking}
-                        onAddGuest={addGuestToMatch}
                         onSetPlayerRole={setPlayerRole}
                         teamsProps={teamsProps}
                         onEndMatch={endMatch}

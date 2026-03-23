@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Clock, MapPin, Users } from "lucide-react";
+import { Clock, Eye, MapPin, Users, X } from "lucide-react";
 import { Stepper, Step } from "../../../components/Stepper";
 import type { StepKey } from "../matchTypes";
 import { StepCreate } from "../steps/StepCreate";
@@ -65,7 +65,7 @@ export function MatchWizard({
     onRejectInvite,
     onRefresh,
     onGoToMatchMaking,
-    onAddGuest,
+
     onSetPlayerRole,
 
     // teams
@@ -78,9 +78,14 @@ export function MatchWizard({
     playingGoalProps,
     onFinalize,
     onReloadDone,
+    // god-mode preview
+    realStepKey,
+    onStepClick,
+    onExitPreview,
 }: any) {
     const meta      = STATUS_META[stepKey as string] ?? STATUS_META.create;
     const accentHex = ACCENT_HEX[stepKey as string]  ?? "#64748b";
+    const isPreview = !!realStepKey && realStepKey !== stepKey;
 
     const header = useMemo(() => {
         if (!current) return null;
@@ -105,7 +110,7 @@ export function MatchWizard({
                                 {meta.label}
                             </span>
 
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
                                 {current?.playedAt && (
                                     <span className="flex items-center gap-1">
                                         <Clock size={13} className="text-slate-400 shrink-0" />
@@ -186,7 +191,22 @@ export function MatchWizard({
                 </span>
             </div>
 
-            <Stepper steps={steps as Step[]} activeKey={stepKey as StepKey} />
+            <Stepper steps={steps as Step[]} activeKey={stepKey as StepKey} onStepClick={onStepClick} />
+
+            {/* Banner de pré-visualização (GodMode) */}
+            {isPreview && (
+                <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+                    <Eye size={15} className="shrink-0" />
+                    <span className="flex-1">Pré-visualização — etapa real: <b>{STATUS_META[realStepKey]?.label ?? realStepKey}</b></span>
+                    <button
+                        type="button"
+                        onClick={onExitPreview}
+                        className="flex items-center gap-1 text-xs font-medium hover:text-amber-900 dark:hover:text-amber-200 transition"
+                    >
+                        <X size={13} /> Sair
+                    </button>
+                </div>
+            )}
 
             {stepKey !== "create" ? header : null}
 
@@ -219,7 +239,6 @@ export function MatchWizard({
                     onReject={onRejectInvite}
                     onRefresh={onRefresh}
                     onGoToMatchMaking={onGoToMatchMaking}
-                    onAddGuest={onAddGuest}
                     onSetPlayerRole={onSetPlayerRole}
                 />
             ) : null}
