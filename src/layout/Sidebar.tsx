@@ -2,11 +2,12 @@ import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, User, ShieldAlert,
-    Menu, X, DollarSign, Presentation, Vote,
+    Menu, X, DollarSign, Presentation, Vote, Sun, Moon,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
 import { GroupInvitesApi } from "../api/endpoints";
+import { useThemeStore } from "../stores/themeStore";
 
 type Item = { to: string; label: string; icon: any; badge?: number; end?: boolean };
 
@@ -22,6 +23,8 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
 
     const pendingCount    = useInviteStore((s) => s.pendingCount);
     const setPendingCount = useInviteStore((s) => s.setPendingCount);
+
+    const { theme, toggle: toggleTheme } = useThemeStore();
 
     useEffect(() => {
         if (!userId) return;
@@ -78,7 +81,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 </div>
 
                 {/* Nav items */}
-                <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+                <nav className="flex-1 p-2 space-y-1 overflow-y-auto min-h-0">
                     {items.map((item) => {
                         const Icon = item.icon;
                         const hasBadge = !!item.badge && item.badge > 0;
@@ -131,6 +134,27 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                     })}
                 </nav>
 
+                {/* Dark mode toggle — apenas admins */}
+                {isGroupAdm && (
+                    <div className="p-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                        <button
+                            type="button"
+                            onClick={toggleTheme}
+                            title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+                            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        >
+                            {theme === "dark"
+                                ? <Sun size={18} className="text-amber-400 shrink-0" />
+                                : <Moon size={18} className="shrink-0" />
+                            }
+                            {open && (
+                                <span className="truncate">
+                                    {theme === "dark" ? "Modo claro" : "Modo escuro"}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+                )}
 
             </div>
         </aside>
