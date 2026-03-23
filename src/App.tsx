@@ -46,14 +46,7 @@ export default function App() {
                 <Route path="matches" element={<MatchesPage />} />
                 <Route path="history" element={<HistoryPage />} />
                 <Route path="history/:groupId/:matchId" element={<MatchDetailsPage />} />
-                <Route
-                    path="calendar"
-                    element={
-                        <GroupAdminRoute>
-                            <CalendarPage />
-                        </GroupAdminRoute>
-                    }
-                />
+                <Route path="calendar" element={<CalendarPage />} />
                 <Route path="groups/:groupId/visual-stats" element={<VisualStatsPage />} />
                 <Route path="spotlight" element={<PlayerSpotlightPage />} />
                 <Route path="payments" element={<PaymentsPage />} />
