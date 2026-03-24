@@ -135,27 +135,25 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                     })}
                 </nav>
 
-                {/* Dark mode toggle — apenas admins */}
-                {isGroupAdm && (
-                    <div className="p-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
-                        <button
-                            type="button"
-                            onClick={toggleTheme}
-                            title={theme === "dark" ? "Modo claro" : "Modo escuro"}
-                            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                        >
-                            {theme === "dark"
-                                ? <Sun size={18} className="text-amber-400 shrink-0" />
-                                : <Moon size={18} className="shrink-0" />
-                            }
-                            {open && (
-                                <span className="truncate">
-                                    {theme === "dark" ? "Modo claro" : "Modo escuro"}
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                )}
+                {/* Dark mode toggle — todos os usuários */}
+                <div className="p-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                    <button
+                        type="button"
+                        onClick={toggleTheme}
+                        title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                    >
+                        {theme === "dark"
+                            ? <Sun size={18} className="text-amber-400 shrink-0" />
+                            : <Moon size={18} className="shrink-0" />
+                        }
+                        {open && (
+                            <span className="truncate">
+                                {theme === "dark" ? "Modo claro" : "Modo escuro"}
+                            </span>
+                        )}
+                    </button>
+                </div>
 
             </div>
         </aside>
