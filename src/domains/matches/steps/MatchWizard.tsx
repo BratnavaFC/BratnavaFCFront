@@ -267,7 +267,7 @@ export function MatchWizard({
                     admin={admin}
                     scoreA={current?.teamAGoals}
                     scoreB={current?.teamBGoals}
-                    mvp={current?.computedMvp?.playerName ?? ""}
+                    mvp={((current as any)?.computedMvps ?? []).map((m: any) => m.playerName ?? m.PlayerName ?? "").filter(Boolean).join(" & ")}
                     onReload={onReloadDone}
                 />
             ) : null}

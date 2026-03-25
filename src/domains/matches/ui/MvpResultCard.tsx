@@ -8,7 +8,7 @@ function cls(...c: (string | false | undefined)[]) {
 }
 
 export function MvpResultCard({
-    mvpName,
+    mvpNames,
     teamName,
     voteCounts = [],
     votes = [],
@@ -16,7 +16,7 @@ export function MvpResultCard({
     allVotedBadge = false,
     _icons,
 }: {
-    mvpName?: string | null;
+    mvpNames?: string[] | null;
     teamName?: string;
     voteCounts?: VoteCountDto[];
     votes?: VoteDto[];
@@ -26,14 +26,17 @@ export function MvpResultCard({
     _icons: ReturnType<typeof useGroupIcons>;
 }) {
     const maxVotes = voteCounts.length > 0 ? (voteCounts[0].count ?? 0) : 0;
+    const hasMvp = !!mvpNames && mvpNames.length > 0;
+    const isTie = hasMvp && mvpNames!.length > 1;
+    const mvpNamesSet = new Set(mvpNames ?? []);
 
     return (
         <div className="space-y-3">
             {/* Winner card */}
-            {mvpName ? (
+            {hasMvp ? (
                 <div className="rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-950/30 px-4 py-4">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 shrink-0">
+                    <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 shrink-0 mt-0.5">
                             <IconRenderer
                                 value={resolveIcon(_icons, "mvp")}
                                 size={20}
@@ -43,18 +46,27 @@ export function MvpResultCard({
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
-                                    Melhor do jogo
+                                    {isTie ? "MVPs do jogo" : "Melhor do jogo"}
                                 </div>
                                 {allVotedBadge && (
                                     <span className="text-[9px] font-semibold bg-amber-200 dark:bg-amber-800/50 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
                                         Todos votaram!
                                     </span>
                                 )}
+                                {isTie && (
+                                    <span className="text-[9px] font-semibold bg-orange-200 dark:bg-orange-800/50 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded-full">
+                                        Empate
+                                    </span>
+                                )}
                             </div>
-                            <div className="font-bold text-slate-900 dark:text-amber-50 text-xl leading-none mt-0.5">
-                                {mvpName}
+                            <div className="mt-1 space-y-0.5">
+                                {mvpNames!.map((name, i) => (
+                                    <div key={i} className="font-bold text-slate-900 dark:text-amber-50 text-xl leading-none">
+                                        {name}
+                                    </div>
+                                ))}
                             </div>
-                            {teamName && (
+                            {!isTie && teamName && (
                                 <div className="text-xs text-amber-700 dark:text-amber-400/70 mt-1">
                                     {teamName}
                                 </div>
@@ -82,7 +94,7 @@ export function MvpResultCard({
                     <div className="space-y-2.5">
                         {voteCounts.map((vc) => {
                             const pct = maxVotes > 0 ? (vc.count / maxVotes) * 100 : 0;
-                            const isWinner = !!mvpName && vc.votedForName === mvpName;
+                            const isWinner = hasMvp && mvpNamesSet.has(vc.votedForName);
                             return (
                                 <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
                                     <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5 shrink-0">

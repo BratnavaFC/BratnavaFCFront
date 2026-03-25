@@ -205,7 +205,7 @@ export default function MatchesPage() {
             status: Number(dto?.status ?? dto?.Status ?? 5) as any,
             teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
             teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
-            computedMvp: dto?.computedMvp ?? dto?.ComputedMvp ?? null,
+            computedMvps: (dto?.computedMvps ?? dto?.ComputedMvps ?? []) as any,
             votes: (dto?.votes ?? dto?.Votes ?? []) as any,
             voteCounts: dto?.voteCounts ?? dto?.VoteCounts ?? [],
             goals: dto?.goals ?? dto?.Goals ?? [],
@@ -957,7 +957,7 @@ export default function MatchesPage() {
 
     const postProps = useMemo(() => {
         return {
-            currentMvpName: (current as any)?.computedMvp?.playerName ?? "",
+            currentMvpNames: ((current as any)?.computedMvps ?? []).map((m: any) => m.playerName ?? m.PlayerName ?? "").filter(Boolean) as string[],
             votes: (current as any)?.votes ?? [],
             voteCounts: (current as any)?.voteCounts ?? [],
             allVoted: (current as any)?.allVoted ?? false,
@@ -997,7 +997,7 @@ export default function MatchesPage() {
             matchDate: (current as any)?.playedAt ?? undefined,
         };
     }, [
-        (current as any)?.computedMvp?.playerName,
+        (current as any)?.computedMvps,
         (current as any)?.votes,
         (current as any)?.voteCounts,
         (current as any)?.allVoted,

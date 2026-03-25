@@ -84,7 +84,7 @@ export type MatchDetailsDto = {
     teamAPlayers: PlayerInMatchDto[];
     teamBPlayers: PlayerInMatchDto[];
 
-    computedMvp?: MatchMvpDto | null;
+    computedMvps?: MatchMvpDto[] | null;
     votes?: VoteDto[];
     voteCounts?: VoteCountDto[];
     goals?: GoalDto[];

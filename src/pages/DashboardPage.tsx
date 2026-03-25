@@ -53,7 +53,7 @@ type MatchDetails = {
   teamAPlayers: MatchPlayer[];
   teamBPlayers: MatchPlayer[];
   unassignedPlayers: MatchPlayer[];
-  computedMvp?: MatchMvp | null;
+  computedMvps?: MatchMvp[] | null;
   goals?: Goal[];
 };
 

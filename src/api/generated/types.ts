@@ -89,7 +89,7 @@ export interface MatchDetailsDto {
   teamBGoals?: number;
   teamAColor?: TeamColorDto;
   teamBColor?: TeamColorDto;
-  computedMvp?: MatchMvpDto;
+  computedMvps?: MatchMvpDto[];
   teamAPlayers?: PlayerInMatchDto[];
   teamBPlayers?: PlayerInMatchDto[];
   unassignedPlayers?: PlayerInMatchDto[];

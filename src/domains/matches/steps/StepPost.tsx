@@ -181,7 +181,7 @@ function PaymentSection({
 
 export function StepPost({
     admin,
-    currentMvpName,
+    currentMvpNames,
     votes,
     voteCounts,
     participants,
@@ -228,7 +228,7 @@ export function StepPost({
     matchDate,
 }: {
     admin: boolean;
-    currentMvpName: string;
+    currentMvpNames: string[];
     votes: VoteDto[];
     voteCounts: VoteCountDto[];
     participants: PlayerInMatchDto[];
@@ -303,9 +303,9 @@ export function StepPost({
                 </div>
 
                 {/* Voting / result section — MVP card shown when backend persisted the winner */}
-                {!!currentMvpName ? (
+                {currentMvpNames.length > 0 ? (
                     <MvpResultCard
-                        mvpName={currentMvpName}
+                        mvpNames={currentMvpNames}
                         voteCounts={[]}
                         votes={[]}
                         admin={false}
@@ -447,9 +447,9 @@ export function StepPost({
 
                 {/* MVP voting / result */}
                 <div className="mt-4">
-                    {!!currentMvpName ? (
+                    {currentMvpNames.length > 0 ? (
                         <MvpResultCard
-                            mvpName={currentMvpName}
+                            mvpNames={currentMvpNames}
                             voteCounts={voteCounts}
                             votes={votes}
                             admin={true}
@@ -528,7 +528,7 @@ export function StepPost({
 
                             <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div className="text-xs text-slate-500">
-                                    MVP atual: <b>{currentMvpName?.trim() ? currentMvpName : "—"}</b>
+                                    MVP atual: <b>{currentMvpNames.length > 0 ? currentMvpNames.join(" & ") : "—"}</b>
                                 </div>
                                 <button
                                     className={cls("btn btn-primary", (!voteVotedMpId || voting || !voteVoterMpId) && "opacity-50 pointer-events-none")}

@@ -664,14 +664,15 @@ export default function MatchDetailsPage() {
 
     const scoreA = data.teamAGoals ?? "–";
     const scoreB = data.teamBGoals ?? "–";
-    const mvp = data.computedMvp; // baseado em votos — visível só para admin/god
+    const mvps: any[] = (data as any).computedMvps ?? []; // baseado em votos — visível só para admin/god
     const voteCounts: any[] = [...(data.voteCounts ?? [])].sort(
         (a, b) => (b.count ?? 0) - (a.count ?? 0)
     );
     const maxVotes = voteCounts.length > 0 ? (voteCounts[0].count ?? 0) : 0;
 
     // MVP baseado na flag isMvp (camelCase do backend) — visível para todos
-    const mvpPlayer = [...(teamAPlayers as any[]), ...(teamBPlayers as any[])].find((p) => p.isMvp);
+    const mvpPlayers = [...(teamAPlayers as any[]), ...(teamBPlayers as any[])].filter((p) => p.isMvp);
+    const mvpPlayer = mvpPlayers[0]; // primeiro MVP (para compatibilidade de teamName)
     const mvpPlayerTeamName = mvpPlayer ? (mvpPlayer.team === 1 ? aName : mvpPlayer.team === 2 ? bName : "") : "";
 
     // Team-colored dot for goal rows
@@ -815,21 +816,18 @@ export default function MatchDetailsPage() {
                     {/* MVP inline no hero */}
                     {(() => {
                         // Admin/god veem o MVP por votos; demais pelo isMvp
-                        const heroMvpName = canSeeMvp ? (mvp?.playerName ?? mvpPlayer?.playerName) : mvpPlayer?.playerName;
-                        const heroMvpTeam = canSeeMvp ? (mvp?.team ?? mvpPlayer?.team) : mvpPlayer?.team;
-                        if (!heroMvpName) return null;
-                        const heroTeamLabel = heroMvpTeam === 1 ? aName : heroMvpTeam === 2 ? bName : "";
+                        const heroMvpNames = canSeeMvp
+                            ? (mvps.length > 0 ? mvps.map((m: any) => m.playerName) : mvpPlayers.map((p: any) => p.playerName))
+                            : mvpPlayers.map((p: any) => p.playerName);
+                        if (heroMvpNames.length === 0) return null;
+                        const heroMvpName = heroMvpNames.join(" & ");
+                        const isTie = heroMvpNames.length > 1;
                         return (
                             <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-400/10 border border-amber-400/20 px-4 py-2.5">
                                 <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-400 shrink-0" }} />
                                 <span className="text-sm font-semibold text-amber-300">
-                                    MVP: {heroMvpName}
+                                    {isTie ? "MVPs" : "MVP"}: {heroMvpName}
                                 </span>
-                                {heroTeamLabel && (
-                                    <span className="text-xs text-amber-400/60">
-                                        ({heroTeamLabel})
-                                    </span>
-                                )}
                             </div>
                         );
                     })()}
@@ -1285,16 +1283,15 @@ export default function MatchDetailsPage() {
             </Section>
 
             {/* ── MVP ───────────────────────────────────────────────── */}
-            {(mvpPlayer || canSeeMvp) && (
+            {(mvpPlayers.length > 0 || canSeeMvp) && (
                 <Section title="MVP">
                     {(() => {
-                        const cardName = canSeeMvp ? (mvp?.playerName ?? mvpPlayer?.playerName) : mvpPlayer?.playerName;
-                        const cardTeam = canSeeMvp ? (mvp?.team ?? mvpPlayer?.team) : mvpPlayer?.team;
-                        const cardTeamName = cardTeam === 1 ? aName : cardTeam === 2 ? bName : (mvpPlayerTeamName ?? "");
+                        const cardNames = canSeeMvp
+                            ? (mvps.length > 0 ? mvps.map((m: any) => m.playerName) : mvpPlayers.map((p: any) => p.playerName))
+                            : mvpPlayers.map((p: any) => p.playerName);
                         return (
                             <MvpResultCard
-                                mvpName={cardName}
-                                teamName={cardTeamName || undefined}
+                                mvpNames={cardNames.length > 0 ? cardNames : undefined}
                                 voteCounts={canSeeMvp ? voteCounts : []}
                                 votes={[]}
                                 admin={canSeeMvp}
