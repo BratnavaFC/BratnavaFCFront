@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PollsApi } from '../api/endpoints';
+import { usePollStore } from '../stores/pollStore';
 import { extractApiError } from '../lib/apiError';
 import PollEventDetailModal from '../components/modals/PollEventDetailModal';
 import PollCreateEventModal from '../components/modals/PollCreateEventModal';
@@ -251,6 +252,8 @@ export default function PollsPage() {
     const isAdminOrGod = roles.includes('Admin') || roles.includes('GodMode');
     const isAdmin = isAdminOrGod || (!!groupId && grpAdminIds.includes(groupId));
 
+    const setPendingPollsCount = usePollStore((s) => s.setPendingPollsCount);
+
     const [polls, setPolls] = useState<PollSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
@@ -271,11 +274,13 @@ export default function PollsPage() {
         setLoading(true);
         try {
             const res = await PollsApi.getPolls(groupId);
-            setPolls(res.data.data ?? []);
+            const list: PollSummary[] = res.data.data ?? [];
+            setPolls(list);
+            setPendingPollsCount(list.filter(p => p.status === 'open' && !p.hasVoted).length);
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao carregar votações.'));
         } finally { setLoading(false); }
-    }, [groupId]);
+    }, [groupId, setPendingPollsCount]);
 
     useEffect(() => { load(); }, [load]);
 

@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
-import { GroupInvitesApi } from "../api/endpoints";
+import { usePollStore } from "../stores/pollStore";
+import { GroupInvitesApi, PollsApi } from "../api/endpoints";
 import { useThemeStore } from "../stores/themeStore";
 
 type Item = { to: string; label: string; icon: any; badge?: number; end?: boolean };
@@ -21,8 +22,10 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const isGod        = roles.includes("GodMode");
     const isGroupAdm   = isAdminOrGod || (!!activeGrpId && grpAdminIds.includes(activeGrpId));
 
-    const pendingCount    = useInviteStore((s) => s.pendingCount);
-    const setPendingCount = useInviteStore((s) => s.setPendingCount);
+    const pendingCount        = useInviteStore((s) => s.pendingCount);
+    const setPendingCount     = useInviteStore((s) => s.setPendingCount);
+    const pendingPollsCount   = usePollStore((s) => s.pendingPollsCount);
+    const setPendingPollsCount = usePollStore((s) => s.setPendingPollsCount);
 
     const { theme, toggle: toggleTheme } = useThemeStore();
 
@@ -33,6 +36,17 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             .catch(() => { /* silencioso */ });
     }, [userId, setPendingCount]);
 
+    useEffect(() => {
+        if (!activeGrpId) { setPendingPollsCount(0); return; }
+        PollsApi.getPolls(activeGrpId)
+            .then((res) => {
+                const list: any[] = (res.data as any)?.data ?? [];
+                const count = list.filter((p: any) => p.status === 'open' && !p.hasVoted).length;
+                setPendingPollsCount(count);
+            })
+            .catch(() => { /* silencioso */ });
+    }, [activeGrpId, setPendingPollsCount]);
+
     const items: Item[] = useMemo(() => [
         { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
         { to: "/app/groups", label: "Grupos", icon: Users },
@@ -40,7 +54,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/matches", label: "Partidas", icon: CalendarDays },
         { to: "/app/history", label: "Histórico", icon: History },
         { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
-        // ...(isGod ? [{ to: "/app/polls", label: "Votações", icon: Vote }] : []),
+        { to: "/app/polls", label: "Votações", icon: Vote, badge: pendingPollsCount || undefined },
         // ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
         // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight",   icon: Presentation }] : []),
         ...((isGroupAdm || isGod) && activeGrpId ? [{
@@ -57,7 +71,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             badge: isAdminOrGod ? 0 : pendingCount,
         },
         ...(isGod ? [{ to: "/app/admin/godmode", label: "GodMode", icon: ShieldAlert }] : []),
-    ], [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount]);
+    ], [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount, pendingPollsCount]);
 
     return (
         <aside className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${open ? "w-64" : "w-16"}`}>
