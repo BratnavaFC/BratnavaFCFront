@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, DollarSign, AlertCircle, Save } from 'lucide-react';
+import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, DollarSign, AlertCircle, Save, Trophy } from 'lucide-react';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
@@ -106,6 +106,11 @@ export default function GroupSettingsPage() {
     const [paymentMode, setPaymentMode] = useState<number>(0);
     const [monthlyFee,  setMonthlyFee]  = useState<string>('');
 
+    // ── regra de empate MVP ────────────────────────────────────────
+    /** 0 = NoMvp, 1 = AllMvp, 2 = AllMvpUpToMax */
+    const [mvpTieRule,       setMvpTieRule]       = useState<number>(1);
+    const [mvpTieMaxPlayers, setMvpTieMaxPlayers] = useState<number>(2);
+
     // ── ícones ─────────────────────────────────────────────────────
     const [goalIcon,       setGoalIcon]       = useState<string | null>(null);
     const [goalkeeperIcon, setGoalkeeperIcon] = useState<string | null>(null);
@@ -161,6 +166,8 @@ export default function GroupSettingsPage() {
                 setPlayerIcon(gs.playerIcon ?? null);
                 setPaymentMode(gs.paymentMode ?? 0);
                 setMonthlyFee(gs.monthlyFee != null ? String(gs.monthlyFee) : '');
+                setMvpTieRule(gs.mvpTieRule ?? 1);
+                setMvpTieMaxPlayers(gs.mvpTieMaxPlayers ?? 2);
             }
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao carregar configurações.'));
@@ -233,6 +240,8 @@ export default function GroupSettingsPage() {
                 playerIcon,
                 paymentMode,
                 monthlyFee: paymentMode === 0 && monthlyFee !== '' ? parseFloat(monthlyFee) : null,
+                mvpTieRule,
+                mvpTieMaxPlayers: mvpTieRule === 2 ? mvpTieMaxPlayers : undefined,
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
@@ -453,6 +462,53 @@ export default function GroupSettingsPage() {
                                     </p>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* ── Regra de empate MVP ── */}
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                            <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center shrink-0">
+                                    <Trophy size={17} />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-semibold text-slate-900 dark:text-white">Empate no MVP</div>
+                                    <div className="text-xs text-slate-400 dark:text-slate-500">O que acontece quando dois ou mais jogadores empatam em votos</div>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                {([
+                                    { val: 0, label: 'Nenhum recebe MVP', desc: 'Em caso de empate, ninguém é eleito.' },
+                                    { val: 1, label: 'Todos recebem MVP', desc: 'Todos os empatados são eleitos MVPs.' },
+                                    { val: 2, label: 'Todos até um máximo', desc: 'Todos recebem MVP se o número de empatados não ultrapassar o limite.' },
+                                ] as { val: number; label: string; desc: string }[]).map(({ val, label, desc }) => (
+                                    <label
+                                        key={val}
+                                        className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all select-none ${mvpTieRule === val ? 'border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                                    >
+                                        <input type="radio" name="mvpTieRule" value={val} checked={mvpTieRule === val}
+                                            onChange={() => setMvpTieRule(val)} className="sr-only" />
+                                        <div className="pt-0.5">
+                                            <div className="text-sm font-medium leading-tight">{label}</div>
+                                            <div className={`text-xs mt-0.5 leading-relaxed ${mvpTieRule === val ? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>{desc}</div>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                            {mvpTieRule === 2 && (
+                                <Field label="Máximo de MVPs empatados">
+                                    <input
+                                        className="input"
+                                        type="number"
+                                        min={2}
+                                        max={22}
+                                        value={mvpTieMaxPlayers}
+                                        onChange={(e) => setMvpTieMaxPlayers(Math.max(2, Number(e.target.value)))}
+                                    />
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                        Se {mvpTieMaxPlayers} ou menos jogadores empatarem, todos recebem MVP. Se ultrapassar, ninguém recebe.
+                                    </p>
+                                </Field>
+                            )}
                         </div>
 
                         {/* ── Salvar ── */}

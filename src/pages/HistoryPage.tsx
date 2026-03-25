@@ -292,9 +292,6 @@ export default function HistoryPage() {
                                                             <span className="sm:hidden">
                                                                 {dates?.short ?? matchId}
                                                             </span>
-                                                            <span className="hidden sm:inline">
-                                                                {dates?.full ?? matchId}
-                                                            </span>
                                                         </div>
 
                                                         {/* Meta row */}
