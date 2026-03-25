@@ -3,6 +3,7 @@ import { Check, CreditCard, Loader2, RefreshCw } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto, VoteCountDto, VoteDto } from "../matchTypes";
 import { cls } from "../matchUtils";
 import { GoalTracker } from "./GoalTracker";
+import { MvpResultCard } from "../ui/MvpResultCard";
 import { useAccountStore } from "../../../auth/accountStore";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
@@ -184,6 +185,8 @@ export function StepPost({
     votes,
     voteCounts,
     participants,
+    allVoted,
+    eligibleVoters,
     onRefresh,
     onFinalize,
     activeMatchPlayerId,
@@ -229,6 +232,10 @@ export function StepPost({
     votes: VoteDto[];
     voteCounts: VoteCountDto[];
     participants: PlayerInMatchDto[];
+    /** Backend: todos os não-convidados já votaram */
+    allVoted: boolean;
+    /** Backend: não-convidados que ainda não votaram */
+    eligibleVoters: PlayerInMatchDto[];
     onRefresh: () => void;
     onFinalize: () => void;
     activeMatchPlayerId: string;
@@ -274,10 +281,10 @@ export function StepPost({
                 ? "—"
                 : `${currentScoreA} × ${currentScoreB}`;
 
-        // Find if this player already voted
-        const myVote = votes.find((v) => v.voterMatchPlayerId === activeMatchPlayerId);
+        // Backend tells us who can still vote and whether everyone is done
+        const canVote  = eligibleVoters.some(p => p.matchPlayerId === activeMatchPlayerId);
+        const myVote   = votes.find(v => v.voterMatchPlayerId === activeMatchPlayerId);
         const hasVoted = !!myVote;
-        const isParticipant = !!activeMatchPlayerId;
 
         return (
             <div className="card p-4 space-y-4">
@@ -285,88 +292,91 @@ export function StepPost({
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <div className="font-semibold">Pós-jogo</div>
-                        <div className="text-xs text-slate-500">
-                            Visualização + voto MVP
-                        </div>
+                        <div className="text-xs text-slate-500">Visualização + voto MVP</div>
                     </div>
-                    <span className="pill">{currentMvpName || "MVP —"}</span>
                 </div>
 
                 {/* Score */}
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 text-center">
-                    <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                        Placar
-                    </div>
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Placar</div>
                     <div className="text-4xl font-extrabold text-slate-900 dark:text-white">{scoreText}</div>
                 </div>
 
-                {/* Voting section */}
-                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
-                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Seu voto MVP</div>
+                {/* Voting / result section — MVP card shown when backend persisted the winner */}
+                {!!currentMvpName ? (
+                    <MvpResultCard
+                        mvpName={currentMvpName}
+                        voteCounts={[]}
+                        votes={[]}
+                        admin={false}
+                        allVotedBadge
+                        _icons={_icons}
+                    />
+                ) : (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
+                            <div className="font-semibold text-slate-900 dark:text-white text-sm">Seu voto MVP</div>
+                        </div>
+
+                        {!activeMatchPlayerId ? (
+                            <div className="text-sm text-slate-400">
+                                Você não está entre os participantes desta partida.
+                            </div>
+                        ) : hasVoted ? (
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-3">
+                                <div className="flex items-center gap-2">
+                                    <Check size={14} className="text-emerald-600 shrink-0" />
+                                    <span className="text-sm font-semibold text-emerald-800">Você já votou no MVP</span>
+                                </div>
+                                <div className="mt-1 text-sm text-slate-600 dark:text-slate-400 pl-[22px]">
+                                    Votado: <b className="text-slate-900 dark:text-slate-100">{myVote!.votedForName}</b>
+                                </div>
+                                <div className="mt-1 text-xs text-slate-400 pl-[22px]">Aguardando os outros votarem...</div>
+                            </div>
+                        ) : !canVote ? (
+                            <div className="text-sm text-slate-400">
+                                Convidados não participam da votação. Aguardando resultado...
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="space-y-1.5">
+                                    {participants
+                                        .filter(p => p.matchPlayerId !== activeMatchPlayerId)
+                                        .map(p => {
+                                            const isSelected = voteVotedMpId === p.matchPlayerId;
+                                            return (
+                                                <button
+                                                    key={p.matchPlayerId}
+                                                    className={cls(
+                                                        "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                                        isSelected
+                                                            ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-300"
+                                                            : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                                    )}
+                                                    onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
+                                                >
+                                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
+                                                    {p.playerName}
+                                                </button>
+                                            );
+                                        })}
+                                </div>
+                                <div className="flex justify-end">
+                                    <button
+                                        className={cls("btn btn-primary", (!voteVotedMpId || voting) && "opacity-50 pointer-events-none")}
+                                        disabled={!voteVotedMpId || voting}
+                                        onClick={onVoteMvp}
+                                    >
+                                        {voting ? "Votando..." : "Votar"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
+                )}
 
-                    {!isParticipant ? (
-                        <div className="text-sm text-slate-400">
-                            Você não está entre os participantes desta partida.
-                        </div>
-                    ) : hasVoted ? (
-                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-3">
-                            <div className="flex items-center gap-2">
-                                <Check size={14} className="text-emerald-600 shrink-0" />
-                                <span className="text-sm font-semibold text-emerald-800">
-                                    Você já votou no MVP
-                                </span>
-                            </div>
-                            <div className="mt-1 text-sm text-slate-600 dark:text-slate-400 pl-[22px]">
-                                Votado:{" "}
-                                <b className="text-slate-900 dark:text-slate-100">{myVote!.votedForName}</b>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            <div className="space-y-1.5">
-                                {participants
-                                    .filter((p) => p.matchPlayerId !== activeMatchPlayerId)
-                                    .map((p) => {
-                                        const isSelected = voteVotedMpId === p.matchPlayerId;
-                                        return (
-                                            <button
-                                                key={p.matchPlayerId}
-                                                className={cls(
-                                                    "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                                                    isSelected
-                                                        ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-300"
-                                                        : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
-                                                )}
-                                                onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
-                                            >
-                                                <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
-                                                {p.playerName}
-                                            </button>
-                                        );
-                                    })}
-                            </div>
-
-                            <div className="flex justify-end">
-                                <button
-                                    className={cls(
-                                        "btn btn-primary",
-                                        (!voteVotedMpId || voting) &&
-                                            "opacity-50 pointer-events-none"
-                                    )}
-                                    disabled={!voteVotedMpId || voting}
-                                    onClick={onVoteMvp}
-                                >
-                                    {voting ? "Votando..." : "Votar"}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Goals — qualquer usuário pode marcar, ninguém pode remover */}
+                {/* Goals */}
                 <GoalTracker
                     participants={participants}
                     goals={goals}
@@ -386,14 +396,7 @@ export function StepPost({
 
     // ── Admin view ──────────────────────────────────────────────────────────
     const hasCurrentScore = currentScoreA != null && currentScoreB != null;
-
-    // Players who have already voted (by matchPlayerId)
-    const votedMatchPlayerIds = new Set(votes.map((v) => v.voterMatchPlayerId));
-
-    // Participants still eligible to vote (not voted yet)
-    const eligibleVoters = participants.filter(
-        (p) => !votedMatchPlayerIds.has(p.matchPlayerId)
-    );
+    const nonGuestCount   = participants.filter(p => !p.isGuest).length;
 
     // Player IDs for payment charge (non-guest participants with a playerId)
     const participantPlayerIds = participants
@@ -442,164 +445,130 @@ export function StepPost({
                     </div>
                 )}
 
-                {/* MVP voting */}
-                <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
-                        <div className="font-semibold text-slate-900 dark:text-white">Votar MVP</div>
-                    </div>
-                    <div className="text-xs text-slate-500">
-                        Admin pode votar por qualquer jogador ainda não votado.
-                        {participants.length > 0 && (
-                            <span className="ml-1">
-                                ({votes.length}/{participants.length} votaram)
-                            </span>
-                        )}
-                    </div>
-
-                    {eligibleVoters.length === 0 && participants.length > 0 ? (
-                        <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5">
-                            <Check size={14} className="text-emerald-600 shrink-0" />
-                            <span className="text-sm font-semibold text-emerald-800">
-                                Todos os jogadores já votaram no MVP
-                            </span>
-                        </div>
+                {/* MVP voting / result */}
+                <div className="mt-4">
+                    {!!currentMvpName ? (
+                        <MvpResultCard
+                            mvpName={currentMvpName}
+                            voteCounts={voteCounts}
+                            votes={votes}
+                            admin={true}
+                            allVotedBadge
+                            _icons={_icons}
+                        />
                     ) : (
-                    <>
-                    <div className="grid grid-cols-2 gap-3 mt-3">
-                        {/* Quem vota */}
-                        <div>
-                            <div className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
-                                Quem vota
-                                {eligibleVoters.length < participants.length && (
-                                    <span className="ml-1 text-[10px] text-slate-400 normal-case tracking-normal font-normal">
-                                        ({participants.length - eligibleVoters.length} já votou)
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
+                            <div className="flex items-center gap-2 mb-1">
+                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-500 shrink-0" }} />
+                                <div className="font-semibold text-slate-900 dark:text-white">Votar MVP</div>
+                            </div>
+                            <div className="text-xs text-slate-500 mb-3">
+                                Admin pode votar por qualquer jogador ainda não votado.
+                                {nonGuestCount > 0 && (
+                                    <span className="ml-1">
+                                        ({votes.length}/{nonGuestCount} votaram)
                                     </span>
                                 )}
                             </div>
-                            <div className="space-y-1.5">
-                                {eligibleVoters.map((p) => {
-                                    const isSelected = voteVoterMpId === p.matchPlayerId;
-                                    return (
-                                        <button
-                                            key={p.matchPlayerId}
-                                            className={cls(
-                                                "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                                                isSelected
-                                                    ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
-                                                    : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
-                                            )}
-                                            onClick={() => {
-                                                const next = isSelected ? "" : p.matchPlayerId;
-                                                setVoteVoterMpId(next);
-                                                setVoteVotedMpId("");
-                                            }}
-                                        >
-                                            <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
-                                            {p.playerName}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
 
-                        {/* Votado */}
-                        <div>
-                            <div className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
-                                Votado
-                            </div>
-                            <div className="space-y-1.5">
-                                {participants
-                                    .filter((p) => p.matchPlayerId !== voteVoterMpId)
-                                    .map((p) => {
-                                        const isSelected = voteVotedMpId === p.matchPlayerId;
-                                        return (
-                                            <button
-                                                key={p.matchPlayerId}
-                                                className={cls(
-                                                    "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                                                    isSelected
-                                                        ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-300"
-                                                        : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
-                                                )}
-                                                onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
-                                            >
-                                                <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}
-                                                {p.playerName}
-                                            </button>
-                                        );
-                                    })}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="text-xs text-slate-500">
-                            MVP atual:{" "}
-                            <b>{currentMvpName?.trim() ? currentMvpName : "—"}</b>
-                        </div>
-
-                        <button
-                            className={cls(
-                                "btn btn-primary",
-                                (!voteVotedMpId || voting || !voteVoterMpId) &&
-                                    "opacity-50 pointer-events-none"
-                            )}
-                            disabled={!voteVotedMpId || voting || !voteVoterMpId}
-                            onClick={onVoteMvp}
-                        >
-                            {voting ? "Votando..." : "Votar"}
-                        </button>
-                    </div>
-                    </>
-                    )} {/* end eligibleVoters > 0 */}
-
-                    {/* Vote counts + individual votes */}
-                    <div className="mt-4">
-                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Parciais</div>
-                        <div className="mt-2 grid gap-2">
-                            {voteCounts.length === 0 ? (
-                                <div className="muted">Sem votos ainda.</div>
-                            ) : (
-                                voteCounts.map((v) => (
-                                    <div
-                                        key={v.votedForMatchPlayerId}
-                                        className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2"
-                                    >
-                                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
-                                            {v.votedForName}
-                                        </div>
-                                        <span className="pill">{v.count}</span>
+                            <div className="grid grid-cols-2 gap-3">
+                                {/* Quem vota */}
+                                <div>
+                                    <div className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
+                                        Quem vota
+                                        {eligibleVoters.length < nonGuestCount && (
+                                            <span className="ml-1 text-[10px] text-slate-400 normal-case tracking-normal font-normal">
+                                                ({nonGuestCount - eligibleVoters.length} já votou)
+                                            </span>
+                                        )}
                                     </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Who voted for whom (detailed breakdown) */}
-                        {votes.length > 0 && (
-                            <div className="mt-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2">
-                                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
-                                    Detalhamento
+                                    <div className="space-y-1.5">
+                                        {eligibleVoters.map(p => {
+                                            const isSelected = voteVoterMpId === p.matchPlayerId;
+                                            return (
+                                                <button key={p.matchPlayerId}
+                                                    className={cls(
+                                                        "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                                        isSelected
+                                                            ? "border-emerald-400 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300"
+                                                            : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800"
+                                                    )}
+                                                    onClick={() => { setVoteVoterMpId(isSelected ? "" : p.matchPlayerId); setVoteVotedMpId(""); }}
+                                                >
+                                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}{p.playerName}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                                <div className="grid gap-1">
-                                    {votes.map((v) => (
-                                        <div
-                                            key={v.voteId}
-                                            className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400"
-                                        >
-                                            <span className="text-slate-400 dark:text-slate-500 truncate">
-                                                {v.voterName}
-                                            </span>
-                                            <span className="text-slate-300 dark:text-slate-600">→</span>
-                                            <span className="font-medium text-slate-700 dark:text-slate-300 truncate">
-                                                {v.votedForName}
-                                            </span>
-                                        </div>
-                                    ))}
+
+                                {/* Votado */}
+                                <div>
+                                    <div className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Votado</div>
+                                    <div className="space-y-1.5">
+                                        {participants.filter(p => p.matchPlayerId !== voteVoterMpId).map(p => {
+                                            const isSelected = voteVotedMpId === p.matchPlayerId;
+                                            return (
+                                                <button key={p.matchPlayerId}
+                                                    className={cls(
+                                                        "w-full text-left rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                                        isSelected
+                                                            ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-300"
+                                                            : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                                    )}
+                                                    onClick={() => setVoteVotedMpId(isSelected ? "" : p.matchPlayerId)}
+                                                >
+                                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />{" "}{p.playerName}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+
+                            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div className="text-xs text-slate-500">
+                                    MVP atual: <b>{currentMvpName?.trim() ? currentMvpName : "—"}</b>
+                                </div>
+                                <button
+                                    className={cls("btn btn-primary", (!voteVotedMpId || voting || !voteVoterMpId) && "opacity-50 pointer-events-none")}
+                                    disabled={!voteVotedMpId || voting || !voteVoterMpId}
+                                    onClick={onVoteMvp}
+                                >
+                                    {voting ? "Votando..." : "Votar"}
+                                </button>
+                            </div>
+
+                            {/* Parciais enquanto votação em andamento */}
+                            {voteCounts.length > 0 && (
+                                <div className="mt-4 border-t border-slate-100 dark:border-slate-700 pt-3">
+                                    <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Parciais</div>
+                                    <div className="grid gap-1.5">
+                                        {voteCounts.map(v => (
+                                            <div key={v.votedForMatchPlayerId} className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5">
+                                                <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{v.votedForName}</span>
+                                                <span className="pill shrink-0 ml-2">{v.count}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {votes.length > 0 && (
+                                        <div className="mt-2 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2">
+                                            <div className="text-xs font-medium text-slate-400 dark:text-slate-500 mb-1.5">Detalhamento</div>
+                                            <div className="grid gap-1">
+                                                {votes.map(v => (
+                                                    <div key={v.voteId} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                                        <span className="truncate">{v.voterName}</span>
+                                                        <span className="text-slate-300 dark:text-slate-600">→</span>
+                                                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate">{v.votedForName}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Score */}

@@ -19,7 +19,6 @@ import type {
     TeamOptionDto,
     StepKey,
 } from "../domains/matches/matchTypes";
-import { InviteResponse } from "../domains/matches/matchTypes";
 import {
     buildAllPlayers,
     getMaxPlayers,
@@ -101,7 +100,7 @@ export default function MatchesPage() {
     const [teamGenOptions, setTeamGenOptions] = useState<TeamOptionDto[] | null>(null);
     const [selectedTeamGenIdx, setSelectedTeamGenIdx] = useState<number>(0);
 
-    const maxPlayers = useMemo(() => getMaxPlayers(groupSettings), [groupSettings]);
+    const maxPlayers = (current as any)?.maxPlayers || getMaxPlayers(groupSettings);
 
     const placeNameOk = placeName.trim().length > 0;
     const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(playedAtDate);
@@ -109,19 +108,7 @@ export default function MatchesPage() {
     const canCreateMatch = admin && !!groupId && placeNameOk && dateOk && timeOk && !creating;
 
     // ============ STEP ============
-    const stepKey: StepKey = useMemo(() => {
-        if (!current) return "create";
-        const s = Number((current as any)?.status);
-
-        if (s === 0) return "create";
-        if (s === 1) return "accept";
-        if (s === 2) return "teams";
-        if (s === 3) return "playing";
-        if (s === 4) return "ended";
-        if (s === 5) return "post";
-        if (s === 6) return "done";
-        return "create";
-    }, [current?.status, (current as any)?.matchId]);
+    const stepKey: StepKey = ((current as any)?.stepKey as StepKey) ?? "create";
 
     function stepsOrderDone(k: StepKey, activeK: StepKey) {
         const order: StepKey[] = ["create", "accept", "teams", "playing", "ended", "post", "done"];
@@ -156,6 +143,8 @@ export default function MatchesPage() {
             playedAt: dto?.playedAt ?? dto?.PlayedAt ?? undefined,
             placeName: dto?.placeName ?? dto?.PlaceName ?? "",
             status: Number(dto?.status ?? dto?.Status ?? 0) as any,
+            stepKey: dto?.stepKey ?? dto?.StepKey ?? "create",
+            canRewind: dto?.canRewind ?? dto?.CanRewind ?? false,
             teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
             teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
         } as any;
@@ -169,14 +158,14 @@ export default function MatchesPage() {
         const res = await MatchesApi.acceptation(groupId, matchId);
         const dto = res.data.data as any;
 
-        const players = (dto?.players ?? dto?.Players ?? []) as PlayerInMatchDto[];
-
-        // aqui você usa unassignedPlayers como pool pra accepted/pending/rejected
         const patch: Partial<MatchDetailsDto> = {
             matchId,
             status: Number(dto?.status ?? dto?.Status ?? 1) as any,
-            unassignedPlayers: players as any,
-            // pra evitar fallback estranho em outros pontos:
+            acceptedPlayers: dto?.acceptedPlayers ?? dto?.AcceptedPlayers ?? [],
+            rejectedPlayers: dto?.rejectedPlayers ?? dto?.RejectedPlayers ?? [],
+            pendingPlayers:  dto?.pendingPlayers  ?? dto?.PendingPlayers  ?? [],
+            maxPlayers:      dto?.maxPlayers      ?? dto?.MaxPlayers      ?? 0,
+            acceptedOverLimit: dto?.acceptedOverLimit ?? dto?.AcceptedOverLimit ?? false,
             teamAPlayers: (current?.teamAPlayers ?? []) as any,
             teamBPlayers: (current?.teamBPlayers ?? []) as any,
         } as any;
@@ -198,6 +187,8 @@ export default function MatchesPage() {
             teamAPlayers: (dto?.teamAPlayers ?? dto?.TeamAPlayers ?? []) as any,
             teamBPlayers: (dto?.teamBPlayers ?? dto?.TeamBPlayers ?? []) as any,
             unassignedPlayers: (dto?.unassignedPlayers ?? dto?.UnassignedPlayers ?? []) as any,
+            participants: (dto?.participants ?? dto?.Participants ?? []) as any,
+            colorsLocked: dto?.colorsLocked ?? dto?.ColorsLocked ?? false,
         } as any;
 
         setCurrent((prev) => mergeCurrent(prev, patch));
@@ -206,31 +197,21 @@ export default function MatchesPage() {
     async function loadPostGame(matchId: string) {
         if (!groupId || !matchId) return;
 
-        // Fetch postgame + full details in parallel so votes are always available
-        // (postgame may not return votes on all backends)
-        const [pgRes, detailsRes] = await Promise.all([
-            MatchesApi.postgame(groupId, matchId),
-            MatchesApi.details(groupId, matchId).catch(() => ({ data: null })),
-        ]);
-
-        const dto = pgRes.data.data as any;
-        const dDto = (detailsRes as any)?.data?.data as any;
-
-        // Prefer postgame fields; fall back to details for votes/goals/mvp
-        const votes = (dto?.votes ?? dto?.Votes ?? dDto?.votes ?? dDto?.Votes ?? []) as any[];
-        const voteCounts = (dto?.voteCounts ?? dto?.VoteCounts ?? dDto?.voteCounts ?? dDto?.VoteCounts ?? []) as any[];
-        const goals = (dto?.goals ?? dto?.Goals ?? dDto?.goals ?? dDto?.Goals ?? []) as any[];
-        const computedMvp = dto?.computedMvp ?? dto?.ComputedMvp ?? dDto?.computedMvp ?? dDto?.ComputedMvp ?? null;
+        const res = await MatchesApi.postgame(groupId, matchId);
+        const dto = res.data.data as any;
 
         const patch: Partial<MatchDetailsDto> = {
             matchId,
             status: Number(dto?.status ?? dto?.Status ?? 5) as any,
             teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
             teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
-            computedMvp,
-            votes: votes as any,
-            voteCounts,
-            goals,
+            computedMvp: dto?.computedMvp ?? dto?.ComputedMvp ?? null,
+            votes: (dto?.votes ?? dto?.Votes ?? []) as any,
+            voteCounts: dto?.voteCounts ?? dto?.VoteCounts ?? [],
+            goals: dto?.goals ?? dto?.Goals ?? [],
+            allVoted: dto?.allVoted ?? dto?.AllVoted ?? false,
+            eligibleVoters: dto?.eligibleVoters ?? dto?.EligibleVoters ?? [],
+            participants: (dto?.participants ?? dto?.Participants ?? []) as any,
         } as any;
 
         setCurrent((prev) => mergeCurrent(prev, patch));
@@ -252,8 +233,6 @@ export default function MatchesPage() {
         }
 
         if (step === "post") {
-            // Participants come from matchmaking data — load both in sequence
-            await loadMatchMaking(matchId);
             await loadPostGame(matchId);
             return;
         }
@@ -431,21 +410,20 @@ export default function MatchesPage() {
         // eslint-disable-next-line
     }, [readOnlyUser, groupId]);
 
-    // lock colors when current has them
+    // sync color state when match data loads
     useEffect(() => {
         if (!current) return;
 
         const aId = (current as any)?.teamAColor?.id ?? "";
         const bId = (current as any)?.teamBColor?.id ?? "";
-        const alreadySet = !!aId || !!bId;
 
         if (aId) setTeamAColorId(String(aId));
         if (bId) setTeamBColorId(String(bId));
 
-        setColorsLocked(alreadySet);
+        setColorsLocked((current as any)?.colorsLocked ?? (!!aId || !!bId));
         setAllowEditColors(false);
         // eslint-disable-next-line
-    }, [(current as any)?.matchId, (current as any)?.teamAColor?.id, (current as any)?.teamBColor?.id]);
+    }, [(current as any)?.matchId, (current as any)?.teamAColor?.id, (current as any)?.teamBColor?.id, (current as any)?.colorsLocked]);
 
     useEffect(() => {
         if (!teamColors?.length) return;
@@ -468,43 +446,16 @@ export default function MatchesPage() {
         [teamColors, teamBColorId]
     );
 
-    // derived lists
+    // derived lists — computed by backend
     const allPlayers = useMemo<PlayerInMatchDto[]>(() => buildAllPlayers(current), [current]);
 
-    const invitePool = useMemo<PlayerInMatchDto[]>(() => {
-        const list = (current as any)?.unassignedPlayers ?? [];
-        return Array.isArray(list) ? list : [];
-    }, [current]);
+    const accepted: PlayerInMatchDto[] = (current as any)?.acceptedPlayers ?? [];
+    const rejected: PlayerInMatchDto[] = (current as any)?.rejectedPlayers ?? [];
+    const pending: PlayerInMatchDto[]  = (current as any)?.pendingPlayers  ?? [];
 
-    const accepted = useMemo(
-        () => invitePool.filter((p) => Number((p as any).inviteResponse) === InviteResponse.Accepted),
-        [invitePool]
-    );
-    const rejected = useMemo(
-        () => invitePool.filter((p) => Number((p as any).inviteResponse) === InviteResponse.Rejected),
-        [invitePool]
-    );
-    const pending = useMemo(
-        () => invitePool.filter((p) => Number((p as any).inviteResponse) === InviteResponse.None),
-        [invitePool]
-    );
+    const acceptedOverLimit: boolean = (current as any)?.acceptedOverLimit ?? false;
 
-    const acceptedOverLimit = accepted.length > maxPlayers;
-
-    const participants = useMemo<PlayerInMatchDto[]>(() => {
-        if (!current) return [];
-
-        const a = Array.isArray((current as any)?.teamAPlayers) ? (current as any).teamAPlayers : [];
-        const b = Array.isArray((current as any)?.teamBPlayers) ? (current as any).teamBPlayers : [];
-        const base = [...a, ...b];
-
-        const fallback = allPlayers.filter((p) => Number((p as any).team) === 1 || Number((p as any).team) === 2);
-        const list = base.length ? base : fallback;
-
-        const map = new Map<string, PlayerInMatchDto>();
-        for (const p of list) if ((p as any)?.playerId) map.set(String((p as any).playerId), p);
-        return Array.from(map.values());
-    }, [current, allPlayers]);
+    const participants: PlayerInMatchDto[] = (current as any)?.participants ?? [];
 
     const teamsAlreadyAssigned = useMemo(() => {
         const a = (current as any)?.teamAPlayers?.length ?? 0;
@@ -512,23 +463,18 @@ export default function MatchesPage() {
         return a > 0 && b > 0;
     }, [(current as any)?.teamAPlayers, (current as any)?.teamBPlayers]);
 
-    const sortedTeamAPlayers = useMemo(() => {
-        const a = Array.isArray((current as any)?.teamAPlayers) ? (current as any).teamAPlayers : [];
-        return [...a].sort((x: any, y: any) => Number(y.isGoalkeeper) - Number(x.isGoalkeeper));
-    }, [(current as any)?.teamAPlayers]);
+    // Backend returns players already sorted (goalkeeper first, then name)
+    const sortedTeamAPlayers: PlayerInMatchDto[] = (current as any)?.teamAPlayers ?? [];
+    const sortedTeamBPlayers: PlayerInMatchDto[] = (current as any)?.teamBPlayers ?? [];
 
-    const sortedTeamBPlayers = useMemo(() => {
-        const b = Array.isArray((current as any)?.teamBPlayers) ? (current as any).teamBPlayers : [];
-        return [...b].sort((x: any, y: any) => Number(y.isGoalkeeper) - Number(x.isGoalkeeper));
-    }, [(current as any)?.teamBPlayers]);
-
-    // Non-admin: automatically use own matchPlayerId as the voter
+    // Non-admin: automatically use own matchPlayerId as the voter (from eligible list)
     useEffect(() => {
-        if (admin || !participants.length || !activePlayerId) return;
-        const myMpId = participants.find((p) => p.playerId === activePlayerId)?.matchPlayerId;
+        if (admin || !activePlayerId) return;
+        const eligible: any[] = (current as any)?.eligibleVoters ?? [];
+        const myMpId = eligible.find((p: any) => p.playerId === activePlayerId)?.matchPlayerId;
         if (myMpId) setVoteVoterMpId(myMpId);
         // eslint-disable-next-line
-    }, [admin, participants, activePlayerId]);
+    }, [admin, (current as any)?.eligibleVoters, activePlayerId]);
 
     // actions
     async function acceptInvite(playerId: string) {
@@ -630,10 +576,8 @@ export default function MatchesPage() {
     async function generateTeams() {
         if (!groupId || !current) return;
 
-        const acceptedAll = allPlayers.filter((p) => Number((p as any).inviteResponse) === InviteResponse.Accepted);
-
         const players: TeamGenPlayerDto[] = uniqById(
-            acceptedAll
+            accepted
                 .filter((p) => typeof (p as any).playerId === "string" && String((p as any).playerId).trim().length > 0)
                 .map((p) => ({
                     id: String((p as any).playerId),
@@ -1016,6 +960,8 @@ export default function MatchesPage() {
             currentMvpName: (current as any)?.computedMvp?.playerName ?? "",
             votes: (current as any)?.votes ?? [],
             voteCounts: (current as any)?.voteCounts ?? [],
+            allVoted: (current as any)?.allVoted ?? false,
+            eligibleVoters: (current as any)?.eligibleVoters ?? [],
             participants,
             scoreA,
             setScoreA,
@@ -1054,6 +1000,8 @@ export default function MatchesPage() {
         (current as any)?.computedMvp?.playerName,
         (current as any)?.votes,
         (current as any)?.voteCounts,
+        (current as any)?.allVoted,
+        (current as any)?.eligibleVoters,
         (current as any)?.teamAGoals,
         (current as any)?.teamBGoals,
         (current as any)?.goals,
@@ -1101,12 +1049,7 @@ export default function MatchesPage() {
 
     const currentExistsInCreate = !!current && stepKey === "create";
 
-    const canRewind = useMemo(() => {
-        if (!admin) return false;
-        if (!current) return false;
-        const s = Number((current as any).status);
-        return Number.isFinite(s) && s > 0; // > Created
-    }, [admin, (current as any)?.status]);
+    const canRewind = admin && !!current && ((current as any)?.canRewind ?? false);
 
     const stepLabel = steps.find((s) => s.key === stepKey)?.title ?? "Em andamento";
 

@@ -20,6 +20,7 @@ import { isGodMode } from "../auth/guards";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
+import { MvpResultCard } from "../domains/matches/ui/MvpResultCard";
 
 /* ===================== helpers ===================== */
 
@@ -1284,80 +1285,23 @@ export default function MatchDetailsPage() {
             </Section>
 
             {/* ── MVP ───────────────────────────────────────────────── */}
-            {/* Todos veem o MVP por isMvp; admin/god veem também a apuração de votos */}
             {(mvpPlayer || canSeeMvp) && (
                 <Section title="MVP">
-                    <div className="space-y-3">
-                        {/* Winner card — admin/god usa mvp (votos); demais usa isMvp */}
-                        {(() => {
-                            const cardName = canSeeMvp ? (mvp?.playerName ?? mvpPlayer?.playerName) : mvpPlayer?.playerName;
-                            const cardTeam = canSeeMvp ? (mvp?.team ?? mvpPlayer?.team) : mvpPlayer?.team;
-                            const cardTeamName = cardTeam === 1 ? aName : cardTeam === 2 ? bName : (mvpPlayerTeamName ?? "");
-                            if (!cardName) return (
-                                <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-8 text-center">
-                                    <IconRenderer value={resolveIcon(_icons, 'mvp')} size={28} lucideProps={{ className: "mx-auto text-slate-300 dark:text-slate-600 mb-2" }} />
-                                    <div className="text-sm text-slate-400 dark:text-slate-500">MVP não definido</div>
-                                </div>
-                            );
-                            return (
-                                <div className="rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-950/30 px-4 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center h-11 w-11 rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 shrink-0">
-                                            <IconRenderer value={resolveIcon(_icons, 'mvp')} size={20} lucideProps={{ className: "text-amber-500 dark:text-amber-400" }} />
-                                        </div>
-                                        <div>
-                                            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-0.5">
-                                                Melhor do jogo
-                                            </div>
-                                            <div className="font-bold text-slate-900 dark:text-amber-50 text-xl leading-none">
-                                                {cardName}
-                                            </div>
-                                            {cardTeamName && (
-                                                <div className="text-xs text-amber-700 dark:text-amber-400/70 mt-1">{cardTeamName}</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
-
-                        {/* Apuração de votos — apenas admin / god mode */}
-                        {canSeeMvp && voteCounts.length > 0 && (
-                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
-                                    Apuração de votos
-                                </div>
-                                <div className="space-y-2.5">
-                                    {voteCounts.map((vc: any) => {
-                                        const pct = maxVotes > 0 ? ((vc.count ?? 0) / maxVotes) * 100 : 0;
-                                        const isWinner = vc.votedForName === mvp?.playerName;
-                                        return (
-                                            <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
-                                                <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5 shrink-0">
-                                                    {isWinner && (
-                                                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} lucideProps={{ className: "text-amber-400 shrink-0" }} />
-                                                    )}
-                                                    {vc.votedForName}
-                                                </div>
-                                                <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                                                    <div
-                                                        className={cn(
-                                                            "h-full rounded-full transition-all",
-                                                            isWinner ? "bg-amber-400" : "bg-slate-300"
-                                                        )}
-                                                        style={{ width: `${pct}%` }}
-                                                    />
-                                                </div>
-                                                <div className="text-sm font-bold text-slate-700 dark:text-slate-300 tabular-nums w-5 text-right shrink-0">
-                                                    {vc.count}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    {(() => {
+                        const cardName = canSeeMvp ? (mvp?.playerName ?? mvpPlayer?.playerName) : mvpPlayer?.playerName;
+                        const cardTeam = canSeeMvp ? (mvp?.team ?? mvpPlayer?.team) : mvpPlayer?.team;
+                        const cardTeamName = cardTeam === 1 ? aName : cardTeam === 2 ? bName : (mvpPlayerTeamName ?? "");
+                        return (
+                            <MvpResultCard
+                                mvpName={cardName}
+                                teamName={cardTeamName || undefined}
+                                voteCounts={canSeeMvp ? voteCounts : []}
+                                votes={[]}
+                                admin={canSeeMvp}
+                                _icons={_icons}
+                            />
+                        );
+                    })()}
                 </Section>
             )}
 

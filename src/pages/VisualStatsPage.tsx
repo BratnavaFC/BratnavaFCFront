@@ -12,6 +12,7 @@ import {
     Search,
     Shield,
     Users,
+    X,
 } from "lucide-react";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
@@ -266,10 +267,6 @@ export default function VisualStatsPage() {
                 const payload: PlayerVisualStatsReport = res?.data?.data ?? res?.data ?? res;
                 if (!mounted) return;
                 setData(payload);
-                const first = [...(payload.players ?? [])].sort((a, b) =>
-                    a.name.localeCompare(b.name, "pt-BR")
-                )[0];
-                setSelectedId(first?.playerId ?? null);
             } catch (e: any) {
                 if (!mounted) return;
                 setErr(e?.message || "Falha ao carregar dados.");
@@ -466,10 +463,7 @@ export default function VisualStatsPage() {
                                                         "hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors",
                                                         inactive && "opacity-50"
                                                     )}
-                                                    onClick={() => {
-                                                        setSelectedId(p.playerId);
-                                                        setMainTab("players");
-                                                    }}
+                                                    onClick={() => setSelectedId(p.playerId)}
                                                 >
                                                     {/* Rank */}
                                                     <td className="px-4 py-2.5 text-xs font-mono text-slate-400 dark:text-slate-500 tabular-nums">
@@ -628,271 +622,241 @@ export default function VisualStatsPage() {
                 PLAYERS TAB
             ══════════════════════════════════════════════════════ */}
             {mainTab === "players" && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
 
-                    {/* ── Left: player list ────────────────────────── */}
-                    <div className="lg:col-span-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
-
-                        {/* Sidebar toolbar */}
-                        <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 space-y-2">
-                            {/* Search */}
-                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5">
-                                <Search size={13} className="text-slate-400 shrink-0" />
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Buscar…"
-                                    className="w-full bg-transparent text-sm outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                                />
-                            </div>
-
-                            {/* Sort chips */}
-                            <div className="flex items-center gap-1 flex-wrap">
-                                {(
-                                    [
-                                        { k: "winrate",  label: "WR" },
-                                        { k: "games",    label: "Jogos" },
-                                        { k: "goals",    label: <IconRenderer value={resolveIcon(_icons, 'goal')} size={13} /> },
-                                        { k: "assists",  label: <IconRenderer value={resolveIcon(_icons, 'assist')} size={13} /> },
-                                        { k: "owngoals", label: <IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} /> },
-                                        { k: "name",     label: "Nome" },
-                                    ] as { k: SortKey; label: React.ReactNode }[]
-                                ).map(({ k, label }) => (
-                                    <SortChip key={k} active={sortKey === k} dir="desc" onClick={() => setSortKey(k)}>
-                                        {label}
-                                    </SortChip>
-                                ))}
-                            </div>
+                    {/* Toolbar */}
+                    <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 space-y-2">
+                        {/* Search */}
+                        <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5">
+                            <Search size={13} className="text-slate-400 shrink-0" />
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Buscar…"
+                                className="w-full bg-transparent text-sm outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                            />
                         </div>
 
-                        {/* Player list */}
-                        <div className="max-h-[72vh] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800">
-                            {sorted.length === 0 && (
-                                <div className="px-4 py-6 text-sm text-center text-slate-400 dark:text-slate-500">
-                                    Nenhum jogador encontrado.
-                                </div>
-                            )}
-                            {sorted.map((p) => {
-                                const active = p.playerId === selectedId;
-                                const wr = normalizeWR(p.winRate);
-                                return (
-                                    <button
-                                        key={p.playerId}
-                                        type="button"
-                                        onClick={() => setSelectedId(p.playerId)}
-                                        className={cx(
-                                            "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
-                                            active
-                                                ? "bg-slate-900 dark:bg-white"
-                                                : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                                        )}
-                                    >
-                                        {/* Avatar initial */}
-                                        <div
-                                            className={cx(
-                                                "h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
-                                                active
-                                                    ? "bg-white/10 dark:bg-slate-900/10 text-white dark:text-slate-900"
-                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                            )}
-                                        >
-                                            {p.name[0]?.toUpperCase()}
-                                        </div>
-
-                                        {/* Name + sub-info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className={cx("text-sm font-semibold truncate", active ? "text-white dark:text-slate-900" : "text-slate-900 dark:text-white")}>
-                                                {p.isGoalkeeper ? <><IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={13} />{" "}</> : null}{p.name}
-                                            </div>
-                                            <div className={cx("text-[11px] tabular-nums", active ? "text-slate-400" : "text-slate-400")}>
-                                                {p.gamesPlayed}j · {p.wins}V{p.ties}E{p.losses}D
-                                            </div>
-                                        </div>
-
-                                        {/* WR */}
-                                        <span
-                                            className="text-xs font-bold tabular-nums shrink-0"
-                                            style={{ color: active ? "#fff" : wrColor(wr) }}
-                                        >
-                                            {pct(wr)}
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                        {/* Sort chips */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {(
+                                [
+                                    { k: "winrate",  label: "WR" },
+                                    { k: "games",    label: "Jogos" },
+                                    { k: "goals",    label: <IconRenderer value={resolveIcon(_icons, 'goal')} size={13} /> },
+                                    { k: "assists",  label: <IconRenderer value={resolveIcon(_icons, 'assist')} size={13} /> },
+                                    { k: "owngoals", label: <IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} /> },
+                                    { k: "name",     label: "Nome" },
+                                ] as { k: SortKey; label: React.ReactNode }[]
+                            ).map(({ k, label }) => (
+                                <SortChip key={k} active={sortKey === k} dir="desc" onClick={() => setSortKey(k)}>
+                                    {label}
+                                </SortChip>
+                            ))}
                         </div>
                     </div>
 
-                    {/* ── Right: player detail ─────────────────────── */}
-                    <div className="lg:col-span-8 space-y-4">
-                        {!selectedPlayer ? (
-                            <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-12 text-center">
-                                <Users size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
-                                <div className="text-sm text-slate-400 dark:text-slate-500">Selecione um jogador</div>
+                    {/* Player list */}
+                    <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                        {sorted.length === 0 && (
+                            <div className="px-4 py-6 text-sm text-center text-slate-400 dark:text-slate-500">
+                                Nenhum jogador encontrado.
                             </div>
-                        ) : (
-                            <>
-                                {/* Player header card */}
-                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
-                                    {/* Top strip with player's WR color */}
-                                    <div
-                                        className="h-1"
-                                        style={{ backgroundColor: wrColor(normalizeWR(selectedPlayer.winRate)) }}
-                                    />
-
-                                    <div className="px-5 py-4">
-                                        {/* Name row */}
-                                        <div className="flex items-start gap-3">
-                                            {/* Avatar */}
-                                            <div className="h-11 w-11 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-extrabold text-lg shrink-0">
-                                                {selectedPlayer.name[0]?.toUpperCase()}
-                                            </div>
-
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-bold text-slate-900 dark:text-white text-lg leading-none">
-                                                        {selectedPlayer.name}
-                                                    </span>
-                                                    {selectedPlayer.isGoalkeeper && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                                                            <Shield size={11} /> Goleiro
-                                                        </span>
-                                                    )}
-                                                    {!isActive(selectedPlayer.status) && (
-                                                        <span className="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                                                            Inativo
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {/* Inline stats */}
-                                                <div className="mt-2 flex items-center gap-3 flex-wrap text-xs text-slate-500 dark:text-slate-400">
-                                                    <span className="tabular-nums">
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedPlayer.gamesPlayed}</span> jogos
-                                                    </span>
-                                                    <span className="text-green-600 tabular-nums font-semibold">
-                                                        {selectedPlayer.wins}V
-                                                    </span>
-                                                    <span className="text-slate-400 tabular-nums">
-                                                        {selectedPlayer.ties}E
-                                                    </span>
-                                                    <span className="text-red-500 tabular-nums font-semibold">
-                                                        {selectedPlayer.losses}D
-                                                    </span>
-                                                    {selectedPlayer.mvps > 0 && (
-                                                        <span className="inline-flex items-center gap-1 text-amber-500 font-semibold">
-                                                            <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />{" "}{selectedPlayer.mvps} MVP{selectedPlayer.mvps > 1 ? "s" : ""}
-                                                        </span>
-                                                    )}
-                                                    {(selectedPlayer.goals || 0) > 0 && (
-                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600 dark:text-slate-400">
-                                                            <IconRenderer value={resolveIcon(_icons, 'goal')} size={12} />{selectedPlayer.goals}
-                                                        </span>
-                                                    )}
-                                                    {(selectedPlayer.assists || 0) > 0 && (
-                                                        <span className="inline-flex items-center gap-1 tabular-nums text-slate-600 dark:text-slate-400">
-                                                            <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{selectedPlayer.assists}
-                                                        </span>
-                                                    )}
-                                                    {(selectedPlayer.ownGoals || 0) > 0 && (
-                                                        <span className="inline-flex items-center gap-1 tabular-nums text-red-500">
-                                                            <IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={12} />{selectedPlayer.ownGoals} GC
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Big WR */}
-                                            <div className="text-right shrink-0">
-                                                <div
-                                                    className="text-3xl font-extrabold tabular-nums leading-none"
-                                                    style={{ color: wrColor(normalizeWR(selectedPlayer.winRate)) }}
-                                                >
-                                                    {pct(normalizeWR(selectedPlayer.winRate))}
-                                                </div>
-                                                <div className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-0.5">
-                                                    Win Rate
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* W/D/L proportion bar */}
-                                        <div className="mt-4">
-                                            <WDLBar
-                                                wins={selectedPlayer.wins}
-                                                ties={selectedPlayer.ties}
-                                                losses={selectedPlayer.losses}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Synergies card */}
-                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
-                                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-                                        <div className="flex items-center gap-2">
-                                            <Layers size={14} className="text-slate-400 dark:text-slate-500" />
-                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                                                Sinergias
-                                            </span>
-                                            <span className="text-xs text-slate-400 dark:text-slate-500">
-                                                {synergies.length} parceiro{synergies.length !== 1 ? "s" : ""}
-                                            </span>
-                                        </div>
-
-                                        {/* Min-together filter */}
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                            <span className="text-xs text-slate-400 dark:text-slate-500">Mín.</span>
-                                            <select
-                                                value={minTogether}
-                                                onChange={(e) => setMinTogether(parseInt(e.target.value, 10))}
-                                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white px-2 py-1 text-xs outline-none"
-                                            >
-                                                <option value={1}>1+ j</option>
-                                                <option value={2}>2+ j</option>
-                                                <option value={3}>3+ j</option>
-                                                <option value={5}>5+ j</option>
-                                                <option value={8}>8+ j</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {synergies.length === 0 ? (
-                                        <div className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-                                            Sem sinergias com esse filtro.
-                                        </div>
-                                    ) : (
-                                        <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                                            {synergies.map((s) => (
-                                                <div
-                                                    key={s.withPlayerId}
-                                                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                                                >
-                                                    {/* Partner avatar */}
-                                                    <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center font-bold text-xs shrink-0">
-                                                        {s.withPlayerName[0]?.toUpperCase()}
-                                                    </div>
-
-                                                    {/* Partner name + games */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                                            {s.withPlayerName}
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
-                                                            {s.matchesTogether}j · {s.winsTogether}V
-                                                        </div>
-                                                    </div>
-
-                                                    {/* WR bar */}
-                                                    <div className="w-28 shrink-0">
-                                                        <WRBar value={s.wr} />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </>
                         )}
+                        {sorted.map((p) => {
+                            const wr = normalizeWR(p.winRate);
+                            return (
+                                <button
+                                    key={p.playerId}
+                                    type="button"
+                                    onClick={() => setSelectedId(p.playerId)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                                >
+                                    {/* Avatar */}
+                                    <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                        {p.name[0]?.toUpperCase()}
+                                    </div>
+
+                                    {/* Name + sub-info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold truncate text-slate-900 dark:text-white">
+                                            {p.isGoalkeeper ? <><IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={13} />{" "}</> : null}{p.name}
+                                        </div>
+                                        <div className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                                            {p.gamesPlayed}j · {p.wins}V{p.ties}E{p.losses}D
+                                        </div>
+                                    </div>
+
+                                    {/* WR + chevron */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <span className="text-xs font-bold tabular-nums" style={{ color: wrColor(wr) }}>
+                                            {pct(wr)}
+                                        </span>
+                                        <svg className="w-4 h-4 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════
+                PLAYER DETAIL MODAL (any tab)
+            ══════════════════════════════════════════════════════ */}
+            {selectedPlayer && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm"
+                    onClick={() => setSelectedId(null)}
+                >
+                    <div
+                        className="relative w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white dark:bg-slate-900 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Drag handle (mobile) / close (desktop) */}
+                        <div className="sticky top-0 z-10 flex items-center justify-between px-5 pt-3 pb-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+                            <div className="sm:hidden mx-auto w-9 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                            <span className="hidden sm:block text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                {selectedPlayer.name}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedId(null)}
+                                className="ml-auto rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-4">
+                            {/* Player header card */}
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                <div className="h-1" style={{ backgroundColor: wrColor(normalizeWR(selectedPlayer.winRate)) }} />
+                                <div className="px-5 py-4">
+                                    <div className="flex items-start gap-3">
+                                        {/* Avatar */}
+                                        <div className="h-11 w-11 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-extrabold text-lg shrink-0">
+                                            {selectedPlayer.name[0]?.toUpperCase()}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-bold text-slate-900 dark:text-white text-lg leading-none">
+                                                    {selectedPlayer.name}
+                                                </span>
+                                                {selectedPlayer.isGoalkeeper && (
+                                                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                                                        <Shield size={11} /> Goleiro
+                                                    </span>
+                                                )}
+                                                {!isActive(selectedPlayer.status) && (
+                                                    <span className="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                                        Inativo
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-2 flex items-center gap-3 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+                                                <span className="tabular-nums">
+                                                    <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedPlayer.gamesPlayed}</span> jogos
+                                                </span>
+                                                <span className="text-green-600 tabular-nums font-semibold">{selectedPlayer.wins}V</span>
+                                                <span className="text-slate-400 tabular-nums">{selectedPlayer.ties}E</span>
+                                                <span className="text-red-500 tabular-nums font-semibold">{selectedPlayer.losses}D</span>
+                                                {selectedPlayer.mvps > 0 && (
+                                                    <span className="inline-flex items-center gap-1 text-amber-500 font-semibold">
+                                                        <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />{" "}{selectedPlayer.mvps} MVP{selectedPlayer.mvps > 1 ? "s" : ""}
+                                                    </span>
+                                                )}
+                                                {(selectedPlayer.goals || 0) > 0 && (
+                                                    <span className="inline-flex items-center gap-1 tabular-nums text-slate-600 dark:text-slate-400">
+                                                        <IconRenderer value={resolveIcon(_icons, 'goal')} size={12} />{selectedPlayer.goals}
+                                                    </span>
+                                                )}
+                                                {(selectedPlayer.assists || 0) > 0 && (
+                                                    <span className="inline-flex items-center gap-1 tabular-nums text-slate-600 dark:text-slate-400">
+                                                        <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{selectedPlayer.assists}
+                                                    </span>
+                                                )}
+                                                {(selectedPlayer.ownGoals || 0) > 0 && (
+                                                    <span className="inline-flex items-center gap-1 tabular-nums text-red-500">
+                                                        <IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={12} />{selectedPlayer.ownGoals} GC
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Big WR */}
+                                        <div className="text-right shrink-0">
+                                            <div
+                                                className="text-3xl font-extrabold tabular-nums leading-none"
+                                                style={{ color: wrColor(normalizeWR(selectedPlayer.winRate)) }}
+                                            >
+                                                {pct(normalizeWR(selectedPlayer.winRate))}
+                                            </div>
+                                            <div className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-0.5">
+                                                Win Rate
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <WDLBar wins={selectedPlayer.wins} ties={selectedPlayer.ties} losses={selectedPlayer.losses} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Synergies card */}
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <Layers size={14} className="text-slate-400 dark:text-slate-500" />
+                                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Sinergias</span>
+                                        <span className="text-xs text-slate-400 dark:text-slate-500">
+                                            {synergies.length} parceiro{synergies.length !== 1 ? "s" : ""}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <span className="text-xs text-slate-400 dark:text-slate-500">Mín.</span>
+                                        <select
+                                            value={minTogether}
+                                            onChange={(e) => setMinTogether(parseInt(e.target.value, 10))}
+                                            className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white px-2 py-1 text-xs outline-none"
+                                        >
+                                            <option value={1}>1+ j</option>
+                                            <option value={2}>2+ j</option>
+                                            <option value={3}>3+ j</option>
+                                            <option value={5}>5+ j</option>
+                                            <option value={8}>8+ j</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {synergies.length === 0 ? (
+                                    <div className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+                                        Sem sinergias com esse filtro.
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                                        {synergies.map((s) => (
+                                            <div key={s.withPlayerId} className="flex items-center gap-3 px-4 py-2.5">
+                                                <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center font-bold text-xs shrink-0">
+                                                    {s.withPlayerName[0]?.toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{s.withPlayerName}</div>
+                                                    <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{s.matchesTogether}j · {s.winsTogether}V</div>
+                                                </div>
+                                                <div className="w-28 shrink-0">
+                                                    <WRBar value={s.wr} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
