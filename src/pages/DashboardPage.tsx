@@ -5,7 +5,7 @@ import { PlayersApi, MatchesApi, PaymentsApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
 import { getResponseMessage } from '../api/apiResponse';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
-import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle, DollarSign } from 'lucide-react';
 import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
@@ -145,6 +145,7 @@ const OUTCOME_META = {
 // ─── DashboardPage ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const store = useAccountStore();
   const active = store.getActive();
   const groupId         = active?.activeGroupId ?? null;
@@ -349,6 +350,63 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* ── Situação financeira ── */}
+      {groupId && (
+        <div className="card p-0 overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="h-6 w-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign size={13} className="text-emerald-600" />
+              </div>
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Situação financeira</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/app/payments')}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+            >
+              Ver detalhes
+            </button>
+          </div>
+          <div className="p-5">
+            {paymentSummaryLoading ? (
+              <div className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            ) : !paymentSummary ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Não foi possível carregar sua situação financeira.</p>
+            ) : paymentSummary.isUpToDate ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-4">
+                <CheckCircle2 size={22} className="text-emerald-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Em dia</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">Você não possui pendências financeiras.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-4">
+                  <AlertCircle size={22} className="text-amber-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Pagamentos pendentes</p>
+                    <div className="flex flex-wrap gap-2 mt-1.5">
+                      {paymentSummary.hasPendingMonthly && (
+                        <span className="text-xs rounded-full border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5">
+                          {paymentSummary.pendingMonthsCount} {paymentSummary.pendingMonthsCount === 1 ? 'mensalidade' : 'mensalidades'} em aberto
+                        </span>
+                      )}
+                      {paymentSummary.pendingExtraCharges?.length > 0 && (
+                        <span className="text-xs rounded-full border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5">
+                          {paymentSummary.pendingExtraCharges.length} {paymentSummary.pendingExtraCharges.length === 1 ? 'cobrança extra' : 'cobranças extras'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -54,9 +54,9 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/matches", label: "Partidas", icon: CalendarDays },
         { to: "/app/history", label: "Histórico", icon: History },
         { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
-        { to: "/app/polls", label: "Votações", icon: Vote, badge: pendingPollsCount || undefined },
-        // ...(isGroupAdm || isGod ? [{ to: "/app/payments",  label: "Pagamentos",  icon: DollarSign }] : []),
-        // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight",   icon: Presentation }] : []),
+        { to: "/app/polls",    label: "Votações",   icon: Vote,        badge: pendingPollsCount || undefined },
+        { to: "/app/payments", label: "Pagamentos", icon: DollarSign },
+        // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight", icon: Presentation }] : []),
         ...((isGroupAdm || isGod) && activeGrpId ? [{
             to: `/app/groups/${activeGrpId}/visual-stats`,
             label: "Visual Stats",
