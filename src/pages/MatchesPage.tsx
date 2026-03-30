@@ -19,6 +19,7 @@ import type {
     TeamOptionDto,
     StepKey,
 } from "../domains/matches/matchTypes";
+import { InviteResponse } from "../domains/matches/matchTypes";
 import {
     buildAllPlayers,
     getMaxPlayers,
@@ -577,8 +578,12 @@ export default function MatchesPage() {
         if (!groupId || !current) return;
 
         const players: TeamGenPlayerDto[] = uniqById(
-            accepted
-                .filter((p) => typeof (p as any).playerId === "string" && String((p as any).playerId).trim().length > 0)
+            allPlayers
+                .filter((p) =>
+                    typeof (p as any).playerId === "string" &&
+                    String((p as any).playerId).trim().length > 0 &&
+                    Number((p as any).inviteResponse) === InviteResponse.Accepted
+                )
                 .map((p) => ({
                     id: String((p as any).playerId),
                     name: (p as any).playerName ?? "—",
@@ -613,6 +618,7 @@ export default function MatchesPage() {
             await MatchesApi.setColors(groupId, currentMatchId, { teamAColorId: a.id, teamBColorId: b.id } as any);
             setTeamAColorId(String(a.id));
             setTeamBColorId(String(b.id));
+            setColorMode("manual");
             await refreshCurrent();
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao definir cores."));

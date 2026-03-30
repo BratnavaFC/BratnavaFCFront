@@ -681,7 +681,7 @@ export function StepTeams({
                         />
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Incluir goleiros</span>
                     </label>
-                    <button className="btn btn-primary h-9 text-sm" onClick={onGenerateTeams}>
+                    <button type="button" className="btn btn-primary h-9 text-sm" onClick={onGenerateTeams}>
                         Gerar times
                     </button>
                 </div>
