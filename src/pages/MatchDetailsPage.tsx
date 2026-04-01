@@ -17,7 +17,7 @@ import {
 import { getResponseMessage } from "../api/apiResponse";
 import useAccountStore from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
-import { useGroupIcons } from "../hooks/useGroupIcons";
+import { useGroupIcons, useShowPlayerStats } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
 import { MvpResultCard } from "../domains/matches/ui/MvpResultCard";
@@ -547,6 +547,8 @@ export default function MatchDetailsPage() {
     const isGroupAdm = !!groupId && (active?.groupAdminIds?.includes(groupId) ?? false);
     const canSeeMvp = isGroupAdm || isGod;
     const isAdmin = isGroupAdm || isGod;
+    const showStats   = useShowPlayerStats(groupId);
+    const canSeeGoals = isAdmin || showStats;
 
     // ── Edit goal state ───────────────────────────────────────────────────────
     const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -943,6 +945,7 @@ export default function MatchDetailsPage() {
             </Section>
 
             {/* ── Gols ──────────────────────────────────────────────── */}
+            {canSeeGoals && (
             <Section title={`Gols (${sortedGoals.length})`}>
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
                     {/* Tabs */}
@@ -1287,6 +1290,7 @@ export default function MatchDetailsPage() {
                     })()}
                 </div>
             </Section>
+            )}
 
             {/* ── MVP ───────────────────────────────────────────────── */}
             {(mvpPlayers.length > 0 || canSeeMvp) && (
