@@ -6,11 +6,12 @@ import { useAccountStore } from '../auth/accountStore';
 import { getResponseMessage } from '../api/apiResponse';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
 import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle, DollarSign } from 'lucide-react';
-import { useGroupIcons } from '../hooks/useGroupIcons';
+import { useGroupIcons, useShowPlayerStats } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
 import GoalDots from '../components/GoalDots';
 import StatNumber from '../components/StatNumber';
+import { isGodMode } from '../auth/guards';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -522,6 +523,11 @@ function TeamBlock({ color, label, count }: { color?: TeamColor | null; label: s
 function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
   const nav   = useNavigate();
   const icons = useGroupIcons(groupId);
+  const active      = useAccountStore((s) => s.getActive());
+  const showStats   = useShowPlayerStats(groupId);
+  const isGod       = isGodMode();
+  const isGroupAdm  = active?.groupAdminIds?.includes(groupId) ?? false;
+  const canSeeStats = isGod || isGroupAdm || showStats;
 
   // Campos diretos do PlayerRecentMatchDto
   const matchId     = match?.matchId;
@@ -596,7 +602,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             )}
 
             {/* Gols */}
-            {goals !== null && goals > 0 && (
+            {canSeeStats && goals !== null && goals > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'goal')} size={20} />
                 <StatNumber value={goals} />
@@ -604,7 +610,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             )}
 
             {/* Assistências */}
-            {assists !== null && assists > 0 && (
+            {canSeeStats && assists !== null && assists > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
                 <StatNumber value={assists} />
