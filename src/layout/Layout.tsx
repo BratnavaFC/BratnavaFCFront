@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { useIsMobile } from "../hooks/UseIsMobile";
+import WatermarkOverlay from "../components/WatermarkOverlay";
 
 export default function Layout() {
     const isMobile = useIsMobile(768);
@@ -59,6 +60,7 @@ export default function Layout() {
 
     return (
         <div className="flex h-dvh bg-slate-50 dark:bg-slate-800/50">
+            <WatermarkOverlay />
             {/* ===== Desktop: Sidebar sempre vis�vel ===== */}
             {showDesktopSidebar && (
                 <Sidebar

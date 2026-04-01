@@ -6,6 +6,7 @@ import { useAccountStore } from "../auth/accountStore";
 import { useNavigate } from "react-router-dom";
 import { Calendar, ChevronLeft, ChevronRight, History, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { getResponseMessage } from "../api/apiResponse";
+import GoalDots from "../components/GoalDots";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -337,16 +338,8 @@ export default function HistoryPage() {
 
                                                     {/* Score or arrow */}
                                                     {score ? (
-                                                        <div className="shrink-0 flex items-center gap-1 rounded-xl bg-slate-900 dark:bg-white px-3 py-1.5">
-                                                            <span className="text-base font-extrabold text-white dark:text-slate-900 tabular-nums leading-none">
-                                                                {score.a}
-                                                            </span>
-                                                            <span className="text-slate-500 dark:text-slate-400 text-xs mx-0.5">
-                                                                ×
-                                                            </span>
-                                                            <span className="text-base font-extrabold text-white dark:text-slate-900 tabular-nums leading-none">
-                                                                {score.b}
-                                                            </span>
+                                                        <div className="shrink-0 rounded-xl bg-slate-900 dark:bg-white px-3 py-2">
+                                                            <GoalDots a={score.a} b={score.b} size="sm" />
                                                         </div>
                                                     ) : (
                                                         <ChevronRight

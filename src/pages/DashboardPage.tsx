@@ -9,6 +9,8 @@ import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, St
 import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
+import GoalDots from '../components/GoalDots';
+import StatNumber from '../components/StatNumber';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -468,10 +470,8 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
           {typeof match.teamAGoals === 'number' && typeof match.teamBGoals === 'number' && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 dark:text-slate-400">Placar:</span>
-              <div className="flex items-center gap-1 rounded-lg bg-slate-900 dark:bg-slate-700 px-2.5 py-1">
-                <span className="text-sm font-extrabold text-white tabular-nums">{match.teamAGoals}</span>
-                <span className="text-slate-500 dark:text-slate-400 text-xs mx-0.5">×</span>
-                <span className="text-sm font-extrabold text-white tabular-nums">{match.teamBGoals}</span>
+              <div className="rounded-lg bg-slate-900 dark:bg-slate-700 px-2.5 py-1.5">
+                <GoalDots a={match.teamAGoals} b={match.teamBGoals} size="sm" />
               </div>
             </div>
           )}
@@ -599,7 +599,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             {goals !== null && goals > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'goal')} size={20} />
-                {goals}
+                <StatNumber value={goals} />
               </span>
             )}
 
@@ -607,7 +607,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             {assists !== null && assists > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
-                {assists}
+                <StatNumber value={assists} />
               </span>
             )}
           </div>
@@ -615,10 +615,8 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
         {/* Placar */}
         {hasScore && (
-          <div className="flex items-center gap-1 rounded-xl bg-slate-900 dark:bg-slate-700 px-3 py-1.5 shrink-0">
-            <span className="text-sm font-extrabold text-white tabular-nums leading-none">{scoreA}</span>
-            <span className="text-slate-500 dark:text-slate-400 text-xs mx-0.5">×</span>
-            <span className="text-sm font-extrabold text-white tabular-nums leading-none">{scoreB}</span>
+          <div className="rounded-xl bg-slate-900 dark:bg-slate-700 px-3 py-2 shrink-0">
+            <GoalDots a={scoreA as number} b={scoreB as number} size="sm" />
           </div>
         )}
       </div>

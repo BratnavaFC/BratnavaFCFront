@@ -2,6 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── StatNumber / CssText: conteúdo só via CSS — sem texto no DOM ─────── */
+.stat-num::before {
+  content: attr(data-n);
+}
+.css-txt::before {
+  content: attr(data-txt);
+}
+
+/* ── Security guards ──────────────────────────────────────────────────── */
+
+/* Disable text selection everywhere */
+.no-select,
+.no-select * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  /* iOS long-press callout (copy/define/share) */
+  -webkit-touch-callout: none !important;
+}
+
+/* Allow selection inside inputs and textareas so the app stays usable */
+.no-select input,
+.no-select textarea,
+.no-select [contenteditable="true"] {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
+
+/* Tab/app goes to background → blur everything */
+.security-hidden * {
+  filter: blur(12px) !important;
+  pointer-events: none !important;
+  transition: filter 0.1s;
+}
+
+/* Print → black page (blocks Ctrl+P capture and some browser print-to-PDF flows) */
+@media print {
+  html,
+  body,
+  body * {
+    visibility: hidden !important;
+    background: #000 !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 999999;
+    visibility: visible !important;
+  }
+}
+
 @layer base {
   body {
     @apply text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900;

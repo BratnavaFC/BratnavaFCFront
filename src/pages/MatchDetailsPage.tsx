@@ -21,6 +21,8 @@ import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
 import { MvpResultCard } from "../domains/matches/ui/MvpResultCard";
+import CssText from "../components/CssText";
+import MaskedName from "../components/MaskedName";
 
 /* ===================== helpers ===================== */
 
@@ -1162,20 +1164,22 @@ export default function MatchDetailsPage() {
                                 <GoalDot team={g.team} />
                                 <div className="min-w-0 flex-1">
                                     <div className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                                        <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{g.scorerName ?? "—"}
+                                        <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}
+                                        <CssText value={g.scorerName ?? "—"} />
                                         {g.isOwnGoal && (
                                             <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
                                         )}
                                     </div>
                                     {g.assistName && (
                                         <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                            <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{g.assistName}
+                                            <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}
+                                            <CssText value={g.assistName} />
                                         </div>
                                     )}
                                 </div>
                                 {g.time && (
                                     <span className="text-xs text-slate-400 dark:text-slate-500 font-mono shrink-0">
-                                        {g.time}
+                                        <CssText value={g.time} />
                                     </span>
                                 )}
                                 {isAdmin && (
@@ -1252,14 +1256,16 @@ export default function MatchDetailsPage() {
                                                     <span className="text-slate-400 dark:text-slate-500 text-xs mr-1">
                                                         #{t.idx}
                                                     </span>
-                                                    <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{t.scorerName ?? "—"}
+                                                    <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}
+                                                    <CssText value={t.scorerName ?? "—"} />
                                                     {t.isOwnGoal && (
                                                         <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
                                                     )}
                                                 </div>
                                                 {t.assistName && (
                                                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                        <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}{t.assistName}
+                                                        <IconRenderer value={resolveIcon(_icons, 'assist')} size={12} />{" "}
+                                                        <CssText value={t.assistName} />
                                                     </div>
                                                 )}
                                             </div>
