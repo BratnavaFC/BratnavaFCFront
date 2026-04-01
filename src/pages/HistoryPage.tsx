@@ -6,7 +6,6 @@ import { useAccountStore } from "../auth/accountStore";
 import { useNavigate } from "react-router-dom";
 import { Calendar, ChevronLeft, ChevronRight, History, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { getResponseMessage } from "../api/apiResponse";
-import GoalDots from "../components/GoalDots";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -338,8 +337,10 @@ export default function HistoryPage() {
 
                                                     {/* Score or arrow */}
                                                     {score ? (
-                                                        <div className="shrink-0 rounded-xl bg-slate-900 dark:bg-white px-3 py-2">
-                                                            <GoalDots a={score.a} b={score.b} size="sm" />
+                                                        <div className="shrink-0 rounded-xl bg-slate-900 dark:bg-white px-3 py-2 text-center min-w-[52px]">
+                                                            <span className="text-base font-bold leading-none text-white dark:text-slate-900 tabular-nums">
+                                                                {score.a} <span className="opacity-50">×</span> {score.b}
+                                                            </span>
                                                         </div>
                                                     ) : (
                                                         <ChevronRight
