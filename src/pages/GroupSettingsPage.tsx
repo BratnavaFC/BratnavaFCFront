@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, DollarSign, AlertCircle, Save, Trophy } from 'lucide-react';
+import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, DollarSign, AlertCircle, Save, Trophy, BarChart2 } from 'lucide-react';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
 import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
@@ -110,6 +110,7 @@ export default function GroupSettingsPage() {
     /** 0 = NoMvp, 1 = AllMvp, 2 = AllMvpUpToMax */
     const [mvpTieRule,       setMvpTieRule]       = useState<number>(1);
     const [mvpTieMaxPlayers, setMvpTieMaxPlayers] = useState<number>(2);
+    const [showPlayerStats,  setShowPlayerStats]  = useState<boolean>(false);
 
     // ── ícones ─────────────────────────────────────────────────────
     const [goalIcon,       setGoalIcon]       = useState<string | null>(null);
@@ -168,6 +169,7 @@ export default function GroupSettingsPage() {
                 setMonthlyFee(gs.monthlyFee != null ? String(gs.monthlyFee) : '');
                 setMvpTieRule(gs.mvpTieRule ?? 1);
                 setMvpTieMaxPlayers(gs.mvpTieMaxPlayers ?? 2);
+                setShowPlayerStats(gs.showPlayerStats ?? false);
             }
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao carregar configurações.'));
@@ -242,6 +244,7 @@ export default function GroupSettingsPage() {
                 monthlyFee: paymentMode === 0 && monthlyFee !== '' ? parseFloat(monthlyFee) : null,
                 mvpTieRule,
                 mvpTieMaxPlayers: mvpTieRule === 2 ? mvpTieMaxPlayers : undefined,
+                showPlayerStats,
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
@@ -509,6 +512,40 @@ export default function GroupSettingsPage() {
                                     </p>
                                 </Field>
                             )}
+                        </div>
+
+                        {/* ── Visibilidade de estatísticas ── */}
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                        <BarChart2 size={17} />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Exibir gols e assistências</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-500">
+                                            Jogadores comuns poderão ver gols e assistências nas partidas. Administradores sempre visualizam.
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={showPlayerStats}
+                                    onClick={() => setShowPlayerStats((v) => !v)}
+                                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
+                                        showPlayerStats
+                                            ? 'bg-slate-900 dark:bg-white'
+                                            : 'bg-slate-200 dark:bg-slate-700'
+                                    }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 shadow transition-transform ${
+                                            showPlayerStats ? 'translate-x-6' : 'translate-x-1'
+                                        }`}
+                                    />
+                                </button>
+                            </div>
                         </div>
 
                         {/* ── Salvar ── */}
