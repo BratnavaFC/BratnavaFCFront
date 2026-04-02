@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PaymentsApi, GroupSettingsApi } from '../api/endpoints';
+import { usePaymentStore, calcPendingPaymentsCount } from '../stores/paymentStore';
 import MonthlyPaymentModal from '../components/modals/MonthlyPaymentModal';
 import CreateExtraChargeModal from '../components/modals/CreateExtraChargeModal';
 import ExtraPaymentModal from '../components/modals/ExtraPaymentModal';
@@ -145,6 +146,8 @@ export default function PaymentsPage() {
         (active.activeGroupId && isGroupFinanceiro(active.activeGroupId))
     ));
 
+    const setPendingPaymentsCount = usePaymentStore((s) => s.setPendingPaymentsCount);
+
     const [paymentMode, setPaymentMode] = useState<number>(0); // 0=Monthly, 1=PerGame
     const [tab, setTab]           = useState<'monthly' | 'extra'>('monthly');
     const [year, setYear]         = useState(new Date().getFullYear());
@@ -178,19 +181,29 @@ export default function PaymentsPage() {
             .catch(() => {/* silently ignore */});
     }, [groupId]);
 
+    // Atualiza o badge do sidebar para QUALQUER usuário (admin ou não)
+    useEffect(() => {
+        if (!groupId) return;
+        PaymentsApi.getMySummary(groupId)
+            .then((res) => setPendingPaymentsCount(calcPendingPaymentsCount((res.data as any)?.data)))
+            .catch(() => { /* silencioso */ });
+    }, [groupId, setPendingPaymentsCount]);
+
     // Loaders para usuário não-admin
     const loadMyData = useCallback(async () => {
         if (!groupId || isAdmin) return;
         try {
-            const [rowRes, chargesRes] = await Promise.all([
+            const [rowRes, chargesRes, summaryRes] = await Promise.all([
                 PaymentsApi.getMyMonthlyRow(groupId, year),
                 PaymentsApi.getMyExtraCharges(groupId),
+                PaymentsApi.getMySummary(groupId),
             ]);
             const rowData = rowRes.data.data as any;
             setMyRow(rowData ? { ...rowData, months: rowData.months ?? [] } : null);
             setMyCharges((chargesRes.data.data as any[]) ?? []);
+            setPendingPaymentsCount(calcPendingPaymentsCount((summaryRes.data as any)?.data));
         } catch { toast.error('Erro ao carregar seus pagamentos'); }
-    }, [groupId, year, isAdmin, activePlayerId]);
+    }, [groupId, year, isAdmin, activePlayerId, setPendingPaymentsCount]);
 
     useEffect(() => { if (!isAdmin && groupId) loadMyData(); }, [isAdmin, groupId, year, loadMyData]);
 

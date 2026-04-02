@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PlayersApi, MatchesApi, PaymentsApi } from '../api/endpoints';
+import { usePaymentStore, calcPendingPaymentsCount } from '../stores/paymentStore';
 import { useAccountStore } from '../auth/accountStore';
 import { getResponseMessage } from '../api/apiResponse';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
@@ -166,6 +167,7 @@ export default function DashboardPage() {
 
   const [paymentSummary,        setPaymentSummary]        = useState<any>(null);
   const [paymentSummaryLoading, setPaymentSummaryLoading] = useState(false);
+  const setPendingPaymentsCount = usePaymentStore((s) => s.setPendingPaymentsCount);
 
   const selectedPlayer = useMemo(() => myPlayers.find(p => p.playerId === selectedPlayerId), [myPlayers, selectedPlayerId]);
 
@@ -232,7 +234,9 @@ export default function DashboardPage() {
     setPaymentSummaryLoading(true);
     try {
       const res = await PaymentsApi.getMySummary(groupId);
-      setPaymentSummary((res.data.data ?? null) as any);
+      const summary = (res.data.data ?? null) as any;
+      setPaymentSummary(summary);
+      setPendingPaymentsCount(calcPendingPaymentsCount(summary));
     } catch {
       // silencioso — summary é best-effort
     } finally {

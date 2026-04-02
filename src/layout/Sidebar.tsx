@@ -7,7 +7,8 @@ import {
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
 import { usePollStore } from "../stores/pollStore";
-import { GroupInvitesApi, PollsApi } from "../api/endpoints";
+import { usePaymentStore, calcPendingPaymentsCount } from "../stores/paymentStore";
+import { GroupInvitesApi, PollsApi, PaymentsApi } from "../api/endpoints";
 import { useThemeStore } from "../stores/themeStore";
 
 type Item = { to: string; label: string; icon: any; badge?: number; end?: boolean };
@@ -22,10 +23,12 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const isGod        = roles.includes("GodMode");
     const isGroupAdm   = isAdminOrGod || (!!activeGrpId && grpAdminIds.includes(activeGrpId));
 
-    const pendingCount        = useInviteStore((s) => s.pendingCount);
-    const setPendingCount     = useInviteStore((s) => s.setPendingCount);
-    const pendingPollsCount   = usePollStore((s) => s.pendingPollsCount);
-    const setPendingPollsCount = usePollStore((s) => s.setPendingPollsCount);
+    const pendingCount            = useInviteStore((s) => s.pendingCount);
+    const setPendingCount         = useInviteStore((s) => s.setPendingCount);
+    const pendingPollsCount       = usePollStore((s) => s.pendingPollsCount);
+    const setPendingPollsCount    = usePollStore((s) => s.setPendingPollsCount);
+    const pendingPaymentsCount    = usePaymentStore((s) => s.pendingPaymentsCount);
+    const setPendingPaymentsCount = usePaymentStore((s) => s.setPendingPaymentsCount);
 
     const { theme, toggle: toggleTheme } = useThemeStore();
 
@@ -47,6 +50,13 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             .catch(() => { /* silencioso */ });
     }, [activeGrpId, setPendingPollsCount]);
 
+    useEffect(() => {
+        if (!activeGrpId) { setPendingPaymentsCount(0); return; }
+        PaymentsApi.getMySummary(activeGrpId)
+            .then((res) => setPendingPaymentsCount(calcPendingPaymentsCount((res.data as any)?.data)))
+            .catch(() => { /* silencioso */ });
+    }, [activeGrpId, setPendingPaymentsCount]);
+
     const items: Item[] = useMemo(() => [
         { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
         { to: "/app/groups", label: "Grupos", icon: Users },
@@ -55,7 +65,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/history", label: "Histórico", icon: History },
         { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
         { to: "/app/polls",    label: "Votações",   icon: Vote,        badge: pendingPollsCount || undefined },
-        { to: "/app/payments", label: "Pagamentos", icon: DollarSign },
+        { to: "/app/payments", label: "Pagamentos", icon: DollarSign, badge: pendingPaymentsCount || undefined },
         // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight", icon: Presentation }] : []),
         ...((isGroupAdm || isGod) && activeGrpId ? [{
             to: `/app/groups/${activeGrpId}/visual-stats`,
@@ -71,7 +81,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             badge: isAdminOrGod ? 0 : pendingCount,
         },
         ...(isGod ? [{ to: "/app/admin/godmode", label: "GodMode", icon: ShieldAlert }] : []),
-    ], [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount, pendingPollsCount]);
+    ], [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount, pendingPollsCount, pendingPaymentsCount]);
 
     return (
         <aside className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${open ? "w-64" : "w-16"}`}>
