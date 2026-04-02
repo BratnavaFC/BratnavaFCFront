@@ -48,14 +48,14 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 setPendingPollsCount(count);
             })
             .catch(() => { /* silencioso */ });
-    }, [activeGrpId, setPendingPollsCount]);
+    }, [userId, activeGrpId, setPendingPollsCount]);
 
     useEffect(() => {
         if (!activeGrpId) { setPendingPaymentsCount(0); return; }
         PaymentsApi.getMySummary(activeGrpId)
             .then((res) => setPendingPaymentsCount(calcPendingPaymentsCount((res.data as any)?.data)))
             .catch(() => { /* silencioso */ });
-    }, [activeGrpId, setPendingPaymentsCount]);
+    }, [userId, activeGrpId, setPendingPaymentsCount]);
 
     const items: Item[] = useMemo(() => [
         { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },

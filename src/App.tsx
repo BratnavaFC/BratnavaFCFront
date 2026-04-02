@@ -4,6 +4,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
 import GroupAdminRoute from './routes/GroupAdminRoute';
 import Layout from './layout/Layout';
+import { useAccountStore } from './auth/accountStore';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -25,6 +26,8 @@ import PollsPage from './pages/PollsPage';
 import BirthdayStatusPage from './pages/BirthdayStatusPage';
 
 export default function App() {
+    const activeAccountId = useAccountStore((s) => s.activeAccountId);
+
     return (
         <>
         <Toaster position="bottom-right" richColors />
@@ -37,7 +40,7 @@ export default function App() {
                 path="/app"
                 element={
                     <ProtectedRoute>
-                        <Layout />
+                        <Layout key={activeAccountId ?? 'guest'} />
                     </ProtectedRoute>
                 }
             >
