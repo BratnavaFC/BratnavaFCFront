@@ -457,7 +457,6 @@ export function MatchTimeSimulationTimeline({
                                     isVisible ? "opacity-100 scale-100" : "opacity-0 scale-50"
                                 )}
                                 style={{ left: `calc(${leftPct}% - 12px + ${offsetIdx * 26}px)` }}
-                                title={`${g.minute}' • ${g.scorerName}${g.assistName ? ` (${g.assistName})` : ""}`}
                             >
                                 {/* Glow ring — only when visible */}
                                 {isVisible && (

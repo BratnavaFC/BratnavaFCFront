@@ -412,45 +412,7 @@ export function MatchTimeSimulationTimeline({
                                         <span className="relative text-sm"><IconRenderer value={resolveIcon(_icons, 'goal')} size={14} /></span>
                                     </div>
 
-                                    {/* tooltip */}
-                                    <div
-                                        className="
-                      absolute bottom-11 left-1/2 -translate-x-1/2
-                      w-[290px]
-                      rounded-2xl
-                      bg-slate-900/95
-                      text-white
-                      shadow-2xl
-                      border border-slate-700/80
-                      p-4
-                      opacity-0
-                      scale-95
-                      pointer-events-none
-                      transition-all duration-200
-                      group-hover:opacity-100
-                      group-hover:scale-100
-                      z-50
-                      backdrop-blur
-                    "
-                                    >
-                                        <div
-                                            className="absolute left-1/2 -translate-x-1/2 -bottom-2 h-4 w-4 rotate-45 bg-slate-900/95 border-r border-b border-slate-700/80"
-                                            aria-hidden
-                                        />
-                                        <div className="text-[13px] font-semibold text-emerald-300">{t.title}</div>
-                                        {t.assist ? <div className="mt-1 text-slate-200 text-[12px]">{t.assist}</div> : null}
-
-                                        <div className="mt-3 grid grid-cols-2 gap-y-1 text-[12px]">
-                                            <div className="text-slate-400">Minuto</div>
-                                            <div className="text-right font-medium text-white">{t.minute}</div>
-
-                                            <div className="text-slate-400">Relógio</div>
-                                            <div className="text-right font-medium text-white">{t.clock}</div>
-
-                                            <div className="text-slate-400">{t.teamLabel}</div>
-                                            <div className="text-right font-semibold text-white">{t.score}</div>
-                                        </div>
-                                    </div>
+                                    {/* tooltip — temporariamente removido */}
                                 </div>
                             </div>
                         );

@@ -302,11 +302,11 @@ export function StepPost({
                     <div className="text-4xl font-extrabold text-slate-900 dark:text-white">{scoreText}</div>
                 </div>
 
-                {/* Voting / result section — MVP card shown when backend persisted the winner */}
-                {currentMvpNames.length > 0 ? (
+                {/* Voting / result section — quando todos votaram mostra resultado; senão mostra UI de voto */}
+                {allVoted ? (
                     <MvpResultCard
                         mvpNames={currentMvpNames}
-                        voteCounts={[]}
+                        voteCounts={voteCounts}
                         votes={[]}
                         admin={false}
                         allVotedBadge
@@ -447,7 +447,7 @@ export function StepPost({
 
                 {/* MVP voting / result */}
                 <div className="mt-4">
-                    {currentMvpNames.length > 0 ? (
+                    {allVoted ? (
                         <MvpResultCard
                             mvpNames={currentMvpNames}
                             voteCounts={voteCounts}

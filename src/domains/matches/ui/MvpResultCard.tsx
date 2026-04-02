@@ -74,6 +74,38 @@ export function MvpResultCard({
                         </div>
                     </div>
                 </div>
+            ) : allVotedBadge ? (
+                <div className="rounded-xl border border-dashed border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-950/20 px-4 py-6 text-center">
+                    <IconRenderer
+                        value={resolveIcon(_icons, "mvp")}
+                        size={28}
+                        lucideProps={{ className: "mx-auto text-orange-300 dark:text-orange-600 mb-2" }}
+                    />
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-orange-500 dark:text-orange-400 mb-1">
+                        Todos votaram!
+                    </div>
+                    {maxVotes > 0 ? (() => {
+                        const tied = voteCounts.filter(v => v.count === maxVotes);
+                        return (
+                            <>
+                                <div className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                                    Empate entre {tied.length} jogadores — Nenhum MVP eleito
+                                </div>
+                                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                                    {tied.map(v => (
+                                        <span key={v.votedForMatchPlayerId} className="text-xs font-medium bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-700/50">
+                                            {v.votedForName}
+                                        </span>
+                                    ))}
+                                </div>
+                            </>
+                        );
+                    })() : (
+                        <div className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                            Empate — Nenhum MVP eleito
+                        </div>
+                    )}
+                </div>
             ) : (
                 <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-8 text-center">
                     <IconRenderer
