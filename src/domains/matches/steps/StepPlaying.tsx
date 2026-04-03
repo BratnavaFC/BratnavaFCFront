@@ -1,4 +1,5 @@
-import { RefreshCw, StopCircle } from "lucide-react";
+import { RefreshCw, StopCircle, Trophy, Zap } from "lucide-react";
+import { useState } from "react";
 import type { GoalDto, PlayerInMatchDto } from "../matchTypes";
 import { GoalTracker } from "./GoalTracker";
 
@@ -6,6 +7,7 @@ export function StepPlaying({
     admin,
     onRefresh,
     onEnd,
+    onPublishEvent,
     participants,
     goals,
     addingGoal,
@@ -20,6 +22,7 @@ export function StepPlaying({
     admin: boolean;
     onRefresh: () => void;
     onEnd: () => void;
+    onPublishEvent?: (type: 'Gol' | 'Jogada') => Promise<void>;
     participants: PlayerInMatchDto[];
     goals: GoalDto[];
     addingGoal: boolean;
@@ -31,6 +34,21 @@ export function StepPlaying({
     teamBName?: string;
     teamBHex?: string;
 }) {
+    const [publishingGol, setPublishingGol]       = useState(false);
+    const [publishingJogada, setPublishingJogada] = useState(false);
+
+    async function handlePublish(type: 'Gol' | 'Jogada') {
+        if (!onPublishEvent) return;
+        if (type === 'Gol') setPublishingGol(true);
+        else setPublishingJogada(true);
+        try {
+            await onPublishEvent(type);
+        } finally {
+            if (type === 'Gol') setPublishingGol(false);
+            else setPublishingJogada(false);
+        }
+    }
+
     return (
         <div className="space-y-4">
             <div className="card overflow-hidden p-0">
@@ -79,6 +97,33 @@ export function StepPlaying({
                     </div>
                 </div>
             </div>
+
+            {/* Botões de replay — somente admin */}
+            {admin && onPublishEvent && (
+                <div className="card p-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 font-medium uppercase tracking-wide">
+                        Replay
+                    </p>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => handlePublish('Gol')}
+                            disabled={publishingGol || publishingJogada}
+                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-base transition"
+                        >
+                            <Trophy size={18} />
+                            GOL
+                        </button>
+                        <button
+                            onClick={() => handlePublish('Jogada')}
+                            disabled={publishingGol || publishingJogada}
+                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-base transition"
+                        >
+                            <Zap size={18} />
+                            JOGADA
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* GoalTracker — visível para todos; somente admin pode remover */}
             <GoalTracker
