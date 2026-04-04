@@ -7,11 +7,10 @@ import { useAccountStore } from '../auth/accountStore';
 import { getResponseMessage } from '../api/apiResponse';
 import { MiniShirt } from '../domains/matches/ui/MiniShirt';
 import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, Star, Clock, CheckCircle2, AlertCircle, DollarSign } from 'lucide-react';
-import { useGroupIcons, useShowPlayerStats } from '../hooks/useGroupIcons';
+import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
 import StatNumber from '../components/StatNumber';
-import { isGodMode } from '../auth/guards';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -529,10 +528,6 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
   const nav   = useNavigate();
   const icons = useGroupIcons(groupId);
   const active      = useAccountStore((s) => s.getActive());
-  const showStats   = useShowPlayerStats(groupId);
-  const isGod       = isGodMode();
-  const isGroupAdm  = active?.groupAdminIds?.includes(groupId) ?? false;
-  const canSeeStats = isGod || isGroupAdm || showStats;
 
   // Campos diretos do PlayerRecentMatchDto
   const matchId     = match?.matchId;
@@ -608,7 +603,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             )}
 
             {/* Gols */}
-            {canSeeStats && goals !== null && goals > 0 && (
+            {goals > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'goal')} size={20} />
                 <StatNumber value={goals} />
@@ -616,7 +611,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             )}
 
             {/* Assistências */}
-            {canSeeStats && assists > 0 && (
+            {assists > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
                 <StatNumber value={assists} />
@@ -624,7 +619,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             )}
 
             {/* Gols contra */}
-            {canSeeStats && ownGoals > 0 && (
+            {ownGoals > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-red-500 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'ownGoal')} size={20} />
                 <StatNumber value={ownGoals} />
