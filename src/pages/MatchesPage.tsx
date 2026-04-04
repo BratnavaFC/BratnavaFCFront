@@ -1031,6 +1031,15 @@ export default function MatchesPage() {
         groupId,
     ]);
 
+    async function publishMatchEvent(type: 'Gol' | 'Jogada') {
+        if (!groupId || !currentMatchId) return;
+        try {
+            await MatchesApi.publishEvent(groupId, currentMatchId, { type, durationSeconds: 20 });
+        } catch {
+            toast.error("Falha ao enviar evento de replay.");
+        }
+    }
+
     const playingGoalProps = useMemo(() => ({
         participants,
         goals: (current as any)?.goals ?? [],
@@ -1038,6 +1047,7 @@ export default function MatchesPage() {
         onAddGoal: addGoal,
         removingGoal,
         onRemoveGoal: removeGoal,
+        onPublishEvent: publishMatchEvent,
         teamAName: (current as any)?.teamAColor?.name ?? "Time A",
         teamAHex:  (current as any)?.teamAColor?.hexValue ?? "",
         teamBName: (current as any)?.teamBColor?.name ?? "Time B",
@@ -1051,6 +1061,8 @@ export default function MatchesPage() {
         (current as any)?.teamBColor?.hexValue,
         addingGoal,
         removingGoal,
+        groupId,
+        currentMatchId,
     ]);
 
     const currentExistsInCreate = !!current && stepKey === "create";

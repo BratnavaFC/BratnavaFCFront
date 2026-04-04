@@ -124,6 +124,8 @@ export const MatchesApi = {
   playerRecent: (groupId: string, playerId: string, take = 3) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/player-recent`, { params: { playerId, take } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
     http.post<ApiResponse<unknown>>(`/api/Matches/group/${groupId}/${matchId}/guests`, dto),
+  publishEvent: (groupId: string, matchId: string, dto: { type: 'Gol' | 'Jogada'; durationSeconds?: number }) =>
+    http.post<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/events`, dto),
   setPlayerRole: (
     groupId: string, matchId: string, matchPlayerId: string,
     dto: { isGoalkeeper: boolean }
