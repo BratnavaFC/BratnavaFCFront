@@ -138,3 +138,11 @@ export type StrategyId = (typeof STRATEGIES)[number]["id"];
 export type ColorMode = "random" | "manual";
 
 export type StepKey = "create" | "accept" | "teams" | "playing" | "ended" | "post" | "done";
+
+export type ReplayClipDto = {
+    id: string;
+    objectKey: string;
+    videoUrl: string;
+    eventType: "Gol" | "Jogada";
+    uploadedAt: string;
+};

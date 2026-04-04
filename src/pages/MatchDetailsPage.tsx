@@ -21,6 +21,8 @@ import { useGroupIcons, useShowPlayerStats } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
 import { MvpResultCard } from "../domains/matches/ui/MvpResultCard";
+import { ReplaySection } from "../domains/matches/ui/ReplaySection";
+import type { ReplayClipDto } from "../domains/matches/matchTypes";
 import CssText from "../components/CssText";
 import MaskedName from "../components/MaskedName";
 
@@ -540,6 +542,7 @@ export default function MatchDetailsPage() {
 
     const [data, setData] = useState<any>(null);
     const [goalsTab, setGoalsTab] = useState<"gols" | "teamA" | "teamB" | "timeline">("gols");
+    const [replays, setReplays] = useState<ReplayClipDto[]>([]);
 
     const active = useAccountStore((s) => s.getActive());
     const isGod = isGodMode();
@@ -565,6 +568,18 @@ export default function MatchDetailsPage() {
                 setData(res.data.data as any);
             } catch (e) {
                 toast.error(getResponseMessage(e, "Falha ao carregar detalhes da partida."));
+            }
+        })();
+    }, [groupId, matchId]);
+
+    useEffect(() => {
+        (async () => {
+            if (!groupId || !matchId) return;
+            try {
+                const res = await MatchesApi.replays(groupId, matchId);
+                setReplays(res.data.data ?? []);
+            } catch {
+                // silencioso — replays são opcionais
             }
         })();
     }, [groupId, matchId]);
@@ -1289,6 +1304,13 @@ export default function MatchDetailsPage() {
                     })()}
                 </div>
             </Section>
+            )}
+
+            {/* ── Replays ───────────────────────────────────────────── */}
+            {replays.length > 0 && (
+                <Section title={`Replays (${replays.length})`}>
+                    <ReplaySection clips={replays} />
+                </Section>
             )}
 
             {/* ── MVP ───────────────────────────────────────────────── */}

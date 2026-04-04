@@ -13,6 +13,7 @@ import type {
   MatchDetailsDto, TeamColorDto, TeamsResultDto, PlayerVisualStatsReport,
   GoalDto,
 } from './generated/types';
+import type { ReplayClipDto } from '../domains/matches/matchTypes';
 
 export const AuthApi = {
   login: (dto: LoginDto) => http.post<ApiResponse<unknown>>('/api/Authentication/login', dto),
@@ -130,6 +131,8 @@ export const MatchesApi = {
     groupId: string, matchId: string, matchPlayerId: string,
     dto: { isGoalkeeper: boolean }
   ) => http.patch<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/players/${matchPlayerId}/role`, dto),
+  replays: (groupId: string, matchId: string) =>
+    http.get<ApiResponse<ReplayClipDto[]>>(`/api/Matches/group/${groupId}/${matchId}/replays`),
 };
 
 export const GroupInvitesApi = {
