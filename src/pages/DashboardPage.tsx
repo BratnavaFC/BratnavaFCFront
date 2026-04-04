@@ -10,7 +10,6 @@ import { Calendar, CalendarDays, History, LayoutDashboard, MapPin, RefreshCw, St
 import { useGroupIcons, useShowPlayerStats } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
-import GoalDots from '../components/GoalDots';
 import StatNumber from '../components/StatNumber';
 import { isGodMode } from '../auth/guards';
 
@@ -476,7 +475,9 @@ function CurrentMatchCard({ match, playerId }: { match: MatchDetails; playerId: 
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 dark:text-slate-400">Placar:</span>
               <div className="rounded-lg bg-slate-900 dark:bg-slate-700 px-2.5 py-1.5">
-                <GoalDots a={match.teamAGoals} b={match.teamBGoals} size="sm" />
+                <span className="text-sm font-extrabold text-white tabular-nums">
+                  {match.teamAGoals} <span className="text-slate-400 font-normal text-xs">×</span> {match.teamBGoals}
+                </span>
               </div>
             </div>
           )}
@@ -546,8 +547,9 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
   const teamBName   = match?.teamBColorName ?? 'Time B';
   const myHex       = playerTeam === 1 ? teamAHex  : playerTeam === 2 ? teamBHex  : null;
   const myName      = playerTeam === 1 ? teamAName : playerTeam === 2 ? teamBName : null;
-  const goals       = match?.playerGoals   as number ?? 0;
-  const assists     = match?.playerAssists as number ?? 0;
+  const goals       = match?.playerGoals    as number ?? 0;
+  const assists     = match?.playerAssists  as number ?? 0;
+  const ownGoals    = match?.playerOwnGoals as number ?? 0;
 
   const outcome: 'win' | 'loss' | 'draw' | null = (() => {
     if (!hasScore || !playerTeam) return null;
@@ -614,10 +616,18 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             )}
 
             {/* Assistências */}
-            {canSeeStats && assists !== null && assists > 0 && (
+            {canSeeStats && assists > 0 && (
               <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
                 <StatNumber value={assists} />
+              </span>
+            )}
+
+            {/* Gols contra */}
+            {canSeeStats && ownGoals > 0 && (
+              <span className="flex items-center gap-0.5 text-[10px] text-red-500 font-medium">
+                <IconRenderer value={resolveIcon(icons, 'ownGoal')} size={20} />
+                <StatNumber value={ownGoals} />
               </span>
             )}
           </div>
@@ -625,8 +635,10 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
         {/* Placar */}
         {hasScore && (
-          <div className="rounded-xl bg-slate-900 dark:bg-slate-700 px-3 py-2 shrink-0">
-            <GoalDots a={scoreA as number} b={scoreB as number} size="sm" />
+          <div className="rounded-xl bg-slate-900 dark:bg-slate-700 px-3 py-2 shrink-0 text-center">
+            <div className="text-base font-extrabold text-white leading-none tabular-nums">
+              {scoreA} <span className="text-slate-400 font-normal text-xs">×</span> {scoreB}
+            </div>
           </div>
         )}
       </div>
