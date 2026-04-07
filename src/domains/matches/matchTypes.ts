@@ -146,7 +146,7 @@ export type ReplayClipDto = {
     objectKey: string;
     videoUrl: string;
     eventType: "Gol" | "Jogada";
-    uploadedAt: string;
+    recordedAt: string;
     likeCount: number;
     isLikedByMe: boolean;
     isFavoritedByMe: boolean;

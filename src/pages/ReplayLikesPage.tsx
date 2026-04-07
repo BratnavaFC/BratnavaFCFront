@@ -9,7 +9,7 @@ import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 async function downloadClip(clip: LikedReplayClipDto, groupId: string) {
-    const time = new Date(clip.uploadedAt)
+    const time = new Date(clip.recordedAt)
         .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         .replace(/:/g, "-");
     const res  = await MatchesApi.downloadReplay(groupId, clip.id);
@@ -20,12 +20,6 @@ async function downloadClip(clip: LikedReplayClipDto, groupId: string) {
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("pt-BR", {
-        day: "2-digit", month: "short", year: "numeric",
-        hour: "2-digit", minute: "2-digit",
-    });
-}
 
 function formatDuration(s: number) {
     const m = Math.floor(s / 60);
@@ -165,7 +159,7 @@ function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLi
             <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                 <div className="flex items-center gap-3">
                     <span className="text-sm font-bold text-white">{clip.eventType === "Gol" ? "⚽ Gol" : "✨ Jogada"}</span>
-                    <span className="text-xs text-white/40">{formatDate(clip.uploadedAt)}</span>
+                    <span className="text-xs text-white/40">{new Date(clip.recordedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                     <span className="text-xs text-white/30">{index + 1} / {clips.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -296,7 +290,7 @@ export default function ReplayLikesPage() {
                 matchId,
                 clips: [...cs].sort((a, b) => (states[b.id]?.likeCount ?? 0) - (states[a.id]?.likeCount ?? 0)),
                 totalLikes: cs.reduce((s, c) => s + (states[c.id]?.likeCount ?? 0), 0),
-                date: cs[0]?.uploadedAt ?? "",
+                date: cs[0]?.recordedAt ?? "",
             }))
             .sort((a, b) => b.totalLikes - a.totalLikes);
     })();

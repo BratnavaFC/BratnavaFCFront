@@ -43,10 +43,12 @@ export function StepPlaying({
         if (!onPublishEvent) return;
         if (type === 'Gol') setPublishingGol(true);
         else setPublishingJogada(true);
-        const cooldown = new Promise<void>((res) => setTimeout(res, COOLDOWN_MS));
+        const started = Date.now();
         try {
-            await Promise.all([onPublishEvent(type), cooldown]);
+            await onPublishEvent(type);
         } finally {
+            const remaining = COOLDOWN_MS - (Date.now() - started);
+            if (remaining > 0) await new Promise<void>((res) => setTimeout(res, remaining));
             if (type === 'Gol') setPublishingGol(false);
             else setPublishingJogada(false);
         }

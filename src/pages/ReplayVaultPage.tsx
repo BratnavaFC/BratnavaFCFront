@@ -86,7 +86,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                 matchId,
                 clips: [...cs].sort((a, b) => (states[b.id]?.likeCount ?? 0) - (states[a.id]?.likeCount ?? 0)),
                 totalLikes: cs.reduce((s, c) => s + (states[c.id]?.likeCount ?? 0), 0),
-                date: cs[0]?.uploadedAt ?? "",
+                date: cs[0]?.recordedAt ?? "",
             }))
             .sort((a, b) => b.totalLikes - a.totalLikes);
     })();
@@ -271,7 +271,7 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
         const map = new Map<string, LikedReplayClipDto[]>();
         clips.forEach((c) => { const arr = map.get(c.matchId) ?? []; arr.push(c); map.set(c.matchId, arr); });
         return [...map.entries()]
-            .map(([matchId, cs]) => ({ matchId, clips: cs, date: cs[0]?.uploadedAt ?? "" }))
+            .map(([matchId, cs]) => ({ matchId, clips: cs, date: cs[0]?.recordedAt ?? "" }))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     })();
     const flat = byMatch.flatMap((g) => g.clips);

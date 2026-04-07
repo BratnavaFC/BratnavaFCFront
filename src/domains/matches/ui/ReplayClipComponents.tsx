@@ -30,7 +30,7 @@ export type Speed   = (typeof SPEEDS)[number];
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 export async function downloadClip(clip: ReplayClipDto, groupId: string) {
-    const time = new Date(clip.uploadedAt)
+    const time = new Date(clip.recordedAt)
         .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         .replace(/:/g, "-");
     const filename = `${clip.eventType}_${time}.mp4`;
@@ -234,7 +234,7 @@ export function VideoCard({
 
                     {/* Timestamp */}
                     <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.6)", fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em" }}>
-                        {formatTime(clip.uploadedAt)}
+                        {formatTime(clip.recordedAt)}
                     </span>
 
                     {/* Duration + download */}
@@ -353,7 +353,7 @@ export function Lightbox({
                         ].join(" ")}>
                             {isGol ? "GOL" : "JOGADA"}
                         </span>
-                        <span className="text-sm text-white/50 tabular-nums truncate">{formatTime(clip.uploadedAt)}</span>
+                        <span className="text-sm text-white/50 tabular-nums truncate">{formatTime(clip.recordedAt)}</span>
                         <span className="text-xs text-white/25 font-mono shrink-0">{index + 1}&thinsp;/&thinsp;{clips.length}</span>
                     </div>
                     <button type="button" onClick={onClose} title="Fechar (ESC)"
