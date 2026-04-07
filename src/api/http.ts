@@ -3,6 +3,8 @@ import { useAccountStore } from "../auth/accountStore";
 
 const baseURL = (import.meta.env.VITE_API_URL as string | undefined)?.trim()?.replace(/\/+$/, "");
 
+export const apiBaseUrl = baseURL ?? "";
+
 // ✅ debug: isso aparece no console do site publicado
 console.log("[CONFIG] VITE_API_URL =", baseURL);
 

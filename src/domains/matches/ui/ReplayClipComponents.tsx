@@ -7,6 +7,17 @@ import { useEffect, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Play, X } from "lucide-react";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
+import { apiBaseUrl } from "../../../api/http";
+import { useAccountStore } from "../../../auth/accountStore";
+
+// ── Stream URL helper ──────────────────────────────────────────────────────────
+// Usa o endpoint proxy do backend em vez da URL presignada direta do R2.
+// Necessário para iOS Safari, que exige Range requests CORS-compliant.
+
+function useStreamUrl(groupId: string, clipId: string): string {
+    const token = useAccountStore((s) => s.getActive()?.accessToken ?? "");
+    return `${apiBaseUrl}/api/matches/group/${groupId}/replays/${clipId}/stream?t=${encodeURIComponent(token)}`;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -104,7 +115,8 @@ export function VideoCard({
     onLike: () => void;
     onFavorite: () => void;
 }) {
-    const isGol = clip.eventType === "Gol";
+    const isGol    = clip.eventType === "Gol";
+    const streamUrl = useStreamUrl(groupId, clip.id);
     const [duration, setDuration] = useState<number | null>(null);
 
     return (
@@ -119,7 +131,7 @@ export function VideoCard({
             <div className="relative aspect-video bg-slate-900 overflow-hidden">
                 {/* Thumbnail */}
                 <div className="absolute inset-0 opacity-55 group-hover:opacity-70 transition-opacity duration-300">
-                    <LazyVideoThumb src={clip.videoUrl} onDuration={setDuration} />
+                    <LazyVideoThumb src={streamUrl} onDuration={setDuration} />
                 </div>
 
                 {/* Gradient overlay */}
@@ -225,6 +237,7 @@ export function Lightbox({
     const canPrev   = index > 0;
     const canNext   = index < clips.length - 1;
     const state     = clipStates[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false };
+    const streamUrl = useStreamUrl(groupId, clip.id);
     const touchStartX = useRef<number>(0);
     const videoRef    = useRef<HTMLVideoElement>(null);
 
@@ -299,7 +312,7 @@ export function Lightbox({
                 <video
                     ref={videoRef}
                     key={clip.id}
-                    src={clip.videoUrl}
+                    src={streamUrl}
                     className="w-full rounded-2xl bg-black shadow-2xl"
                     controls
                     autoPlay
