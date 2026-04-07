@@ -114,8 +114,24 @@ export default function HistoryPage() {
         if (!groupId) return;
         setLoading(true);
         try {
-            const res = await MatchesApi.history(groupId, 400);
-            setItems(Array.isArray(res.data.data) ? res.data.data as any[] : []);
+            const [histRes, currentRes] = await Promise.allSettled([
+                MatchesApi.history(groupId, 400),
+                MatchesApi.getCurrent(groupId),
+            ]);
+
+            const list: any[] = histRes.status === "fulfilled"
+                ? (Array.isArray(histRes.value.data.data) ? histRes.value.data.data : [])
+                : [];
+
+            if (currentRes.status === "fulfilled") {
+                const current = currentRes.value.data.data as any;
+                const currentId = current?.id ?? current?.matchId;
+                if (currentId && !list.some((m) => (m?.id ?? m?.matchId) === currentId)) {
+                    list.unshift(current);
+                }
+            }
+
+            setItems(list);
             setPage(1);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar histórico."));
@@ -241,7 +257,7 @@ export default function HistoryPage() {
                                     const teamBHex = normalizeHex(
                                         m?.teamBColorHex ?? m?.teamBColor?.hexValue
                                     );
-                                    const statusName = m?.statusName ?? m?.status ?? "";
+                                    const statusName = m?.statusName ?? m?.status ?? m?.stepKey ?? "";
                                     const meta = statusMeta(statusName);
                                     const dates = formatDate(m.playedAt);
 

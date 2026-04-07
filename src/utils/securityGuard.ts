@@ -85,23 +85,21 @@ export function initSecurityGuard() {
     // Disable text selection
     document.body.classList.add("no-select");
 
-    // Keyboard
-    document.addEventListener("keydown", blockDevToolsKeys, true);
+    // Keyboard + DevTools detection — only in production builds
+    if (import.meta.env.PROD) {
+        document.addEventListener("keydown", blockDevToolsKeys, true);
+
+        startDevToolsDetection(() => {
+            document.body.innerHTML = "";
+            window.location.reload();
+        });
+    }
 
     // Right-click
     document.addEventListener("contextmenu", blockContextMenu, true);
 
     // Tab/app visibility
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    // DevTools detection
-    startDevToolsDetection(() => {
-        // Redirect to a blank error state — stops the tab from being useful for inspection
-        if (import.meta.env.PROD) {
-            document.body.innerHTML = "";
-            window.location.reload();
-        }
-    });
 }
 
 export function destroySecurityGuard() {

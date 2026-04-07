@@ -1,88 +1,153 @@
-import { useCallback, useEffect, useState } from "react";
-import { Play, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ReplayClipDto } from "../matchTypes";
+import { MatchesApi } from "../../../api/endpoints";
+import { type ClipStateMap, VideoCard, Lightbox } from "./ReplayClipComponents";
 
-type Props = {
-    clips: ReplayClipDto[];
-};
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+const PAGE_SIZE = 12;
+type Filter = "all" | "Gol" | "Jogada";
+
+// ── Clip interaction state ────────────────────────────────────────────────────
+
+function buildInitialState(clips: ReplayClipDto[]): ClipStateMap {
+    return Object.fromEntries(clips.map((c) => [c.id, {
+        likeCount:       c.likeCount,
+        isLikedByMe:     c.isLikedByMe,
+        isFavoritedByMe: c.isFavoritedByMe,
+    }]));
 }
 
-function VideoCard({ clip, onPlay }: { clip: ReplayClipDto; onPlay: () => void }) {
+// ── Tab button ────────────────────────────────────────────────────────────────
+
+function Tab({
+    label,
+    count,
+    active,
+    onClick,
+}: {
+    label: string;
+    count: number;
+    active: boolean;
+    onClick: () => void;
+}) {
     return (
         <button
             type="button"
-            onClick={onPlay}
-            className="group w-full text-left rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900 hover:border-slate-400 dark:hover:border-slate-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            onClick={onClick}
+            className={[
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150",
+                active
+                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
+            ].join(" ")}
         >
-            {/* Thumbnail */}
-            <div className="relative aspect-video bg-slate-800 overflow-hidden">
-                <video
-                    src={`${clip.videoUrl}#t=0.5`}
-                    className="w-full h-full object-cover opacity-50 group-hover:opacity-60 transition-opacity"
-                    preload="metadata"
-                    muted
-                    playsInline
-                />
-                {/* Play overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 group-hover:scale-110 transition-all">
-                        <Play size={18} className="text-white fill-white ml-0.5" />
-                    </div>
-                </div>
-            </div>
-
-            {/* Info */}
-            <div className="px-3 py-2 bg-white dark:bg-slate-800">
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                    {formatTime(clip.uploadedAt)}
-                </div>
-            </div>
+            {label}
+            <span
+                className={[
+                    "text-[11px] font-bold px-1.5 py-0.5 rounded-full tabular-nums",
+                    active
+                        ? "bg-white/20 dark:bg-slate-900/20"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
+                ].join(" ")}
+            >
+                {count}
+            </span>
         </button>
     );
 }
 
-function ClipGroup({ title, items, onPlay }: {
-    title: string;
-    items: ReplayClipDto[];
-    onPlay: (clip: ReplayClipDto) => void;
-}) {
-    if (items.length === 0) return null;
-    return (
-        <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
-                {title} ({items.length})
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {items.map((c) => (
-                    <VideoCard key={c.id} clip={c} onPlay={() => onPlay(c)} />
-                ))}
-            </div>
-        </div>
-    );
-}
+// ── Main export ───────────────────────────────────────────────────────────────
 
-export function ReplaySection({ clips }: Props) {
-    const [active, setActive] = useState<ReplayClipDto | null>(null);
+type Props = { clips: ReplayClipDto[]; groupId: string };
 
-    const close = useCallback(() => setActive(null), []);
+export function ReplaySection({ clips, groupId }: Props) {
+    const [filter, setFilter]               = useState<Filter>("all");
+    const [page, setPage]                   = useState(1);
+    const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
+    const [clipStates, setClipStates]       = useState<ClipStateMap>(() => buildInitialState(clips));
 
-    useEffect(() => {
-        if (!active) return;
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === "Escape") close();
-        };
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [active, close]);
+    // Sync state when clips prop changes (e.g. refresh)
+    useEffect(() => { setClipStates(buildInitialState(clips)); }, [clips]);
 
-    const gols    = clips.filter((c) => c.eventType === "Gol");
-    const jogadas = clips.filter((c) => c.eventType === "Jogada");
+    const toggleLike = useCallback(async (clipId: string) => {
+        setClipStates((prev) => {
+            const cur = prev[clipId];
+            if (!cur) return prev;
+            return {
+                ...prev,
+                [clipId]: {
+                    ...cur,
+                    isLikedByMe: !cur.isLikedByMe,
+                    likeCount:   cur.isLikedByMe ? cur.likeCount - 1 : cur.likeCount + 1,
+                },
+            };
+        });
+        try {
+            const res = await MatchesApi.toggleLike(groupId, clipId);
+            setClipStates((prev) => ({
+                ...prev,
+                [clipId]: { ...prev[clipId], isLikedByMe: res.data.isLiked, likeCount: res.data.likeCount },
+            }));
+        } catch {
+            setClipStates((prev) => {
+                const cur = prev[clipId];
+                if (!cur) return prev;
+                return {
+                    ...prev,
+                    [clipId]: {
+                        ...cur,
+                        isLikedByMe: !cur.isLikedByMe,
+                        likeCount:   cur.isLikedByMe ? cur.likeCount - 1 : cur.likeCount + 1,
+                    },
+                };
+            });
+        }
+    }, [groupId]);
+
+    const toggleFavorite = useCallback(async (clipId: string) => {
+        setClipStates((prev) => {
+            const cur = prev[clipId];
+            if (!cur) return prev;
+            return { ...prev, [clipId]: { ...cur, isFavoritedByMe: !cur.isFavoritedByMe } };
+        });
+        try {
+            const res = await MatchesApi.toggleFavorite(groupId, clipId);
+            setClipStates((prev) => ({
+                ...prev,
+                [clipId]: { ...prev[clipId], isFavoritedByMe: res.data.isFavorited },
+            }));
+        } catch {
+            setClipStates((prev) => {
+                const cur = prev[clipId];
+                if (!cur) return prev;
+                return { ...prev, [clipId]: { ...cur, isFavoritedByMe: !cur.isFavoritedByMe } };
+            });
+        }
+    }, [groupId]);
+
+    const gols    = useMemo(() => clips.filter((c) => c.eventType === "Gol"),    [clips]);
+    const jogadas = useMemo(() => clips.filter((c) => c.eventType === "Jogada"), [clips]);
+
+    const filtered = useMemo(() => {
+        if (filter === "Gol")    return gols;
+        if (filter === "Jogada") return jogadas;
+        return clips;
+    }, [filter, clips, gols, jogadas]);
+
+    useEffect(() => { setPage(1); }, [filter]);
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const paged = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE;
+        return filtered.slice(start, start + PAGE_SIZE);
+    }, [filtered, page]);
+
+    const openLightbox  = useCallback((filteredIdx: number) => { setLightboxIdx(filteredIdx); }, []);
+    const closeLightbox = useCallback(() => setLightboxIdx(null), []);
+    const prevClip      = useCallback(() => setLightboxIdx((i) => (i !== null && i > 0 ? i - 1 : i)), []);
+    const nextClip      = useCallback(() => setLightboxIdx((i) => (i !== null && i < filtered.length - 1 ? i + 1 : i)), [filtered.length]);
 
     if (clips.length === 0) {
         return (
@@ -94,41 +159,74 @@ export function ReplaySection({ clips }: Props) {
 
     return (
         <>
-            <div className="space-y-6">
-                <ClipGroup title="Gols"    items={gols}    onPlay={setActive} />
-                <ClipGroup title="Jogadas" items={jogadas} onPlay={setActive} />
+            {/* ── Filter tabs ── */}
+            <div className="flex items-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl w-fit mb-5">
+                <Tab label="Todos"   count={clips.length}    active={filter === "all"}     onClick={() => setFilter("all")} />
+                {gols.length    > 0 && <Tab label="Gols"    count={gols.length}    active={filter === "Gol"}    onClick={() => setFilter("Gol")} />}
+                {jogadas.length > 0 && <Tab label="Jogadas" count={jogadas.length} active={filter === "Jogada"} onClick={() => setFilter("Jogada")} />}
             </div>
 
-            {/* ── Modal player ───────────────────────────────────────── */}
-            {active && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-                    onClick={close}
-                >
-                    <div
-                        className="relative w-full max-w-4xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Fechar */}
-                        <button
-                            type="button"
-                            onClick={close}
-                            className="absolute -top-10 right-0 flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
-                        >
-                            <X size={15} />
-                            Fechar (ESC)
-                        </button>
-
-                        <video
-                            key={active.id}
-                            src={active.videoUrl}
-                            className="w-full rounded-xl bg-black shadow-2xl"
-                            controls
-                            autoPlay
-                            playsInline
+            {/* ── Grid ── */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
+                {paged.map((clip, i) => {
+                    const globalIdx = (page - 1) * PAGE_SIZE + i;
+                    return (
+                        <VideoCard
+                            key={clip.id}
+                            clip={clip}
+                            globalIndex={globalIdx}
+                            groupId={groupId}
+                            state={clipStates[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false }}
+                            onPlay={() => openLightbox(globalIdx)}
+                            onLike={() => toggleLike(clip.id)}
+                            onFavorite={() => toggleFavorite(clip.id)}
                         />
-                    </div>
+                    );
+                })}
+            </div>
+
+            {/* ── Pagination ── */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page <= 1}
+                        className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <ChevronLeft size={14} />
+                        Anterior
+                    </button>
+
+                    <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                        {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages}
+                        className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        Próxima
+                        <ChevronRight size={14} />
+                    </button>
                 </div>
+            )}
+
+            {/* ── Lightbox ── */}
+            {lightboxIdx !== null && (
+                <Lightbox
+                    clips={filtered}
+                    index={lightboxIdx}
+                    groupId={groupId}
+                    clipStates={clipStates}
+                    onClose={closeLightbox}
+                    onPrev={prevClip}
+                    onNext={nextClip}
+                    onLike={toggleLike}
+                    onFavorite={toggleFavorite}
+                />
             )}
         </>
     );

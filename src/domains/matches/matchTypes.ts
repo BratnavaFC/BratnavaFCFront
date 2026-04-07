@@ -145,4 +145,11 @@ export type ReplayClipDto = {
     videoUrl: string;
     eventType: "Gol" | "Jogada";
     uploadedAt: string;
+    likeCount: number;
+    isLikedByMe: boolean;
+    isFavoritedByMe: boolean;
+};
+
+export type LikedReplayClipDto = ReplayClipDto & {
+    matchId: string;
 };

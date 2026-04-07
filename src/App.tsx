@@ -24,6 +24,7 @@ import PaymentsPage from './pages/PaymentsPage';
 import PlayerSpotlightPage from './pages/PlayerSpotlightPage';
 import PollsPage from './pages/PollsPage';
 import BirthdayStatusPage from './pages/BirthdayStatusPage';
+import ReplayVaultPage from './pages/ReplayVaultPage';
 
 export default function App() {
     const activeAccountId = useAccountStore((s) => s.activeAccountId);
@@ -56,6 +57,7 @@ export default function App() {
                 <Route path="payments" element={<PaymentsPage />} />
                 <Route path="polls" element={<PollsPage />} />
                 <Route path="birthday-status" element={<BirthdayStatusPage />} />
+                <Route path="replays" element={<ReplayVaultPage />} />
 
                 <Route
                     path="settings"
