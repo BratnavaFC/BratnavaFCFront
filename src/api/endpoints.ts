@@ -145,6 +145,25 @@ export const MatchesApi = {
     http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-likes`),
   myFavorites: (groupId: string) =>
     http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-favorites`),
+  deleteReplay: (groupId: string, clipId: string) =>
+    http.delete(`/api/Matches/group/${groupId}/replays/${clipId}`),
+};
+
+export const BetApi = {
+    getCurrentContext: (groupId: string) =>
+        http.get(`/api/Bet/group/${groupId}/current`),
+    placeOrUpdateBet: (groupId: string, matchId: string, dto: { selections: { category: string; predictedValue: string; fichasWagered: number }[] }) =>
+        http.post(`/api/Bet/group/${groupId}/match/${matchId}`, dto),
+    getMatchResults: (groupId: string, matchId: string) =>
+        http.get(`/api/Bet/group/${groupId}/match/${matchId}/results`),
+    getLeaderboard: (groupId: string) =>
+        http.get(`/api/Bet/group/${groupId}/leaderboard`),
+    getMyBalance: (groupId: string) =>
+        http.get<{ balance: number }>(`/api/Bet/group/${groupId}/balance`),
+    getHistory: (groupId: string) =>
+        http.get(`/api/Bet/group/${groupId}/history`),
+    deleteBet: (groupId: string, matchId: string) =>
+        http.delete(`/api/Bet/group/${groupId}/match/${matchId}`),
 };
 
 export const GroupInvitesApi = {

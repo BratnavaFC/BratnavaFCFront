@@ -1316,7 +1316,7 @@ export default function MatchDetailsPage() {
             {/* ── Replays ───────────────────────────────────────────── */}
             {replays.length > 0 && groupId && (
                 <Section title={`Replays (${replays.length})`}>
-                    <ReplaySection clips={replays} groupId={groupId} />
+                    <ReplaySection clips={replays} groupId={groupId} isAdmin={isAdmin} />
                 </Section>
             )}
 

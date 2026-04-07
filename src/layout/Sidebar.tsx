@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, User, ShieldAlert,
-    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff
+    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff, Coins,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -11,7 +11,7 @@ import { usePaymentStore, calcPendingPaymentsCount } from "../stores/paymentStor
 import { GroupInvitesApi, PollsApi, PaymentsApi } from "../api/endpoints";
 import { useThemeStore } from "../stores/themeStore";
 
-type Item = { to: string; label: string; icon: any; badge?: number; end?: boolean };
+type Item = { to: string; label: string; icon?: any; imgIcon?: string; badge?: number; end?: boolean };
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const userId       = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
@@ -76,6 +76,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
          ...(isGroupAdm || isGod ? [{ to: "/app/birthday-status", label: "Aniversários", icon: Cake }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/settings", label: "Configurações", icon: Settings }] : []),
         { to: "/app/replays", label: "Replays", icon: Film },
+        { to: "/app/bet",     label: "Bet",     icon: Coins },
         {
             to: "/app/admin/users",
             label: isAdminOrGod ? "Usuários" : "Minha conta",
@@ -94,9 +95,11 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                     open ? "px-4 py-3 gap-3 justify-between" : "px-2 py-3 justify-center",
                 ].join(" ")}>
                     {open && (
-                        <span className="text-sm font-bold text-slate-900 dark:text-white tracking-widest uppercase select-none">
-                            Bratnava FC
-                        </span>
+                        <img
+                            src="/bratnava-coin.png"
+                            alt="Bratnava Coin"
+                            className="h-10 w-auto object-contain select-none dark:invert"
+                        />
                     )}
                     <button
                         onClick={onToggle}
@@ -110,7 +113,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 {/* Nav items */}
                 <nav className="flex-1 p-2 space-y-1 overflow-y-auto min-h-0">
                     {items.map((item) => {
-                        const Icon = item.icon;
+                        const Icon = item.icon ?? (() => null);
                         const hasBadge = !!item.badge && item.badge > 0;
 
                         return (
@@ -131,7 +134,10 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                                 {({ isActive }) => (
                                     <>
                                         <span className="relative shrink-0">
-                                            <Icon size={18} />
+                                            {item.imgIcon
+                                                ? <img src={item.imgIcon} alt={item.label} className="h-[18px] w-[18px] object-contain dark:invert" />
+                                                : <Icon size={18} />
+                                            }
                                             {hasBadge && (
                                                 <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-none">
                                                     {item.badge! > 9 ? "9+" : item.badge}

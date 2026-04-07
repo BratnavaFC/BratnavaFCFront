@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Play, X } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Play, Trash2, X } from "lucide-react";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 import { apiBaseUrl } from "../../../api/http";
@@ -103,21 +103,26 @@ export function VideoCard({
     globalIndex,
     groupId,
     state,
+    isAdmin,
     onPlay,
     onLike,
     onFavorite,
+    onDelete,
 }: {
     clip: ReplayClipDto;
     globalIndex: number;
     groupId: string;
     state: ClipState;
+    isAdmin?: boolean;
     onPlay: () => void;
     onLike: () => void;
     onFavorite: () => void;
+    onDelete?: () => void;
 }) {
     const isGol    = clip.eventType === "Gol";
     const streamUrl = useStreamUrl(groupId, clip.id);
     const [duration, setDuration] = useState<number | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     return (
         <div
@@ -161,12 +166,54 @@ export function VideoCard({
                     </span>
                 </div>
 
-                {/* Clip index — top right */}
-                <div className="absolute top-2 right-2">
+                {/* Clip index / delete — top right */}
+                <div className="absolute top-2 right-2 flex items-center gap-1">
+                    {isAdmin && (
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                            title="Excluir vídeo"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full"
+                            style={{ width: 20, height: 20, background: "rgba(239,68,68,0.75)", backdropFilter: "blur(4px)" }}
+                        >
+                            <Trash2 size={10} className="text-white" />
+                        </button>
+                    )}
                     <span className="text-[9px] font-semibold text-white/50 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full">
                         #{globalIndex + 1}
                     </span>
                 </div>
+
+                {/* Delete confirmation overlay */}
+                {isAdmin && confirmDelete && (
+                    <div
+                        className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-2xl"
+                        style={{ background: "rgba(0,0,0,0.88)" }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <Trash2 size={22} className="text-red-400" />
+                        <p className="text-white text-xs font-semibold">Excluir este vídeo?</p>
+                        <p className="text-white/40 text-[10px] text-center px-4">Esta ação não pode ser desfeita.</p>
+                        <div className="flex gap-2 mt-1">
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                                className="text-xs font-semibold px-4 py-1.5 rounded-lg"
+                                style={{ background: "rgba(255,255,255,0.12)", color: "#fff" }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); onDelete?.(); }}
+                                className="text-xs font-semibold px-4 py-1.5 rounded-lg"
+                                style={{ background: "rgba(239,68,68,0.85)", color: "#fff" }}
+                            >
+                                Excluir
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Bottom bar */}
                 <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-2.5 py-2">
@@ -216,21 +263,25 @@ export function Lightbox({
     index,
     groupId,
     clipStates,
+    isAdmin,
     onClose,
     onPrev,
     onNext,
     onLike,
     onFavorite,
+    onDelete,
 }: {
     clips: ReplayClipDto[];
     index: number;
     groupId: string;
     clipStates: ClipStateMap;
+    isAdmin?: boolean;
     onClose: () => void;
     onPrev: () => void;
     onNext: () => void;
     onLike: (clipId: string) => void;
     onFavorite: (clipId: string) => void;
+    onDelete?: (clipId: string) => void;
 }) {
     const clip      = clips[index];
     const isGol     = clip.eventType === "Gol";
@@ -240,6 +291,8 @@ export function Lightbox({
     const streamUrl = useStreamUrl(groupId, clip.id);
     const touchStartX = useRef<number>(0);
     const videoRef    = useRef<HTMLVideoElement>(null);
+
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     const [speed, setSpeed] = useState<Speed>(() => {
         const saved = localStorage.getItem("replay_speed");
@@ -266,6 +319,8 @@ export function Lightbox({
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
     }, [onClose, onPrev, onNext, canPrev, canNext]);
+
+    useEffect(() => { setConfirmDelete(false); }, [clip.id]);
 
     useEffect(() => {
         document.body.style.overflow = "hidden";
@@ -351,8 +406,33 @@ export function Lightbox({
                             style={{ width: 32, height: 30, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.5)" }}>
                             <Download size={13} />
                         </button>
+                        {isAdmin && (
+                            <button type="button" onClick={() => setConfirmDelete((v) => !v)} title="Excluir vídeo"
+                                className="flex items-center justify-center rounded-xl transition-all"
+                                style={{ width: 32, height: 30, background: confirmDelete ? "rgba(239,68,68,0.25)" : "rgba(239,68,68,0.10)", border: `1px solid ${confirmDelete ? "rgba(239,68,68,0.6)" : "rgba(239,68,68,0.25)"}`, color: "rgba(239,68,68,0.75)" }}>
+                                <Trash2 size={13} />
+                            </button>
+                        )}
                     </div>
                 </div>
+
+                {/* Confirmação de exclusão */}
+                {isAdmin && confirmDelete && (
+                    <div className="mt-2 px-1 flex items-center justify-end gap-3 rounded-xl py-2.5"
+                        style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                        <span className="text-xs text-red-400 font-medium">Excluir este vídeo permanentemente?</span>
+                        <button type="button" onClick={() => setConfirmDelete(false)}
+                            className="text-xs font-semibold px-3 py-1 rounded-lg"
+                            style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}>
+                            Cancelar
+                        </button>
+                        <button type="button" onClick={() => { setConfirmDelete(false); onDelete?.(clip.id); }}
+                            className="text-xs font-semibold px-3 py-1 rounded-lg"
+                            style={{ background: "rgba(239,68,68,0.8)", color: "#fff" }}>
+                            Excluir
+                        </button>
+                    </div>
+                )}
 
                 {/* Bottom navigation */}
                 <div className="flex items-center justify-between mt-4 gap-4">

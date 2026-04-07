@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 import { type ClipStateMap, VideoCard, Lightbox } from "./ReplayClipComponents";
@@ -60,13 +61,14 @@ function Tab({
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-type Props = { clips: ReplayClipDto[]; groupId: string };
+type Props = { clips: ReplayClipDto[]; groupId: string; isAdmin?: boolean };
 
-export function ReplaySection({ clips, groupId }: Props) {
+export function ReplaySection({ clips, groupId, isAdmin }: Props) {
     const [filter, setFilter]               = useState<Filter>("all");
     const [page, setPage]                   = useState(1);
     const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
     const [clipStates, setClipStates]       = useState<ClipStateMap>(() => buildInitialState(clips));
+    const [deletedIds, setDeletedIds]       = useState<Set<string>>(new Set());
 
     // Sync state when clips prop changes (e.g. refresh)
     useEffect(() => { setClipStates(buildInitialState(clips)); }, [clips]);
@@ -127,14 +129,26 @@ export function ReplaySection({ clips, groupId }: Props) {
         }
     }, [groupId]);
 
-    const gols    = useMemo(() => clips.filter((c) => c.eventType === "Gol"),    [clips]);
-    const jogadas = useMemo(() => clips.filter((c) => c.eventType === "Jogada"), [clips]);
+    const handleDelete = useCallback(async (clipId: string) => {
+        try {
+            await MatchesApi.deleteReplay(groupId, clipId);
+            setDeletedIds((prev) => new Set([...prev, clipId]));
+            setLightboxIdx(null);
+            toast.success("Vídeo excluído.");
+        } catch {
+            toast.error("Falha ao excluir o vídeo.");
+        }
+    }, [groupId]);
+
+    const visibleClips = useMemo(() => clips.filter((c) => !deletedIds.has(c.id)), [clips, deletedIds]);
+    const gols    = useMemo(() => visibleClips.filter((c) => c.eventType === "Gol"),    [visibleClips]);
+    const jogadas = useMemo(() => visibleClips.filter((c) => c.eventType === "Jogada"), [visibleClips]);
 
     const filtered = useMemo(() => {
         if (filter === "Gol")    return gols;
         if (filter === "Jogada") return jogadas;
-        return clips;
-    }, [filter, clips, gols, jogadas]);
+        return visibleClips;
+    }, [filter, visibleClips, gols, jogadas]);
 
     useEffect(() => { setPage(1); }, [filter]);
 
@@ -149,7 +163,7 @@ export function ReplaySection({ clips, groupId }: Props) {
     const prevClip      = useCallback(() => setLightboxIdx((i) => (i !== null && i > 0 ? i - 1 : i)), []);
     const nextClip      = useCallback(() => setLightboxIdx((i) => (i !== null && i < filtered.length - 1 ? i + 1 : i)), [filtered.length]);
 
-    if (clips.length === 0) {
+    if (visibleClips.length === 0) {
         return (
             <p className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                 Nenhum replay disponível.
@@ -161,7 +175,7 @@ export function ReplaySection({ clips, groupId }: Props) {
         <>
             {/* ── Filter tabs ── */}
             <div className="flex items-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl w-fit mb-5">
-                <Tab label="Todos"   count={clips.length}    active={filter === "all"}     onClick={() => setFilter("all")} />
+                <Tab label="Todos"   count={visibleClips.length}    active={filter === "all"}     onClick={() => setFilter("all")} />
                 {gols.length    > 0 && <Tab label="Gols"    count={gols.length}    active={filter === "Gol"}    onClick={() => setFilter("Gol")} />}
                 {jogadas.length > 0 && <Tab label="Jogadas" count={jogadas.length} active={filter === "Jogada"} onClick={() => setFilter("Jogada")} />}
             </div>
@@ -177,9 +191,11 @@ export function ReplaySection({ clips, groupId }: Props) {
                             globalIndex={globalIdx}
                             groupId={groupId}
                             state={clipStates[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false }}
+                            isAdmin={isAdmin}
                             onPlay={() => openLightbox(globalIdx)}
                             onLike={() => toggleLike(clip.id)}
                             onFavorite={() => toggleFavorite(clip.id)}
+                            onDelete={() => handleDelete(clip.id)}
                         />
                     );
                 })}
@@ -221,11 +237,13 @@ export function ReplaySection({ clips, groupId }: Props) {
                     index={lightboxIdx}
                     groupId={groupId}
                     clipStates={clipStates}
+                    isAdmin={isAdmin}
                     onClose={closeLightbox}
                     onPrev={prevClip}
                     onNext={nextClip}
                     onLike={toggleLike}
                     onFavorite={toggleFavorite}
+                    onDelete={handleDelete}
                 />
             )}
         </>

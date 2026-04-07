@@ -66,6 +66,17 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
         }
     }
 
+    async function handleDelete(clipId: string) {
+        try {
+            await MatchesApi.deleteReplay(groupId, clipId);
+            setClips((prev) => prev.filter((c) => c.id !== clipId));
+            setLbIdx(null);
+            toast.success("Vídeo excluído.");
+        } catch {
+            toast.error("Falha ao excluir o vídeo.");
+        }
+    }
+
     const byLikes = [...clips].sort((a, b) => (states[b.id]?.likeCount ?? 0) - (states[a.id]?.likeCount ?? 0));
     const byMatch = (() => {
         const map = new Map<string, LikedReplayClipDto[]>();
@@ -150,9 +161,11 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                                         <VideoCard key={clip.id} clip={clip} groupId={groupId}
                                             globalIndex={flatIdx >= 0 ? flatIdx : 0}
                                             state={states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false }}
+                                            isAdmin={isAdmin}
                                             onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
                                             onLike={() => toggleLike(clip.id)}
-                                            onFavorite={() => toggleFavorite(clip.id)} />
+                                            onFavorite={() => toggleFavorite(clip.id)}
+                                            onDelete={() => handleDelete(clip.id)} />
                                     );
                                 })}
                             </div>
@@ -168,9 +181,11 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                         <VideoCard key={clip.id} clip={clip} groupId={groupId}
                             globalIndex={i}
                             state={states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false }}
+                            isAdmin={isAdmin}
                             onPlay={() => setLbIdx(i)}
                             onLike={() => toggleLike(clip.id)}
-                            onFavorite={() => toggleFavorite(clip.id)} />
+                            onFavorite={() => toggleFavorite(clip.id)}
+                            onDelete={() => handleDelete(clip.id)} />
                     ))}
                 </div>
             )}
@@ -178,10 +193,11 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
             {lbIdx !== null && (
                 <Lightbox clips={flatForLb} index={lbIdx} groupId={groupId}
                     clipStates={states}
+                    isAdmin={isAdmin}
                     onClose={() => setLbIdx(null)}
                     onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
                     onNext={() => setLbIdx((i) => Math.min(flatForLb.length - 1, (i ?? 0) + 1))}
-                    onLike={toggleLike} onFavorite={toggleFavorite} />
+                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete} />
             )}
         </div>
     );
@@ -189,7 +205,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
 
 // ── Tab: Favoritos (all users) ─────────────────────────────────────────────────
 
-function FavoritesTab({ groupId }: { groupId: string }) {
+function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
     const [clips,   setClips]   = useState<LikedReplayClipDto[]>([]);
     const [loading, setLoading] = useState(false);
     const [lbIdx,   setLbIdx]   = useState<number | null>(null);
@@ -237,6 +253,17 @@ function FavoritesTab({ groupId }: { groupId: string }) {
             }
         } catch {
             setStates((p) => { const c = p[clipId]; if (!c) return p; return { ...p, [clipId]: { ...c, isFavoritedByMe: !c.isFavoritedByMe } }; });
+        }
+    }
+
+    async function handleDelete(clipId: string) {
+        try {
+            await MatchesApi.deleteReplay(groupId, clipId);
+            setClips((prev) => prev.filter((c) => c.id !== clipId));
+            setLbIdx(null);
+            toast.success("Vídeo excluído.");
+        } catch {
+            toast.error("Falha ao excluir o vídeo.");
         }
     }
 
@@ -305,9 +332,11 @@ function FavoritesTab({ groupId }: { groupId: string }) {
                                         <VideoCard key={clip.id} clip={clip} groupId={groupId}
                                             globalIndex={flatIdx >= 0 ? flatIdx : 0}
                                             state={states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: true }}
+                                            isAdmin={isAdmin}
                                             onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
                                             onLike={() => toggleLike(clip.id)}
-                                            onFavorite={() => toggleFavorite(clip.id)} />
+                                            onFavorite={() => toggleFavorite(clip.id)}
+                                            onDelete={() => handleDelete(clip.id)} />
                                     );
                                 })}
                             </div>
@@ -319,10 +348,11 @@ function FavoritesTab({ groupId }: { groupId: string }) {
             {lbIdx !== null && (
                 <Lightbox clips={flat} index={lbIdx} groupId={groupId}
                     clipStates={states}
+                    isAdmin={isAdmin}
                     onClose={() => setLbIdx(null)}
                     onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
                     onNext={() => setLbIdx((i) => Math.min(flat.length - 1, (i ?? 0) + 1))}
-                    onLike={toggleLike} onFavorite={toggleFavorite} />
+                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete} />
             )}
         </div>
     );
@@ -400,7 +430,7 @@ export default function ReplayVaultPage() {
 
                     {/* Tab content */}
                     {tab === "liked" && <LikedTab groupId={groupId} isAdmin={isAdminOrGod} />}
-                    {tab === "favorites" && <FavoritesTab groupId={groupId} />}
+                    {tab === "favorites" && <FavoritesTab groupId={groupId} isAdmin={isAdminOrGod} />}
                 </>
             )}
         </div>
