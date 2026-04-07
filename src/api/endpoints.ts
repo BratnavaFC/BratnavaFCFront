@@ -13,6 +13,7 @@ import type {
   MatchDetailsDto, TeamColorDto, TeamsResultDto, PlayerVisualStatsReport,
   GoalDto,
 } from './generated/types';
+import type { LikedReplayClipDto, ReplayClipDto } from '../domains/matches/matchTypes';
 
 export const AuthApi = {
   login: (dto: LoginDto) => http.post<ApiResponse<unknown>>('/api/Authentication/login', dto),
@@ -130,6 +131,20 @@ export const MatchesApi = {
     groupId: string, matchId: string, matchPlayerId: string,
     dto: { isGoalkeeper: boolean }
   ) => http.patch<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/players/${matchPlayerId}/role`, dto),
+  replays: (groupId: string, matchId: string) =>
+    http.get<ApiResponse<ReplayClipDto[]>>(`/api/Matches/group/${groupId}/${matchId}/replays`),
+  downloadReplay: (groupId: string, clipId: string) =>
+    http.get(`/api/Matches/group/${groupId}/replays/${clipId}/download`, { responseType: "blob" }),
+  toggleLike: (groupId: string, clipId: string) =>
+    http.post<{ isLiked: boolean; likeCount: number }>(`/api/Matches/group/${groupId}/replays/${clipId}/like`),
+  toggleFavorite: (groupId: string, clipId: string) =>
+    http.post<{ isFavorited: boolean }>(`/api/Matches/group/${groupId}/replays/${clipId}/favorite`),
+  likedReplays: (groupId: string) =>
+    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/liked`),
+  myLikes: (groupId: string) =>
+    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-likes`),
+  myFavorites: (groupId: string) =>
+    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-favorites`),
 };
 
 export const GroupInvitesApi = {

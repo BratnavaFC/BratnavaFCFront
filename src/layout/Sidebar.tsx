@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
-    LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, CalendarOff, History, Settings, BarChart3, User, ShieldAlert,
-    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon,
+    LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, User, ShieldAlert,
+    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -75,6 +75,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         }] : []),
          ...(isGroupAdm || isGod ? [{ to: "/app/birthday-status", label: "Aniversários", icon: Cake }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/settings", label: "Configurações", icon: Settings }] : []),
+        ...(isGroupAdm || isGod ? [{ to: "/app/replays", label: "Replays", icon: Film }] : []),
         {
             to: "/app/admin/users",
             label: isAdminOrGod ? "Usuários" : "Minha conta",

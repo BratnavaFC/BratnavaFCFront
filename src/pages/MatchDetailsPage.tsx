@@ -21,6 +21,8 @@ import { useGroupIcons, useShowPlayerStats } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
 import { MvpResultCard } from "../domains/matches/ui/MvpResultCard";
+import { ReplaySection } from "../domains/matches/ui/ReplaySection";
+import type { ReplayClipDto } from "../domains/matches/matchTypes";
 import CssText from "../components/CssText";
 import MaskedName from "../components/MaskedName";
 
@@ -540,6 +542,7 @@ export default function MatchDetailsPage() {
 
     const [data, setData] = useState<any>(null);
     const [goalsTab, setGoalsTab] = useState<"gols" | "teamA" | "teamB" | "timeline">("gols");
+    const [replays, setReplays] = useState<ReplayClipDto[]>([]);
 
     const active = useAccountStore((s) => s.getActive());
     const isGod = isGodMode();
@@ -565,6 +568,18 @@ export default function MatchDetailsPage() {
                 setData(res.data.data as any);
             } catch (e) {
                 toast.error(getResponseMessage(e, "Falha ao carregar detalhes da partida."));
+            }
+        })();
+    }, [groupId, matchId]);
+
+    useEffect(() => {
+        (async () => {
+            if (!groupId || !matchId) return;
+            try {
+                const res = await MatchesApi.replays(groupId, matchId);
+                setReplays(res.data.data ?? []);
+            } catch {
+                // silencioso — replays são opcionais
             }
         })();
     }, [groupId, matchId]);
@@ -817,19 +832,26 @@ export default function MatchDetailsPage() {
                     </div>
 
                     {/* MVP inline no hero */}
-                    {(() => {
-                        // Admin/god veem o MVP por votos; demais pelo isMvp
-                        const heroMvpNames = canSeeMvp
-                            ? (mvps.length > 0 ? mvps.map((m: any) => m.playerName) : mvpPlayers.map((p: any) => p.playerName))
-                            : mvpPlayers.map((p: any) => p.playerName);
-                        if (heroMvpNames.length === 0) return null;
-                        const heroMvpName = heroMvpNames.join(" & ");
-                        const isTie = heroMvpNames.length > 1;
+                    {mvpPlayers.length > 0 ? (() => {
+                        const heroMvpName = mvpPlayers.map((p: any) => p.playerName).join(" & ");
+                        const isTie = mvpPlayers.length > 1;
                         return (
                             <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-400/10 border border-amber-400/20 px-4 py-2.5">
                                 <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-amber-400 shrink-0" }} />
                                 <span className="text-sm font-semibold text-amber-300">
                                     {isTie ? "MVPs" : "MVP"}: {heroMvpName}
+                                </span>
+                            </div>
+                        );
+                    })() : voteCounts.length > 0 && (() => {
+                        const maxV   = voteCounts[0]?.count ?? 0;
+                        const tied   = voteCounts.filter((v: any) => v.count === maxV);
+                        const names  = tied.map((v: any) => v.votedForName).join(" & ");
+                        return (
+                            <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-orange-400/10 border border-orange-400/20 px-4 py-2.5">
+                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-orange-400 shrink-0" }} />
+                                <span className="text-sm font-semibold text-orange-300">
+                                    Empate — sem MVP: {names}
                                 </span>
                             </div>
                         );
@@ -1291,25 +1313,23 @@ export default function MatchDetailsPage() {
             </Section>
             )}
 
-            {/* ── MVP ───────────────────────────────────────────────── */}
-            {(mvpPlayers.length > 0 || canSeeMvp) && (
-                <Section title="MVP">
-                    {(() => {
-                        const cardNames = canSeeMvp
-                            ? (mvps.length > 0 ? mvps.map((m: any) => m.playerName) : mvpPlayers.map((p: any) => p.playerName))
-                            : mvpPlayers.map((p: any) => p.playerName);
-                        return (
-                            <MvpResultCard
-                                mvpNames={cardNames.length > 0 ? cardNames : undefined}
-                                voteCounts={canSeeMvp ? voteCounts : []}
-                                votes={[]}
-                                admin={canSeeMvp}
-                                _icons={_icons}
-                            />
-                        );
-                    })()}
+            {/* ── Replays ───────────────────────────────────────────── */}
+            {isAdmin && replays.length > 0 && (
+                <Section title={`Replays (${replays.length})`}>
+                    <ReplaySection clips={replays} groupId={groupId} />
                 </Section>
             )}
+
+            {/* ── MVP — visível para todos os membros do grupo ─────── */}
+            <Section title="MVP">
+                <MvpResultCard
+                    mvpNames={mvpPlayers.length > 0 ? mvpPlayers.map((p: any) => p.playerName) : undefined}
+                    voteCounts={voteCounts}
+                    votes={[]}
+                    admin={canSeeMvp}
+                    _icons={_icons}
+                />
+            </Section>
 
         </div>
     );
