@@ -5,6 +5,7 @@ export interface BetPlayer {
     playerId:           string;
     name:               string;
     team:               number; // 0=unassigned, 1=TeamA, 2=TeamB
+    isGuest:            boolean;
     hasBet:             boolean;
     totalFichasWagered: number | null;
 }

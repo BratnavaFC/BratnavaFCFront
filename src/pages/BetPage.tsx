@@ -469,9 +469,10 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
         <div className="space-y-5">
             {/* Toggle: status das apostas dos jogadores */}
             {(() => {
-                const playersWithUser = ctx.players.filter((p) => p.team !== 0 || p.hasBet);
-                const total    = ctx.players.length;
-                const betCount = ctx.players.filter((p) => p.hasBet).length;
+                // Apenas mensalistas entram na contagem/lista de apostas pendentes
+                const members  = ctx.players.filter((p) => !p.isGuest);
+                const total    = members.length;
+                const betCount = members.filter((p) => p.hasBet).length;
                 return (
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <button
@@ -501,7 +502,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
 
                         {showBetStatus && (
                             <div className="border-t border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
-                                {ctx.players.map((p) => (
+                                {members.map((p) => (
                                     <div key={p.matchPlayerId} className="flex items-center justify-between px-4 py-2.5">
                                         <span className="text-sm text-slate-700 dark:text-slate-300">{p.name}</span>
                                         {p.hasBet
@@ -983,7 +984,6 @@ export default function BetPage() {
                     </div>
                     <div>
                         <h1 className="text-2xl font-black leading-tight">Bet</h1>
-                        <p className="text-sm text-white/50 mt-0.5">Apostas virtuais · sem dinheiro real</p>
                     </div>
                 </div>
             </div>
