@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
-    LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, BarChart3, User, ShieldAlert,
+    LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, CalendarOff, History, Settings, BarChart3, User, ShieldAlert,
     Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
@@ -64,6 +64,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/matches", label: "Partidas", icon: CalendarDays },
         { to: "/app/history", label: "Histórico", icon: History },
         { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
+        { to: "/app/absences", label: "Ausências",  icon: CalendarOff },
         { to: "/app/polls",    label: "Votações",   icon: Vote,        badge: pendingPollsCount || undefined },
         { to: "/app/payments", label: "Pagamentos", icon: DollarSign, badge: pendingPaymentsCount || undefined },
         // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight", icon: Presentation }] : []),

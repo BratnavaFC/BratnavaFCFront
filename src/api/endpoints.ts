@@ -147,6 +147,40 @@ export const TeamGenApi = {
   spotlight:   (groupId: string) => http.get<ApiResponse<unknown>>(`/api/TeamGeneration/spotlight/${groupId}`),
 };
 
+export type AbsenceDto = {
+  id: string;
+  startDate: string;    // "YYYY-MM-DD"
+  endDate: string;      // "YYYY-MM-DD"
+  absenceType: number;
+  absenceTypeName: string;
+  description?: string | null;
+  createdAt: string;
+};
+
+export type CreateAbsenceDto = {
+  startDate: string;    // "YYYY-MM-DD"
+  endDate: string;      // "YYYY-MM-DD"
+  absenceType: number;
+  description?: string | null;
+};
+
+export const AbsencesApi = {
+  mine: () =>
+    http.get<ApiResponse<AbsenceDto[]>>('/api/absences/mine'),
+
+  create: (dto: CreateAbsenceDto) =>
+    http.post<ApiResponse<AbsenceDto>>('/api/absences', dto),
+
+  update: (id: string, dto: CreateAbsenceDto) =>
+    http.put<ApiResponse<AbsenceDto>>(`/api/absences/${id}`, dto),
+
+  delete: (id: string) =>
+    http.delete<ApiResponse<null>>(`/api/absences/${id}`),
+
+  byGroup: (groupId: string) =>
+    http.get<ApiResponse<unknown[]>>(`/api/absences/group/${groupId}`),
+};
+
 export const CalendarApi = {
   events:         (groupId: string, start: string, end: string) =>
                     http.get<ApiResponse<unknown[]>>(`/api/Calendar/group/${groupId}?start=${start}&end=${end}`),

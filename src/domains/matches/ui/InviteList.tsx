@@ -6,6 +6,7 @@ import { useAccountStore } from "../../../auth/accountStore";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
 import { resolveIcon } from "../../../lib/groupIcons";
+import { resolveAbsenceIcon } from "../../../lib/absenceIcons";
 
 // ── Variant config ────────────────────────────────────────────────────────────
 
@@ -142,6 +143,19 @@ export function InviteList({
                                     <IconRenderer value={resolveIcon(_icons, "goalkeeper")} size={14} />
                                 </span>
                             )
+                        )}
+
+                        {variant === 'rejected' && p.absenceType != null && (
+                            <span
+                                title={p.absenceDescription ?? undefined}
+                                className="leading-none opacity-80 cursor-help shrink-0"
+                            >
+                                <IconRenderer
+                                    value={resolveAbsenceIcon(p.absenceType)}
+                                    size={14}
+                                    lucideProps={p.absenceType === 2 ? { color: 'red' } : undefined}
+                                />
+                            </span>
                         )}
 
                         {isMe && (
