@@ -75,7 +75,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         }] : []),
          ...(isGroupAdm || isGod ? [{ to: "/app/birthday-status", label: "Aniversários", icon: Cake }] : []),
         ...(isGroupAdm || isGod ? [{ to: "/app/settings", label: "Configurações", icon: Settings }] : []),
-        ...(isGroupAdm || isGod ? [{ to: "/app/replays", label: "Replays", icon: Film }] : []),
+        { to: "/app/replays", label: "Replays", icon: Film },
         {
             to: "/app/admin/users",
             label: isAdminOrGod ? "Usuários" : "Minha conta",

@@ -1314,9 +1314,9 @@ export default function MatchDetailsPage() {
             )}
 
             {/* ── Replays ───────────────────────────────────────────── */}
-            {isAdmin && replays.length > 0 && (
+            {replays.length > 0 && groupId && (
                 <Section title={`Replays (${replays.length})`}>
-                    <ReplaySection clips={replays} groupId={groupId!} />
+                    <ReplaySection clips={replays} groupId={groupId} />
                 </Section>
             )}
 

@@ -366,15 +366,7 @@ export default function ReplayVaultPage() {
                 </div>
             )}
 
-            {groupId && !isAdminOrGod && (
-                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400">
-                    <Film size={36} className="mx-auto mb-3 opacity-30" />
-                    <p className="text-sm font-medium">Acesso restrito</p>
-                    <p className="text-xs mt-1 opacity-60">Esta seção está disponível apenas para administradores.</p>
-                </div>
-            )}
-
-            {groupId && isAdminOrGod && (
+            {groupId && (
                 <>
                     {/* Tab bar */}
                     <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">

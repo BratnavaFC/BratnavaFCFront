@@ -114,22 +114,9 @@ export default function HistoryPage() {
         if (!groupId) return;
         setLoading(true);
         try {
-            const [histRes, currentRes] = await Promise.allSettled([
-                MatchesApi.history(groupId, 400),
-                MatchesApi.getCurrent(groupId),
-            ]);
+            const histRes = await MatchesApi.history(groupId, 400);
 
-            const list: any[] = histRes.status === "fulfilled"
-                ? (Array.isArray(histRes.value.data.data) ? histRes.value.data.data : [])
-                : [];
-
-            if (currentRes.status === "fulfilled") {
-                const current = currentRes.value.data.data as any;
-                const currentId = current?.id ?? current?.matchId;
-                if (currentId && !list.some((m) => (m?.id ?? m?.matchId) === currentId)) {
-                    list.unshift(current);
-                }
-            }
+            const list: any[] = Array.isArray(histRes.data.data) ? histRes.data.data : [];
 
             setItems(list);
             setPage(1);
