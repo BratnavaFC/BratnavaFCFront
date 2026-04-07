@@ -39,19 +39,15 @@ export function StepPlaying({
 
     const COOLDOWN_MS = 1500;
 
-    async function handlePublish(type: 'Gol' | 'Jogada') {
+    function handlePublish(type: 'Gol' | 'Jogada') {
         if (!onPublishEvent) return;
         if (type === 'Gol') setPublishingGol(true);
         else setPublishingJogada(true);
-        const started = Date.now();
-        try {
-            await onPublishEvent(type);
-        } finally {
-            const remaining = COOLDOWN_MS - (Date.now() - started);
-            if (remaining > 0) await new Promise<void>((res) => setTimeout(res, remaining));
+        onPublishEvent(type).catch(() => {});
+        setTimeout(() => {
             if (type === 'Gol') setPublishingGol(false);
             else setPublishingJogada(false);
-        }
+        }, COOLDOWN_MS);
     }
 
     return (
