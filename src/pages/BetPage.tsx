@@ -137,6 +137,75 @@ function teamLabel(team: number) {
     return "Sem time";
 }
 
+// ── NumberStepper ─────────────────────────────────────────────────────────────
+
+function NumberStepper({
+    value, min, max, step = 1, disabled, onChange, size = "md",
+}: {
+    value: number;
+    min: number;
+    max: number;
+    step?: number;
+    disabled?: boolean;
+    onChange: (v: number) => void;
+    size?: "sm" | "md" | "lg";
+}) {
+    const [raw, setRaw] = useState(String(value));
+
+    // Keep raw in sync when value changes externally (e.g. button clicks)
+    useEffect(() => { setRaw(String(value)); }, [value]);
+
+    const btnBase = "flex items-center justify-center rounded-lg font-bold select-none transition-colors active:scale-95 touch-manipulation";
+    const sizeMap = {
+        sm: { btn: "w-8 h-8 text-base",  inp: "w-12 text-sm font-bold py-1"   },
+        md: { btn: "w-10 h-10 text-lg",  inp: "w-14 text-lg font-black py-1.5" },
+        lg: { btn: "w-12 h-12 text-xl",  inp: "w-16 text-2xl font-black py-2"  },
+    };
+    const s = sizeMap[size];
+    const dec = () => onChange(Math.max(min, value - step));
+    const inc = () => onChange(Math.min(max, value + step));
+
+    const commit = (str: string) => {
+        const n = parseInt(str, 10);
+        if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
+        else setRaw(String(value));
+    };
+
+    return (
+        <div className="flex items-center gap-1">
+            <button type="button" onClick={dec} disabled={disabled || value <= min}
+                className={[btnBase, s.btn,
+                    "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200",
+                    "hover:bg-slate-200 dark:hover:bg-slate-600",
+                    "disabled:opacity-30 disabled:cursor-default",
+                ].join(" ")}>−</button>
+            <input
+                type="number"
+                inputMode="numeric"
+                value={raw}
+                disabled={disabled}
+                onChange={(e) => setRaw(e.target.value)}
+                onBlur={(e) => commit(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && commit(raw)}
+                className={[
+                    s.inp,
+                    "text-center tabular-nums rounded-lg border border-slate-200 dark:border-slate-600",
+                    "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100",
+                    "focus:outline-none focus:ring-2 focus:ring-slate-400",
+                    "disabled:opacity-40 disabled:cursor-default",
+                    "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                ].join(" ")}
+            />
+            <button type="button" onClick={inc} disabled={disabled || value >= max}
+                className={[btnBase, s.btn,
+                    "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200",
+                    "hover:bg-slate-200 dark:hover:bg-slate-600",
+                    "disabled:opacity-30 disabled:cursor-default",
+                ].join(" ")}>+</button>
+        </div>
+    );
+}
+
 // ── SelectionCard ─────────────────────────────────────────────────────────────
 
 function SelectionCard({
@@ -222,9 +291,10 @@ function SelectionCard({
                                 {teamA ? <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: teamA.hex }} /> : null}
                                 {teamA?.name ?? "Time A"}
                             </label>
-                            <input type="number" min={0} max={20} value={sel.scoreA ?? ""} disabled={locked}
-                                onChange={(e) => onUpdate({ ...sel, scoreA: Math.max(0, parseInt(e.target.value) || 0) })}
-                                className="w-full mt-1 text-center text-2xl font-black rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent py-2 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60 disabled:cursor-default" />
+                            <div className="mt-1 flex justify-center">
+                                <NumberStepper value={sel.scoreA ?? 0} min={0} max={20} disabled={locked}
+                                    onChange={(v) => onUpdate({ ...sel, scoreA: v })} size="lg" />
+                            </div>
                         </div>
                         <span className="text-xl font-black text-slate-400 mt-5">×</span>
                         <div className="flex-1">
@@ -233,9 +303,10 @@ function SelectionCard({
                                 {teamB ? <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: teamB.hex }} /> : null}
                                 {teamB?.name ?? "Time B"}
                             </label>
-                            <input type="number" min={0} max={20} value={sel.scoreB ?? ""} disabled={locked}
-                                onChange={(e) => onUpdate({ ...sel, scoreB: Math.max(0, parseInt(e.target.value) || 0) })}
-                                className="w-full mt-1 text-center text-2xl font-black rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent py-2 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60 disabled:cursor-default" />
+                            <div className="mt-1 flex justify-center">
+                                <NumberStepper value={sel.scoreB ?? 0} min={0} max={20} disabled={locked}
+                                    onChange={(v) => onUpdate({ ...sel, scoreB: v })} size="lg" />
+                            </div>
                         </div>
                     </div>
                     {winnerHint && !scoreConsistentWithWinner(winnerHint, sel.scoreA, sel.scoreB) && (
@@ -267,9 +338,8 @@ function SelectionCard({
                         <label className="text-xs text-slate-500 whitespace-nowrap">
                             {sel.category === "PlayerGoals" ? "Gols previstos:" : "Assistências previstas:"}
                         </label>
-                        <input type="number" min={0} max={20} value={sel.playerCount ?? 0} disabled={locked}
-                            onChange={(e) => onUpdate({ ...sel, playerCount: Math.max(0, parseInt(e.target.value) || 0) })}
-                            className="w-20 text-center rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent px-3 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60 disabled:cursor-default" />
+                        <NumberStepper value={sel.playerCount ?? 0} min={0} max={20} disabled={locked}
+                            onChange={(v) => onUpdate({ ...sel, playerCount: v })} size="sm" />
                     </div>
                 </div>
             )}
@@ -277,9 +347,8 @@ function SelectionCard({
             <div className="flex items-center gap-3 pt-1 border-t border-slate-100 dark:border-slate-700">
                 <Coins size={14} className="text-amber-400 shrink-0" />
                 <label className="text-xs text-slate-500">Bratnava Coins:</label>
-                <input type="number" min={30} step={10} max={MAX_WAGER} value={sel.fichasWagered} disabled={locked}
-                    onChange={(e) => onUpdate({ ...sel, fichasWagered: Math.max(30, parseInt(e.target.value) || 30) })}
-                    className="w-24 text-center rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent px-3 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-60 disabled:cursor-default" />
+                <NumberStepper value={sel.fichasWagered} min={30} max={MAX_WAGER} step={10} disabled={locked}
+                    onChange={(v) => onUpdate({ ...sel, fichasWagered: v })} size="sm" />
             </div>
         </div>
     );

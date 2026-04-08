@@ -1,4 +1,4 @@
-import { RefreshCw, StopCircle, Trophy, Zap } from "lucide-react";
+import { Loader2, RefreshCw, StopCircle, Trophy, Zap } from "lucide-react";
 import { useState } from "react";
 import type { GoalDto, PlayerInMatchDto } from "../matchTypes";
 import { GoalTracker } from "./GoalTracker";
@@ -37,16 +37,17 @@ export function StepPlaying({
     const [publishingGol, setPublishingGol]       = useState(false);
     const [publishingJogada, setPublishingJogada] = useState(false);
 
-    async function handlePublish(type: 'Gol' | 'Jogada') {
+    const COOLDOWN_MS = 1500;
+
+    function handlePublish(type: 'Gol' | 'Jogada') {
         if (!onPublishEvent) return;
         if (type === 'Gol') setPublishingGol(true);
         else setPublishingJogada(true);
-        try {
-            await onPublishEvent(type);
-        } finally {
+        onPublishEvent(type).catch(() => {});
+        setTimeout(() => {
             if (type === 'Gol') setPublishingGol(false);
             else setPublishingJogada(false);
-        }
+        }, COOLDOWN_MS);
     }
 
     return (
@@ -110,7 +111,9 @@ export function StepPlaying({
                             disabled={publishingGol || publishingJogada}
                             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-base transition"
                         >
-                            <Trophy size={18} />
+                            {publishingGol
+                                ? <Loader2 size={18} className="animate-spin" />
+                                : <Trophy size={18} />}
                             GOL
                         </button>
                         <button
@@ -118,7 +121,9 @@ export function StepPlaying({
                             disabled={publishingGol || publishingJogada}
                             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-base transition"
                         >
-                            <Zap size={18} />
+                            {publishingJogada
+                                ? <Loader2 size={18} className="animate-spin" />
+                                : <Zap size={18} />}
                             JOGADA
                         </button>
                     </div>
