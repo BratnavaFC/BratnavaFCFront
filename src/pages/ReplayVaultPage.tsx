@@ -431,7 +431,7 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
             .map(([matchId, cs]) => ({
                 matchId,
                 clips: cs,
-                date: cs[0]?.uploadedAt ?? "",
+                date: cs[0]?.recordedAt ?? "",
                 goalCount: cs.filter((c) => c.eventType === "Gol").length,
                 playCount: cs.filter((c) => c.eventType === "Jogada").length,
             }))

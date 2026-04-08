@@ -7,16 +7,14 @@ import { useEffect, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Play, Trash2, X } from "lucide-react";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
-import { apiBaseUrl } from "../../../api/http";
-import { useAccountStore } from "../../../auth/accountStore";
 
 // ── Stream URL helper ──────────────────────────────────────────────────────────
-// Usa o endpoint proxy do backend em vez da URL presignada direta do R2.
-// Necessário para iOS Safari, que exige Range requests CORS-compliant.
+// Usa a URL presignada direta do R2. Se o iOS Safari voltar a dar problema
+// (CORS / Range requests), reverter para o proxy:
+//   return `${apiBaseUrl}/api/matches/group/${groupId}/replays/${clipId}/stream?t=${encodeURIComponent(token)}`;
 
-function useStreamUrl(groupId: string, clipId: string): string {
-    const token = useAccountStore((s) => s.getActive()?.accessToken ?? "");
-    return `${apiBaseUrl}/api/matches/group/${groupId}/replays/${clipId}/stream?t=${encodeURIComponent(token)}`;
+function useStreamUrl(_groupId: string, _clipId: string, videoUrl: string): string {
+    return videoUrl;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -120,7 +118,7 @@ export function VideoCard({
     onDelete?: () => void;
 }) {
     const isGol    = clip.eventType === "Gol";
-    const streamUrl = useStreamUrl(groupId, clip.id);
+    const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
     const [duration, setDuration] = useState<number | null>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -288,7 +286,7 @@ export function Lightbox({
     const canPrev   = index > 0;
     const canNext   = index < clips.length - 1;
     const state     = clipStates[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false };
-    const streamUrl = useStreamUrl(groupId, clip.id);
+    const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
     const touchStartX = useRef<number>(0);
     const videoRef    = useRef<HTMLVideoElement>(null);
 
