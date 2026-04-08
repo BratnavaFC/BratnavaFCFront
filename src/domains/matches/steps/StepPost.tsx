@@ -439,6 +439,7 @@ export function StepPost({
     placeName,
     onEditMatch,
     onDeleteMatch,
+    onReapplyMvp,
 }: {
     admin: boolean;
     currentMvpNames: string[];
