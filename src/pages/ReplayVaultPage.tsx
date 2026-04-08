@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
     Bookmark, Film, Heart,
-    LayoutGrid, ListOrdered, Loader2, RefreshCw, Star,
+    LayoutGrid, ListOrdered, Loader2, RefreshCw, Star, Gamepad2,
 } from "lucide-react";
 import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
@@ -358,9 +358,197 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
     );
 }
 
+// ── Tab: Jogos (admin only) ────────────────────────────────────────────────────
+
+type EventFilter = "all" | "Gol" | "Jogada";
+
+function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
+    const [clips,   setClips]   = useState<LikedReplayClipDto[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [lbIdx,   setLbIdx]   = useState<number | null>(null);
+    const [states,  setStates]  = useState<ClipStateMap>({});
+    const [filter,  setFilter]  = useState<EventFilter>("all");
+
+    async function load() {
+        setLoading(true);
+        try {
+            const res  = await MatchesApi.allReplays(groupId);
+            const list = Array.isArray(res.data.data) ? res.data.data : [];
+            setClips(list);
+            setStates(Object.fromEntries(list.map((c) => [c.id, { likeCount: c.likeCount, isLikedByMe: c.isLikedByMe, isFavoritedByMe: c.isFavoritedByMe }])));
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao carregar vídeos."));
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => { load(); }, [groupId]);
+
+    async function toggleLike(clipId: string) {
+        setStates((p) => {
+            const c = p[clipId]; if (!c) return p;
+            return { ...p, [clipId]: { ...c, isLikedByMe: !c.isLikedByMe, likeCount: c.isLikedByMe ? c.likeCount - 1 : c.likeCount + 1 } };
+        });
+        try {
+            const r = await MatchesApi.toggleLike(groupId, clipId);
+            setStates((p) => ({ ...p, [clipId]: { ...p[clipId], isLikedByMe: r.data.isLiked, likeCount: r.data.likeCount } }));
+        } catch {
+            setStates((p) => {
+                const c = p[clipId]; if (!c) return p;
+                return { ...p, [clipId]: { ...c, isLikedByMe: !c.isLikedByMe, likeCount: c.isLikedByMe ? c.likeCount - 1 : c.likeCount + 1 } };
+            });
+        }
+    }
+
+    async function toggleFavorite(clipId: string) {
+        setStates((p) => { const c = p[clipId]; if (!c) return p; return { ...p, [clipId]: { ...c, isFavoritedByMe: !c.isFavoritedByMe } }; });
+        try {
+            const r = await MatchesApi.toggleFavorite(groupId, clipId);
+            setStates((p) => ({ ...p, [clipId]: { ...p[clipId], isFavoritedByMe: r.data.isFavorited } }));
+        } catch {
+            setStates((p) => { const c = p[clipId]; if (!c) return p; return { ...p, [clipId]: { ...c, isFavoritedByMe: !c.isFavoritedByMe } }; });
+        }
+    }
+
+    async function handleDelete(clipId: string) {
+        try {
+            await MatchesApi.deleteReplay(groupId, clipId);
+            setClips((prev) => prev.filter((c) => c.id !== clipId));
+            setLbIdx(null);
+            toast.success("Vídeo excluído.");
+        } catch {
+            toast.error("Falha ao excluir o vídeo.");
+        }
+    }
+
+    const filtered = filter === "all" ? clips : clips.filter((c) => c.eventType === filter);
+
+    const byMatch = (() => {
+        const map = new Map<string, LikedReplayClipDto[]>();
+        filtered.forEach((c) => { const arr = map.get(c.matchId) ?? []; arr.push(c); map.set(c.matchId, arr); });
+        return [...map.entries()]
+            .map(([matchId, cs]) => ({
+                matchId,
+                clips: cs,
+                date: cs[0]?.uploadedAt ?? "",
+                goalCount: cs.filter((c) => c.eventType === "Gol").length,
+                playCount: cs.filter((c) => c.eventType === "Jogada").length,
+            }))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    })();
+
+    const flat = byMatch.flatMap((g) => g.clips);
+
+    return (
+        <div className="space-y-5">
+            {/* Sub-header controls */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {loading
+                        ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
+                        : `${filtered.length} vídeo${filtered.length !== 1 ? "s" : ""} em ${byMatch.length} partida${byMatch.length !== 1 ? "s" : ""}`}
+                </p>
+                <div className="flex items-center gap-2">
+                    {/* Event filter */}
+                    <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                        {(["all", "Gol", "Jogada"] as EventFilter[]).map((f) => (
+                            <button key={f} type="button" onClick={() => setFilter(f)}
+                                className={[
+                                    "text-xs font-medium px-3 py-2 transition-colors",
+                                    filter === f
+                                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900"
+                                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
+                                ].join(" ")}>
+                                {f === "all" ? "Tudo" : f === "Gol" ? "⚽ Gols" : "✨ Jogadas"}
+                            </button>
+                        ))}
+                    </div>
+                    <button type="button" onClick={load} disabled={loading}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
+                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Atualizar
+                    </button>
+                </div>
+            </div>
+
+            {/* Loading skeleton */}
+            {loading && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                        <div key={i} className="rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" style={{ aspectRatio: "16/9" }} />
+                    ))}
+                </div>
+            )}
+
+            {/* Empty */}
+            {!loading && clips.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400">
+                    <Gamepad2 size={36} className="mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium">Nenhum replay enviado ainda</p>
+                    <p className="text-xs mt-1 opacity-60">Os vídeos aparecerão aqui após serem enviados nas partidas.</p>
+                </div>
+            )}
+
+            {!loading && filtered.length === 0 && clips.length > 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-8 text-center text-slate-400">
+                    <p className="text-sm">Nenhum vídeo do tipo selecionado.</p>
+                </div>
+            )}
+
+            {!loading && filtered.length > 0 && (
+                <div className="space-y-6">
+                    {byMatch.map((group) => (
+                        <div key={group.matchId}>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                                <div className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+                                    style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#6366f1" }}>
+                                    <Gamepad2 size={11} />
+                                    {group.goalCount > 0 && <span>⚽ {group.goalCount}</span>}
+                                    {group.playCount > 0 && <span>✨ {group.playCount}</span>}
+                                    · {group.clips.length} vídeo{group.clips.length !== 1 ? "s" : ""}
+                                </div>
+                                <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                                    {new Date(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                </span>
+                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
+                                {group.clips.map((clip) => {
+                                    const flatIdx = flat.findIndex((c) => c.id === clip.id);
+                                    return (
+                                        <VideoCard key={clip.id} clip={clip} groupId={groupId}
+                                            globalIndex={flatIdx >= 0 ? flatIdx : 0}
+                                            state={states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false }}
+                                            isAdmin={isAdmin}
+                                            onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
+                                            onLike={() => toggleLike(clip.id)}
+                                            onFavorite={() => toggleFavorite(clip.id)}
+                                            onDelete={() => handleDelete(clip.id)} />
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {lbIdx !== null && (
+                <Lightbox clips={flat} index={lbIdx} groupId={groupId}
+                    clipStates={states}
+                    isAdmin={isAdmin}
+                    onClose={() => setLbIdx(null)}
+                    onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
+                    onNext={() => setLbIdx((i) => Math.min(flat.length - 1, (i ?? 0) + 1))}
+                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete} />
+            )}
+        </div>
+    );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-type TabId = "liked" | "favorites";
+type TabId = "liked" | "favorites" | "matches";
 
 export default function ReplayVaultPage() {
     const groupId = useAccountStore((s) => s.getActive()?.activeGroupId);
@@ -426,11 +614,27 @@ export default function ReplayVaultPage() {
                             <Star size={15} style={{ fill: tab === "favorites" ? "#f59e0b" : "none", color: tab === "favorites" ? "#f59e0b" : "currentColor" }} />
                             Meus Favoritos
                         </button>
+                        {isAdminOrGod && (
+                            <button
+                                type="button"
+                                onClick={() => setTab("matches")}
+                                className={[
+                                    "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px",
+                                    tab === "matches"
+                                        ? "border-indigo-500 text-indigo-500"
+                                        : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
+                                ].join(" ")}
+                            >
+                                <Gamepad2 size={15} />
+                                Jogos
+                            </button>
+                        )}
                     </div>
 
                     {/* Tab content */}
                     {tab === "liked" && <LikedTab groupId={groupId} isAdmin={isAdminOrGod} />}
                     {tab === "favorites" && <FavoritesTab groupId={groupId} isAdmin={isAdminOrGod} />}
+                    {tab === "matches" && isAdminOrGod && <MatchesTab groupId={groupId} isAdmin={isAdminOrGod} />}
                 </>
             )}
         </div>

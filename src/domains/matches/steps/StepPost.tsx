@@ -376,20 +376,6 @@ export function StepPost({
                     </div>
                 )}
 
-                {/* Goals */}
-                <GoalTracker
-                    participants={participants}
-                    goals={goals}
-                    addingGoal={addingGoal}
-                    onAddGoal={onAddGoal}
-                    removingGoal={removingGoal}
-                    onRemoveGoal={onRemoveGoal}
-                    canRemove={false}
-                    teamAName={teamAName}
-                    teamAHex={teamAHex}
-                    teamBName={teamBName}
-                    teamBHex={teamBHex}
-                />
             </div>
         );
     }

@@ -139,6 +139,8 @@ export const MatchesApi = {
     http.post<{ isLiked: boolean; likeCount: number }>(`/api/Matches/group/${groupId}/replays/${clipId}/like`),
   toggleFavorite: (groupId: string, clipId: string) =>
     http.post<{ isFavorited: boolean }>(`/api/Matches/group/${groupId}/replays/${clipId}/favorite`),
+  allReplays: (groupId: string) =>
+    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/all`),
   likedReplays: (groupId: string) =>
     http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/liked`),
   myLikes: (groupId: string) =>
