@@ -3,11 +3,12 @@ import type { ReactNode } from "react";
 import {
     Coins, Trophy, Target, TrendingUp, TrendingDown,
     Minus, Loader2, RefreshCw, Check, X, ChevronDown,
-    History,
+    History, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BetApi, MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
+import { isGroupAdmin } from "../auth/guards";
 import { getResponseMessage } from "../api/apiResponse";
 import type {
     CurrentMatchBetContextDto,
@@ -16,6 +17,8 @@ import type {
     BetCategory,
     BetPlayer,
     MatchBetHistoryDto,
+    BetPreviewDto,
+    BetPreviewUserDto,
 } from "../domains/bets/betTypes";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -354,6 +357,260 @@ function SelectionCard({
     );
 }
 
+// ── Painel de parcial (todos os usuários) ────────────────────────────────────
+
+function BetPreviewPanel({
+    groupId,
+    matchId,
+    admin,
+    players,
+}: {
+    groupId: string;
+    matchId: string;
+    admin: boolean;
+    players: BetPlayer[];
+}) {
+    const myUserId = useAccountStore(s => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
+    const [preview,      setPreview]      = useState<BetPreviewDto | null>(null);
+    const [loading,      setLoading]      = useState(false);
+    const [expanded,     setExpanded]     = useState<Set<string>>(new Set());
+    const [open,         setOpen]         = useState(true);
+    // null = visão do admin (expande tudo); string = impersona esse usuário
+    const [viewAsUserId, setViewAsUserId] = useState<string | null>(null);
+
+    const playerNameByMpId = Object.fromEntries(players.map((p) => [p.matchPlayerId, p.name]));
+
+    /**
+     * Regra de expansão:
+     *  - Admin sem "ver como": expande qualquer linha
+     *  - Admin em modo "ver como": expande só a linha do jogador selecionado
+     *  - Usuário comum: expande só a própria linha
+     */
+    function canExpand(userId: string): boolean {
+        if (admin) return viewAsUserId === null ? true : userId === viewAsUserId;
+        return userId === myUserId;
+    }
+
+    /** Quem recebe o rótulo "(você)" */
+    function isViewAsMe(userId: string): boolean {
+        if (admin && viewAsUserId !== null) return userId === viewAsUserId;
+        return userId === myUserId;
+    }
+
+    function toggleUser(userId: string) {
+        if (!canExpand(userId)) return;
+        setExpanded((prev) => {
+            const next = new Set(prev);
+            next.has(userId) ? next.delete(userId) : next.add(userId);
+            return next;
+        });
+    }
+
+    async function load() {
+        setLoading(true);
+        try {
+            const res = await BetApi.getPreview(groupId, matchId);
+            setPreview((res.data as any) as BetPreviewDto);
+            setOpen(true);
+        } catch {
+            // silently ignore: sem partida atual ou sem apostas
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // Carrega automaticamente na montagem
+    useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    /** Formata o valor mostrando o nome do jogador quando disponível. */
+    function formatPreviewValue(category: string, value: string | null | undefined): string {
+        if (!value) return "–";
+        if (category === "WinningTeam") return value === "TeamA" ? "Time A" : value === "TeamB" ? "Time B" : "Empate";
+        if (category === "FinalScore")  return value.replace(":", " × ");
+        const parts = value.split("|");
+        if (parts.length >= 2) {
+            const name  = playerNameByMpId[parts[0]] ?? "Jogador";
+            const count = parts[1];
+            return category === "PlayerGoals"
+                ? `${name} — ${count} gol${count !== "1" ? "s" : ""}`
+                : `${name} — ${count} assist.`;
+        }
+        return value;
+    }
+
+    return (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {/* Header / toggle */}
+            <div className="flex items-center gap-2 px-4 py-3">
+                <Eye size={15} className="text-indigo-400 shrink-0" />
+                <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    Como vai ficar — parcial
+                </span>
+
+                {/* Seletor "Ver como" — visível apenas para admins quando há bettors */}
+                {admin && preview && preview.userBets.length > 0 && (
+                    <select
+                        value={viewAsUserId ?? ""}
+                        onChange={(e) => {
+                            setViewAsUserId(e.target.value || null);
+                            setExpanded(new Set()); // colapsa tudo ao trocar perspectiva
+                        }}
+                        className="text-xs rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <option value="">👁️ Admin (todos)</option>
+                        {preview.userBets.map((u) => (
+                            <option key={u.userId} value={u.userId}>{u.userName}</option>
+                        ))}
+                    </select>
+                )}
+
+                {/* Botão colapsar/expandir painel */}
+                <button
+                    type="button"
+                    onClick={() => { if (!preview && !loading) load(); else setOpen((o) => !o); }}
+                    disabled={loading}
+                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    {loading
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : preview
+                            ? <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+                            : <RefreshCw size={13} />
+                    }
+                </button>
+
+                {/* Atualizar */}
+                {preview && (
+                    <button type="button" onClick={load} disabled={loading}
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                        <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                    </button>
+                )}
+            </div>
+
+            {open && preview && (
+                <div className="border-t border-slate-100 dark:border-slate-700">
+                    {/* Score badge */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-800/40">
+                        <span className="text-xs text-slate-500">
+                            Placar atual:{" "}
+                            <span className="font-black text-slate-800 dark:text-white">
+                                {preview.currentScoreA} × {preview.currentScoreB}
+                            </span>
+                        </span>
+                        {admin && viewAsUserId !== null && (
+                            <span className="text-xs text-indigo-400 font-medium">
+                                Visão de: {preview.userBets.find(u => u.userId === viewAsUserId)?.userName}
+                            </span>
+                        )}
+                    </div>
+
+                    {preview.userBets.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-slate-400 text-sm">
+                            Nenhuma aposta registrada ainda.
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                            {preview.userBets.map((userBet: BetPreviewUserDto, rank: number) => {
+                                const isOpen      = expanded.has(userBet.userId);
+                                const expandable  = canExpand(userBet.userId);
+                                const isMe        = isViewAsMe(userBet.userId);
+                                const betNet      = userBet.simulatedBetEarnings;
+                                const total       = userBet.simulatedTotal;
+                                const correctCnt  = userBet.selections.filter((s) => s.isCorrect).length;
+                                const partialCnt  = userBet.selections.filter((s) => s.isPartialCredit).length;
+
+                                return (
+                                    <div key={userBet.userId}>
+                                        <div
+                                            role={expandable ? "button" : undefined}
+                                            tabIndex={expandable ? 0 : undefined}
+                                            onClick={expandable ? () => toggleUser(userBet.userId) : undefined}
+                                            onKeyDown={expandable ? (e) => e.key === "Enter" && toggleUser(userBet.userId) : undefined}
+                                            className={[
+                                                "flex items-center gap-3 px-4 py-3",
+                                                isMe ? "bg-indigo-50/50 dark:bg-indigo-900/10" : "",
+                                                expandable ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors" : "",
+                                            ].filter(Boolean).join(" ")}>
+                                            {/* Rank */}
+                                            <span className="text-sm w-6 text-center shrink-0">
+                                                {rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : `${rank + 1}º`}
+                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                                                    {userBet.userName}
+                                                    {isMe && <span className="text-xs font-normal text-slate-400 ml-1">(você)</span>}
+                                                </p>
+                                                <p className="text-xs text-slate-400">
+                                                    {userBet.selections.length} seleç{userBet.selections.length !== 1 ? "ões" : "ão"}
+                                                    {" · "}{correctCnt} acerto{correctCnt !== 1 ? "s" : ""}
+                                                    {partialCnt > 0 && ` · ${partialCnt} parcial`}
+                                                </p>
+                                            </div>
+                                            <div className="text-right shrink-0 mr-1">
+                                                <div className={`flex items-center gap-1 font-bold text-sm justify-end ${fichasColor(betNet)}`}>
+                                                    {betNet > 0 ? <TrendingUp size={13} /> : betNet < 0 ? <TrendingDown size={13} /> : <Minus size={13} />}
+                                                    {betNet > 0 ? "+" : ""}{betNet}
+                                                </div>
+                                                <p className="text-xs text-slate-400">Total +{total}</p>
+                                            </div>
+                                            {expandable && (
+                                                <ChevronDown size={14} className={`text-slate-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                                            )}
+                                        </div>
+
+                                        {expandable && isOpen && (
+                                            <div className="bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-700/50 divide-y divide-slate-100 dark:divide-slate-700/30">
+                                                {userBet.selections.map((sel) => (
+                                                    <div key={sel.id} className="flex items-start gap-3 px-5 py-2.5">
+                                                        <div className="mt-0.5 w-4 flex justify-center shrink-0">
+                                                            {resultIcon(sel.isCorrect, sel.isPartialCredit)}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                                                {CATEGORY_LABELS[sel.category as BetCategory] ?? sel.category}
+                                                            </p>
+                                                            <p className="text-xs text-slate-400 mt-0.5">
+                                                                Apostou:{" "}
+                                                                <span className="font-medium text-slate-600 dark:text-slate-300">
+                                                                    {formatPreviewValue(sel.category, sel.predictedValue)}
+                                                                </span>
+                                                                {sel.actualValue && (
+                                                                    <>
+                                                                        {" "}· Agora:{" "}
+                                                                        <span className="font-medium text-slate-600 dark:text-slate-300">
+                                                                            {formatPreviewValue(sel.category, sel.actualValue)}
+                                                                        </span>
+                                                                    </>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-xs text-slate-400">{sel.fichasWagered} BC</p>
+                                                            <p className={`text-xs font-bold ${fichasColor(sel.fichasEarned)}`}>
+                                                                {sel.fichasEarned != null
+                                                                    ? (sel.fichasEarned > 0 ? "+" : "") + sel.fichasEarned
+                                                                    : "–"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {/* Base reward */}
+                                                <div className="flex items-center justify-between px-5 py-2 bg-white/50 dark:bg-slate-900/20">
+                                                    <span className="text-xs text-slate-400">Base por participação</span>
+                                                    <span className="text-xs font-bold text-emerald-500">+200</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Tab: Aposta Atual ─────────────────────────────────────────────────────────
 
 function CurrentBetTab({ groupId }: { groupId: string }) {
@@ -522,6 +779,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
         );
     }
 
+    const adminOfGroup  = isGroupAdmin(groupId);
     const isLocked      = !ctx.betWindowOpen;
     const totalWager    = selections.reduce((s, sel) => s + sel.fichasWagered, 0);
     const overMax       = totalWager > MAX_WAGER;
@@ -725,6 +983,9 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                     ))}
                 </div>
             )}
+
+            {/* Parcial das apostas — todos os usuários (admin pode expandir todos, demais só o próprio) */}
+            <BetPreviewPanel groupId={groupId} matchId={ctx.matchId} admin={adminOfGroup} players={ctx.players} />
 
             {/* Total + submit */}
             {!isLocked && (

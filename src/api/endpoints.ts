@@ -111,10 +111,11 @@ export const MatchesApi = {
   assignTeams: (groupId: string, matchId: string, dto: AssignTeamsDto) => http.put<ApiResponse<MatchDetailsDto>>(`/api/Matches/group/${groupId}/${matchId}/teams`, dto),
   swap: (groupId: string, matchId: string, dto: SwapPlayersDto) => http.post<ApiResponse<MatchDetailsDto>>(`/api/Matches/group/${groupId}/${matchId}/swap`, dto),
   finalize: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/finalize`),
+  reapplyMvp: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/reapply-mvp`),
   details: (groupId: string, matchId: string) => http.get<ApiResponse<MatchDetailsDto>>(`/api/Matches/group/${groupId}/${matchId}/details`),
   goToMatchMaking: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   goToPostGame: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/matches/group/${groupId}/${matchId}/postgame`),
-  removeGoal: (groupId: string, matchId: string, goalId: string) => http.delete<ApiResponse<null>>(`/matches/group/${groupId}/${matchId}/goals/${goalId}`),
+  removeGoal: (groupId: string, matchId: string, goalId: string) => http.delete<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/goals/${goalId}`),
   getCurrent: (groupId: string) => http.get<ApiResponse<MatchDetailsDto>>(`/api/matches/group/${groupId}/current`),
   rewind: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/matches/group/${groupId}/${matchId}/rewind`),
   header: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/header`),
@@ -166,6 +167,8 @@ export const BetApi = {
         http.get(`/api/Bet/group/${groupId}/history`),
     deleteBet: (groupId: string, matchId: string) =>
         http.delete(`/api/Bet/group/${groupId}/match/${matchId}`),
+    getPreview: (groupId: string, matchId: string) =>
+        http.get(`/api/Bet/group/${groupId}/match/${matchId}/preview`),
 };
 
 export const GroupInvitesApi = {

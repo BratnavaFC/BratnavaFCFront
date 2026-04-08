@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronUp, ChevronDown, X } from "lucide-react";
+import { ChevronUp, ChevronDown, X, Pencil, Check } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto } from "../matchTypes";
 import { cls } from "../matchUtils";
 import { useAccountStore } from "../../../auth/accountStore";
@@ -49,6 +49,7 @@ export function GoalTracker({
     onAddGoal,
     removingGoal,
     onRemoveGoal,
+    onEditGoal,
     canRemove,
     teamAName,
     teamAHex,
@@ -61,6 +62,7 @@ export function GoalTracker({
     onAddGoal: (scorerPlayerId: string, assistPlayerId: string | null, time: string, isOwnGoal: boolean) => Promise<void>;
     removingGoal: Record<string, boolean>;
     onRemoveGoal: (goalId: string) => void;
+    onEditGoal?: (goalId: string, scorerPlayerId: string, assistPlayerId: string | null, time: string, isOwnGoal: boolean) => Promise<void>;
     canRemove: boolean;
     teamAName?: string;
     teamAHex?: string;
@@ -75,6 +77,41 @@ export function GoalTracker({
     const [assistId, setAssistId] = useState<string | null>(null);
     const [isOwnGoal, setIsOwnGoal] = useState(false);
     const [time, setTime] = useState<string>(() => getCurrentHHmm());
+
+    // ── inline edit state ────────────────────────────────────────────────────
+    const [editingGoalId,   setEditingGoalId]   = useState<string | null>(null);
+    const [editScorerId,    setEditScorerId]    = useState("");
+    const [editAssistId,    setEditAssistId]    = useState<string | null>(null);
+    const [editIsOwnGoal,   setEditIsOwnGoal]   = useState(false);
+    const [editTime,        setEditTime]        = useState("");
+    const [savingEdit,      setSavingEdit]      = useState(false);
+
+    function openEditGoal(g: GoalDto) {
+        setEditingGoalId(g.goalId);
+        setEditScorerId(g.scorerPlayerId);
+        setEditAssistId(g.assistPlayerId ?? null);
+        setEditIsOwnGoal(g.isOwnGoal ?? false);
+        setEditTime(g.time ?? "");
+    }
+
+    function closeEditGoal() {
+        setEditingGoalId(null);
+        setEditScorerId("");
+        setEditAssistId(null);
+        setEditIsOwnGoal(false);
+        setEditTime("");
+    }
+
+    async function confirmEditGoal() {
+        if (!onEditGoal || !editingGoalId || !editScorerId) return;
+        setSavingEdit(true);
+        try {
+            await onEditGoal(editingGoalId, editScorerId, editAssistId, editTime, editIsOwnGoal);
+            closeEditGoal();
+        } finally {
+            setSavingEdit(false);
+        }
+    }
 
     const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
     const _icons = useGroupIcons(_groupId);
@@ -148,6 +185,80 @@ export function GoalTracker({
     }
 
     function renderGoalRow(g: GoalDto) {
+        const isEditing = editingGoalId === g.goalId;
+
+        if (isEditing) {
+            const editScorer = participants.find(p => p.playerId === editScorerId);
+            const editAssistCandidates = editScorer
+                ? participants.filter(p => p.playerId !== editScorerId && (editIsOwnGoal ? p.team !== editScorer.team : p.team === editScorer.team))
+                : [];
+
+            return (
+                <div key={g.goalId} className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Editar gol</span>
+                        <button onClick={closeEditGoal} className="text-slate-400 hover:text-slate-600"><X size={13} /></button>
+                    </div>
+                    {/* Tempo */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 shrink-0">Tempo:</span>
+                        <input className="input h-8 text-sm w-24 tabular-nums text-center" value={editTime} onChange={e => setEditTime(e.target.value)} placeholder="21:04" />
+                    </div>
+                    {/* Gol contra */}
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input type="checkbox" checked={editIsOwnGoal} onChange={e => { setEditIsOwnGoal(e.target.checked); setEditAssistId(null); }} />
+                        Gol contra
+                    </label>
+                    {/* Marcador */}
+                    <div>
+                        <div className="text-xs text-slate-500 mb-1">Marcador</div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            {participants.filter(p => p.team !== 0).map(p => (
+                                <button key={p.playerId}
+                                    onClick={() => { setEditScorerId(p.playerId); setEditAssistId(null); }}
+                                    className={cls("rounded-lg border px-2 py-1.5 text-xs font-medium text-left transition-colors",
+                                        editScorerId === p.playerId
+                                            ? "border-indigo-400 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-300"
+                                            : "border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                    )}>
+                                    {p.playerName}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {/* Assistência */}
+                    {editAssistCandidates.length > 0 && (
+                        <div>
+                            <div className="text-xs text-slate-500 mb-1">Assistência (opcional)</div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                {editAssistCandidates.map(p => (
+                                    <button key={p.playerId}
+                                        onClick={() => setEditAssistId(prev => prev === p.playerId ? null : p.playerId)}
+                                        className={cls("rounded-lg border px-2 py-1.5 text-xs font-medium text-left transition-colors",
+                                            editAssistId === p.playerId
+                                                ? "border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300"
+                                                : "border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                        )}>
+                                        {p.playerName}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex justify-end gap-2 pt-1">
+                        <button onClick={closeEditGoal} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700">
+                            Cancelar
+                        </button>
+                        <button onClick={confirmEditGoal} disabled={savingEdit || !editScorerId}
+                            className="inline-flex items-center gap-1 rounded-lg border border-indigo-300 dark:border-indigo-600 bg-indigo-500 text-white px-2.5 py-1.5 text-xs hover:bg-indigo-600 disabled:opacity-50">
+                            {savingEdit ? <span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" /> : <Check size={12} />}
+                            Salvar
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div
                 key={g.goalId}
@@ -157,9 +268,7 @@ export function GoalTracker({
                     <div className="font-medium text-slate-900 dark:text-slate-100 truncate text-sm">
                         <IconRenderer value={resolveIcon(_icons, 'goal')} size={14} />{" "}{g.scorerName}
                         {g.isOwnGoal && (
-                            <span className="ml-1 text-xs font-normal text-orange-500">
-                                (C)
-                            </span>
+                            <span className="ml-1 text-xs font-normal text-orange-500">(C)</span>
                         )}
                         {g.assistName ? (
                             <span className="text-slate-500">
@@ -170,19 +279,30 @@ export function GoalTracker({
                     <div className="text-xs text-slate-500">{g.time ?? "—"}</div>
                 </div>
 
-                {canRemove && (
-                    <button
-                        className={cls(
-                            "flex items-center justify-center w-7 h-7 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 transition-colors shrink-0",
-                            removingGoal[g.goalId] && "opacity-50 pointer-events-none"
-                        )}
-                        disabled={!!removingGoal[g.goalId]}
-                        onClick={() => onRemoveGoal(g.goalId)}
-                        title="Remover gol"
-                    >
-                        <X size={13} />
-                    </button>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {onEditGoal && (
+                        <button
+                            className="flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-500 transition-colors"
+                            onClick={() => openEditGoal(g)}
+                            title="Editar gol"
+                        >
+                            <Pencil size={12} />
+                        </button>
+                    )}
+                    {canRemove && (
+                        <button
+                            className={cls(
+                                "flex items-center justify-center w-7 h-7 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 transition-colors",
+                                removingGoal[g.goalId] && "opacity-50 pointer-events-none"
+                            )}
+                            disabled={!!removingGoal[g.goalId]}
+                            onClick={() => onRemoveGoal(g.goalId)}
+                            title="Remover gol"
+                        >
+                            <X size={13} />
+                        </button>
+                    )}
+                </div>
             </div>
         );
     }

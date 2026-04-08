@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
 import { resolveIcon } from "../../../lib/groupIcons";
@@ -14,6 +15,7 @@ export function MvpResultCard({
     votes = [],
     admin,
     allVotedBadge = false,
+    onReapplyMvp,
     _icons,
 }: {
     mvpNames?: string[] | null;
@@ -24,8 +26,11 @@ export function MvpResultCard({
     /** true = mostrar apuração de votos (barras + números) */
     admin: boolean;
     allVotedBadge?: boolean;
+    /** Admin: recalcula o MVP aplicando a regra de empate configurada */
+    onReapplyMvp?: () => Promise<void>;
     _icons: ReturnType<typeof useGroupIcons>;
 }) {
+    const [reapplying, setReapplying] = useState(false);
     const maxVotes   = voteCounts.length > 0 ? (voteCounts[0].count ?? 0) : 0;
     const hasMvp     = !!mvpNames && mvpNames.length > 0;
     const mvpIsTie   = hasMvp && mvpNames!.length > 1;          // múltiplos MVPs eleitos
@@ -105,6 +110,18 @@ export function MvpResultCard({
                                     </span>
                                 ))}
                             </div>
+                            {admin && onReapplyMvp && (
+                                <button
+                                    onClick={async () => {
+                                        setReapplying(true);
+                                        try { await onReapplyMvp(); } finally { setReapplying(false); }
+                                    }}
+                                    disabled={reapplying}
+                                    className="mt-3 text-xs font-semibold text-orange-600 dark:text-orange-400 underline underline-offset-2 disabled:opacity-50"
+                                >
+                                    {reapplying ? "Recalculando…" : "Recalcular MVP pela regra configurada"}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

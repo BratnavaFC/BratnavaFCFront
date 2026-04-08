@@ -84,6 +84,23 @@ export interface MatchBetHistoryDto {
     userBets:   UserBetInHistoryDto[];
 }
 
+// ── Preview parcial ───────────────────────────────────────────────────────────
+
+export interface BetPreviewUserDto {
+    userId:               string;
+    userName:             string;
+    selections:           BetSelectionDto[];
+    simulatedBetEarnings: number;
+    simulatedTotal:       number;
+}
+
+export interface BetPreviewDto {
+    matchId:       string;
+    currentScoreA: number;
+    currentScoreB: number;
+    userBets:      BetPreviewUserDto[];
+}
+
 // ── Form state types ──────────────────────────────────────────────────────────
 
 export interface SelectionForm {

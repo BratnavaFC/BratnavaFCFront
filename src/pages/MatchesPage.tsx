@@ -808,6 +808,40 @@ export default function MatchesPage() {
         [admin, stepKey, teamsAlreadyAssigned]
     );
 
+    // ── edit / delete match ───────────────────────────────────────────────────
+    async function editMatch(playedAt: string, placeName: string) {
+        if (!groupId || !currentMatchId) return;
+        try {
+            await MatchesApi.update(groupId, currentMatchId, { playedAt, placeName });
+            await refreshCurrent();
+            toast.success("Partida atualizada.");
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao atualizar a partida."));
+        }
+    }
+
+    async function deleteMatch() {
+        if (!groupId || !currentMatchId) return;
+        try {
+            await MatchesApi.remove(groupId, currentMatchId);
+            await loadCurrent();
+            toast.success("Partida excluída.");
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao excluir a partida."));
+        }
+    }
+
+    async function reapplyMvp() {
+        if (!admin || !groupId || !currentMatchId) return;
+        try {
+            await MatchesApi.reapplyMvp(groupId, currentMatchId);
+            await loadCurrent();
+            toast.success("MVP recalculado com sucesso.");
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao recalcular MVP."));
+        }
+    }
+
     // postgame
     async function setScore() {
         if (!admin || !groupId || !currentMatchId) return;
@@ -875,6 +909,16 @@ export default function MatchesPage() {
             toast.error(getResponseMessage(e, "Falha ao remover gol."));
         } finally {
             setRemovingGoal((p) => ({ ...p, [goalId]: false }));
+        }
+    }
+
+    async function editGoal(goalId: string, scorerPlayerId: string, assistPlayerId: string | null, time: string, isOwnGoal: boolean) {
+        if (!admin || !groupId || !currentMatchId) return;
+        try {
+            await MatchesApi.updateGoal(groupId, currentMatchId, goalId, { scorerPlayerId, assistPlayerId, time: time || null, isOwnGoal });
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao editar gol."));
         }
     }
 
@@ -990,6 +1034,7 @@ export default function MatchesPage() {
             goals: (current as any)?.goals ?? [],
             removingGoal,
             onRemoveGoal: removeGoal,
+            onEditGoal: editGoal,
             activeMatchPlayerId:
                 participants.find((p) => p.playerId === activePlayerId)?.matchPlayerId ?? "",
 
@@ -1000,7 +1045,12 @@ export default function MatchesPage() {
 
             paymentMode: (groupSettings as any)?.paymentMode ?? 0,
             groupId: groupId ?? undefined,
+            matchId: currentMatchId ?? undefined,
             matchDate: (current as any)?.playedAt ?? undefined,
+            placeName: (current as any)?.placeName ?? "",
+            onEditMatch: editMatch,
+            onDeleteMatch: deleteMatch,
+            onReapplyMvp: reapplyMvp,
         };
     }, [
         (current as any)?.computedMvps,
@@ -1016,6 +1066,7 @@ export default function MatchesPage() {
         (current as any)?.teamBColor?.name,
         (current as any)?.teamBColor?.hexValue,
         (current as any)?.playedAt,
+        (current as any)?.placeName,
         participants,
         scoreA,
         scoreB,
@@ -1026,9 +1077,9 @@ export default function MatchesPage() {
         addingGoal,
         removingGoal,
         activePlayerId,
-        participants,
         groupSettings,
         groupId,
+        currentMatchId,
     ]);
 
     async function publishMatchEvent(type: 'Gol' | 'Jogada') {

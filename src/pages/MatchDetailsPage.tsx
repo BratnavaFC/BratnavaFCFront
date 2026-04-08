@@ -1327,6 +1327,13 @@ export default function MatchDetailsPage() {
                     voteCounts={voteCounts}
                     votes={[]}
                     admin={canSeeMvp}
+                    onReapplyMvp={isAdmin ? async () => {
+                        if (!groupId || !matchId) return;
+                        await MatchesApi.reapplyMvp(groupId, matchId);
+                        const res = await MatchesApi.details(groupId, matchId);
+                        setData(res.data.data as any);
+                        toast.success("MVP recalculado com sucesso.");
+                    } : undefined}
                     _icons={_icons}
                 />
             </Section>
