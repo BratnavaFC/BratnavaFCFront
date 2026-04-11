@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
     X, Loader2, Check, Lock, Unlock, Trash2,
     Plus, Pencil, Eye, EyeOff,
-    Users, Clock, Image,
+    Users, Clock, Image, ChevronLeft, ChevronRight,
     CheckSquare, Square, BarChart2, AlertCircle,
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
@@ -18,7 +18,7 @@ interface PollOption {
     id: string;
     text: string;
     description?: string | null;
-    imageUrl?: string | null;
+    images: string[];
     sortOrder: number;
     voteCount: number;
 }
@@ -62,8 +62,7 @@ interface Poll {
 interface OptionDraft {
     text: string;
     description: string;
-    imageUrl: string;
-    _dragOver: boolean;
+    images: string[];
 }
 
 interface PollDetailModalProps {
@@ -77,7 +76,7 @@ interface PollDetailModalProps {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const EMPTY_OPTION_DRAFT: OptionDraft = {
-    text: '', description: '', imageUrl: '', _dragOver: false,
+    text: '', description: '', images: [],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -138,12 +137,12 @@ function AdminVotePanel({
         setLoading(playerId);
         try {
             const res = await PollsApi.adminCastVote(groupId, poll.id, { playerId, optionIds });
-            // Preserve existing images — vote response intentionally omits imageUrl
+            // Preserve existing images — vote response intentionally omits images
             const merged = {
                 ...res.data.data,
                 options: (res.data.data.options as PollOption[]).map((newOpt: PollOption) => ({
                     ...newOpt,
-                    imageUrl: newOpt.imageUrl ?? poll.options.find(o => o.id === newOpt.id)?.imageUrl ?? null,
+                    images: newOpt.images?.length ? newOpt.images : (poll.options.find(o => o.id === newOpt.id)?.images ?? []),
                 })),
             };
             onUpdated(merged);
@@ -261,8 +260,6 @@ function OptionDraftForm({
     saving: boolean;
     isEdit: boolean;
 }) {
-    const set = (key: keyof OptionDraft, val: any) => onChange({ ...draft, [key]: val });
-
     return (
         <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/40 p-4 shadow-sm space-y-3">
             {/* Texto */}
@@ -272,7 +269,7 @@ function OptionDraftForm({
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                     placeholder="Ex: Churrasco no domingo"
                     value={draft.text}
-                    onChange={e => set('text', e.target.value)}
+                    onChange={e => onChange({ ...draft, text: e.target.value })}
                 />
             </div>
 
@@ -284,61 +281,52 @@ function OptionDraftForm({
                     rows={2}
                     placeholder="Detalhes sobre esta opção..."
                     value={draft.description}
-                    onChange={e => set('description', e.target.value)}
+                    onChange={e => onChange({ ...draft, description: e.target.value })}
                 />
             </div>
 
-            {/* Upload de imagem */}
+            {/* Multi-image upload */}
             <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                     <Image size={11} className="inline mr-1" />
-                    Foto <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span>
+                    Fotos <span className="font-normal text-slate-400">(opcional · máx. 8)</span>
                 </label>
-                <label
-                    className={`flex flex-col items-center justify-center gap-1 cursor-pointer w-full rounded-lg border-2 border-dashed px-3 py-4 text-sm transition-colors
-                        ${draft._dragOver
-                            ? 'border-slate-500 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
-                            : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
-                    onDragOver={e => { e.preventDefault(); set('_dragOver', true); }}
-                    onDragLeave={() => set('_dragOver', false)}
-                    onDrop={async e => {
-                        e.preventDefault();
-                        set('_dragOver', false);
-                        const file = e.dataTransfer.files?.[0];
-                        if (!file || !file.type.startsWith('image/')) return;
-                        if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                        try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
-                    }}
-                >
-                    <Image size={18} />
-                    <span>{draft.imageUrl ? 'Trocar foto' : 'Arraste ou clique para escolher'}</span>
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async e => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                            try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
-                        }}
-                    />
-                </label>
-                {draft.imageUrl && (
-                    <div className="mt-2 relative">
-                        <img
-                            src={draft.imageUrl}
-                            alt="Preview"
-                            className="h-32 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-600"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => set('imageUrl', '')}
-                            className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 transition-colors"
-                        >
-                            <X size={12} />
-                        </button>
+
+                {/* Thumbnails strip */}
+                {draft.images.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mb-2">
+                        {draft.images.map((src, idx) => (
+                            <div key={idx} className="relative group">
+                                <img src={src} alt="" className="h-16 w-16 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+                                <button type="button"
+                                    onClick={() => onChange({ ...draft, images: draft.images.filter((_, i) => i !== idx) })}
+                                    className="absolute -top-1.5 -right-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 shadow transition-colors opacity-0 group-hover:opacity-100">
+                                    <X size={10} />
+                                </button>
+                            </div>
+                        ))}
                     </div>
+                )}
+
+                {/* Add photo zone */}
+                {draft.images.length < 8 && (
+                    <label className="flex items-center gap-2 cursor-pointer w-full rounded-lg border-2 border-dashed px-3 py-2.5 text-sm transition-colors border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <Plus size={14} />
+                        <span>{draft.images.length === 0 ? 'Adicionar foto' : 'Adicionar mais'}</span>
+                        <input type="file" accept="image/*" multiple className="hidden"
+                            onChange={async e => {
+                                const files = Array.from(e.target.files ?? []);
+                                const remaining = 8 - draft.images.length;
+                                const toProcess = files.slice(0, remaining);
+                                const compressed: string[] = [];
+                                for (const file of toProcess) {
+                                    if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name}: máximo 5 MB.`); continue; }
+                                    try { compressed.push(await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
+                                }
+                                if (compressed.length) onChange({ ...draft, images: [...draft.images, ...compressed] });
+                                e.target.value = '';
+                            }} />
+                    </label>
                 )}
             </div>
 
@@ -361,6 +349,104 @@ function OptionDraftForm({
                     {isEdit ? 'Salvar' : 'Adicionar'}
                 </button>
             </div>
+        </div>
+    );
+}
+
+// ─── ImageGallery ─────────────────────────────────────────────────────────────
+function ImageGallery({ images, onLightbox }: { images: string[]; onLightbox: (idx: number) => void }) {
+    if (images.length === 0) return null;
+    if (images.length === 1) {
+        return (
+            <div className="relative w-full overflow-hidden bg-slate-100 dark:bg-slate-700 cursor-pointer group" style={{ aspectRatio: '16/9' }}
+                onClick={() => onLightbox(0)}>
+                <img src={images[0]} alt="" loading="lazy" className="w-full h-full object-cover transition-opacity opacity-0" onLoad={e => e.currentTarget.classList.replace('opacity-0','opacity-100')} />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="bg-white/90 rounded-full p-1.5"><Image size={16} className="text-slate-700" /></div>
+                </div>
+            </div>
+        );
+    }
+    if (images.length === 2) {
+        return (
+            <div className="flex gap-0.5 w-full overflow-hidden" style={{ height: 140 }}>
+                {images.map((src, idx) => (
+                    <div key={idx} className="flex-1 relative cursor-pointer group overflow-hidden bg-slate-100 dark:bg-slate-700"
+                        onClick={() => onLightbox(idx)}>
+                        <img src={src} alt="" loading="lazy" className="w-full h-full object-cover transition-opacity opacity-0 group-hover:scale-105 transition-transform duration-200" onLoad={e => e.currentTarget.classList.replace('opacity-0','opacity-100')} />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    // 3+
+    const visible = images.slice(0, 3);
+    const extra = images.length - 3;
+    return (
+        <div className="flex gap-0.5 w-full overflow-hidden" style={{ height: 160 }}>
+            {/* Left: first image full height */}
+            <div className="relative cursor-pointer group overflow-hidden bg-slate-100 dark:bg-slate-700" style={{ flex: '0 0 60%' }}
+                onClick={() => onLightbox(0)}>
+                <img src={visible[0]} alt="" loading="lazy" className="w-full h-full object-cover transition-opacity opacity-0 group-hover:scale-105 transition-transform duration-200" onLoad={e => e.currentTarget.classList.replace('opacity-0','opacity-100')} />
+            </div>
+            {/* Right: 2 stacked */}
+            <div className="flex flex-col gap-0.5 flex-1">
+                <div className="relative flex-1 cursor-pointer group overflow-hidden bg-slate-100 dark:bg-slate-700"
+                    onClick={() => onLightbox(1)}>
+                    <img src={visible[1]} alt="" loading="lazy" className="w-full h-full object-cover transition-opacity opacity-0 group-hover:scale-105 transition-transform duration-200" onLoad={e => e.currentTarget.classList.replace('opacity-0','opacity-100')} />
+                </div>
+                <div className="relative flex-1 cursor-pointer group overflow-hidden bg-slate-100 dark:bg-slate-700"
+                    onClick={() => onLightbox(2)}>
+                    <img src={visible[2]} alt="" loading="lazy" className="w-full h-full object-cover transition-opacity opacity-0 group-hover:scale-105 transition-transform duration-200" onLoad={e => e.currentTarget.classList.replace('opacity-0','opacity-100')} />
+                    {extra > 0 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <span className="text-white font-bold text-xl">+{extra}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── ImageLightbox ────────────────────────────────────────────────────────────
+function ImageLightbox({ images, startIdx, onClose }: { images: string[]; startIdx: number; onClose: () => void }) {
+    const [idx, setIdx] = useState(startIdx);
+    useEffect(() => {
+        function onKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowLeft') setIdx(i => Math.max(0, i - 1));
+            if (e.key === 'ArrowRight') setIdx(i => Math.min(images.length - 1, i + 1));
+        }
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [images.length, onClose]);
+
+    return (
+        <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center" onClick={onClose}>
+            <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors"><X size={20} /></button>
+            {images.length > 1 && idx > 0 && (
+                <button onClick={e => { e.stopPropagation(); setIdx(i => i - 1); }}
+                    className="absolute left-4 text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors"><ChevronLeft size={24} /></button>
+            )}
+            {images.length > 1 && idx < images.length - 1 && (
+                <button onClick={e => { e.stopPropagation(); setIdx(i => i + 1); }}
+                    className="absolute right-4 text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors"><ChevronRight size={24} /></button>
+            )}
+            <img
+                src={images[idx]}
+                alt=""
+                className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl shadow-2xl"
+                onClick={e => e.stopPropagation()}
+            />
+            {images.length > 1 && (
+                <div className="absolute bottom-4 flex gap-1.5">
+                    {images.map((_, i) => (
+                        <button key={i} onClick={e => { e.stopPropagation(); setIdx(i); }}
+                            className={`h-1.5 rounded-full transition-all ${i === idx ? 'w-5 bg-white' : 'w-1.5 bg-white/40'}`} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
@@ -422,14 +508,17 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                                     : <span className="text-xs font-bold text-slate-400">#{rank + 1}</span>
                                 }
                             </div>
-                            {opt.imageUrl && (
-                                <img
-                                    src={opt.imageUrl}
-                                    alt={opt.text}
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="h-9 w-9 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-600"
-                                />
+                            {(opt.images?.length ?? 0) > 0 && (
+                                <div className="flex gap-1 shrink-0">
+                                    {(opt.images ?? []).slice(0, 2).map((src, i) => (
+                                        <img key={i} src={src} alt="" className="h-9 w-9 rounded-lg object-cover border border-slate-200 dark:border-slate-600" loading="lazy" />
+                                    ))}
+                                    {(opt.images?.length ?? 0) > 2 && (
+                                        <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                            +{(opt.images?.length ?? 0) - 2}
+                                        </div>
+                                    )}
+                                </div>
                             )}
                             <div className="flex-1 min-w-0">
                                 <p className={`text-sm font-semibold leading-snug ${isLeader ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
@@ -525,7 +614,7 @@ function PollDetailModal({
     const [optionDraft, setOptionDraft] = useState<OptionDraft>(EMPTY_OPTION_DRAFT);
     const [savingOption, setSavingOption] = useState(false);
     const [showClosePollModal, setShowClosePollModal] = useState(false);
-    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+    const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null);
     const [detailTab, setDetailTab] = useState<'options' | 'resultado'>('options');
 
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
@@ -540,7 +629,7 @@ function PollDetailModal({
             ...updated,
             options: updated.options.map(newOpt => ({
                 ...newOpt,
-                imageUrl: newOpt.imageUrl ?? poll.options.find(o => o.id === newOpt.id)?.imageUrl ?? null,
+                images: newOpt.images?.length ? newOpt.images : (poll.options.find(o => o.id === newOpt.id)?.images ?? []),
             })),
         };
     }
@@ -608,6 +697,17 @@ function PollDetailModal({
         } finally { setActionLoading(null); }
     }
 
+    async function handleSetShowVotes(value: boolean) {
+        setActionLoading('show-votes');
+        try {
+            await PollsApi.setShowVotes(groupId, poll.id, value);
+            onUpdated({ ...poll, showVotes: value });
+            toast.success(value ? 'Votos agora visíveis.' : 'Votos agora anônimos.');
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao alterar visibilidade.'));
+        } finally { setActionLoading(null); }
+    }
+
     async function handleDeletePoll() {
         if (!confirm(`Excluir a votação "${poll.title}"?`)) return;
         setActionLoading('delete');
@@ -635,7 +735,7 @@ function PollDetailModal({
 
     function startEditOption(opt: PollOption) {
         setEditingOption(opt.id);
-        setOptionDraft({ text: opt.text, description: opt.description ?? '', imageUrl: opt.imageUrl ?? '', _dragOver: false });
+        setOptionDraft({ text: opt.text, description: opt.description ?? '', images: opt.images ?? [] });
         setAddingOption(false);
     }
 
@@ -646,7 +746,7 @@ function PollDetailModal({
             const dto = {
                 text: optionDraft.text,
                 description: optionDraft.description || null,
-                imageUrl: optionDraft.imageUrl || null,
+                images: optionDraft.images,
             };
             if (isEdit && optionId) {
                 await PollsApi.updateOption(groupId, poll.id, optionId, dto);
@@ -784,30 +884,13 @@ function PollDetailModal({
                                 ].join(' ')}
                                 onClick={() => isOpen && toggleOption(opt.id)}
                             >
-                                {/* Banner de imagem (largura total) */}
-                                {opt.imageUrl && (
-                                    <div
-                                        className="relative w-full bg-slate-200 dark:bg-slate-700 overflow-hidden"
-                                        style={{ aspectRatio: '16/9' }}
-                                        onClick={e => { e.stopPropagation(); setLightboxSrc(opt.imageUrl!); }}
-                                        title="Clique para ampliar"
-                                    >
-                                        <img
-                                            src={opt.imageUrl}
-                                            alt={opt.text}
-                                            loading="lazy"
-                                            decoding="async"
-                                            className="w-full h-full object-cover transition-opacity duration-300 opacity-0"
-                                            onLoad={e => e.currentTarget.classList.replace('opacity-0', 'opacity-100')}
-                                            onError={e => (e.currentTarget.parentElement!.style.display = 'none')}
-                                        />
-                                        <div className="absolute inset-0 bg-black/0 hover:bg-black/25 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                                            <div className="bg-white/90 rounded-full p-2 shadow-lg">
-                                                <Image size={18} className="text-slate-700" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Image gallery */}
+                                <div onClick={e => e.stopPropagation()}>
+                                    <ImageGallery
+                                        images={opt.images ?? []}
+                                        onLightbox={(idx) => setLightbox({ images: opt.images, idx })}
+                                    />
+                                </div>
 
                                 {/* Conteúdo */}
                                 <div className="p-3">
@@ -855,7 +938,9 @@ function PollDetailModal({
                                             </div>
 
                                             {/* Vote bar */}
-                                            <VoteBar count={opt.voteCount} total={totalVotes} color={color} />
+                                            {(poll.showVotes || isAdmin) && (
+                                                <VoteBar count={opt.voteCount} total={totalVotes} color={color} />
+                                            )}
 
                                             {/* Who voted */}
                                             {(poll.showVotes || isAdmin) && votersForOpt.length > 0 && (
@@ -930,6 +1015,19 @@ function PollDetailModal({
                     {/* Admin controls */}
                     {isAdmin && (
                         <div className="flex items-center gap-2 ml-auto">
+                            <button
+                                type="button"
+                                onClick={() => handleSetShowVotes(!poll.showVotes)}
+                                disabled={!!actionLoading}
+                                title={poll.showVotes ? 'Tornar votos anônimos' : 'Tornar votos visíveis'}
+                                className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                            >
+                                {actionLoading === 'show-votes'
+                                    ? <Loader2 size={13} className="animate-spin" />
+                                    : poll.showVotes ? <Eye size={13} /> : <EyeOff size={13} />
+                                }
+                                {poll.showVotes ? 'Público' : 'Anônimo'}
+                            </button>
                             {poll.status === 'open' ? (
                                 <button
                                     type="button"
@@ -980,26 +1078,8 @@ function PollDetailModal({
             />
         )}
 
-        {/* Lightbox */}
-        {lightboxSrc && (
-            <div
-                className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
-                onClick={() => setLightboxSrc(null)}
-            >
-                <button
-                    type="button"
-                    className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-                    onClick={() => setLightboxSrc(null)}
-                >
-                    <X size={20} />
-                </button>
-                <img
-                    src={lightboxSrc}
-                    alt="Imagem ampliada"
-                    className="max-w-full max-h-[90vh] rounded-xl object-contain shadow-2xl"
-                    onClick={e => e.stopPropagation()}
-                />
-            </div>
+        {lightbox && (
+            <ImageLightbox images={lightbox.images} startIdx={lightbox.idx} onClose={() => setLightbox(null)} />
         )}
     </>
     );

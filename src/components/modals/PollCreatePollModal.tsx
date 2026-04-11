@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-    X, Loader2, Check, Eye, EyeOff, Clock,
-    Plus, Vote, Image, ChevronRight,
+    X, Loader2, Check, Eye, EyeOff, Clock, ChevronRight,
+    Plus, Vote, Image, Trash2,
     CheckSquare, Square,
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
@@ -16,7 +16,7 @@ interface PollOption {
     id: string;
     text: string;
     description?: string | null;
-    imageUrl?: string | null;
+    images: string[];
     sortOrder: number;
     voteCount: number;
 }
@@ -60,8 +60,7 @@ interface Poll {
 interface OptionDraft {
     text: string;
     description: string;
-    imageUrl: string;
-    _dragOver: boolean;
+    images: string[];
 }
 
 interface PollCreatePollModalProps {
@@ -73,7 +72,7 @@ interface PollCreatePollModalProps {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const EMPTY_OPTION_DRAFT: OptionDraft = {
-    text: '', description: '', imageUrl: '', _dragOver: false,
+    text: '', description: '', images: [],
 };
 
 // ─── OptionDraftForm ──────────────────────────────────────────────────────────
@@ -88,8 +87,6 @@ function OptionDraftForm({
     saving: boolean;
     isEdit: boolean;
 }) {
-    const set = (key: keyof OptionDraft, val: any) => onChange({ ...draft, [key]: val });
-
     return (
         <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/40 p-4 shadow-sm space-y-3">
             <div>
@@ -98,7 +95,7 @@ function OptionDraftForm({
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                     placeholder="Ex: Churrasco no domingo"
                     value={draft.text}
-                    onChange={e => set('text', e.target.value)}
+                    onChange={e => onChange({ ...draft, text: e.target.value })}
                 />
             </div>
 
@@ -109,60 +106,52 @@ function OptionDraftForm({
                     rows={2}
                     placeholder="Detalhes sobre esta opção..."
                     value={draft.description}
-                    onChange={e => set('description', e.target.value)}
+                    onChange={e => onChange({ ...draft, description: e.target.value })}
                 />
             </div>
 
+            {/* Multi-image upload */}
             <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                     <Image size={11} className="inline mr-1" />
-                    Foto <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span>
+                    Fotos <span className="font-normal text-slate-400">(opcional · máx. 8)</span>
                 </label>
-                <label
-                    className={`flex flex-col items-center justify-center gap-1 cursor-pointer w-full rounded-lg border-2 border-dashed px-3 py-4 text-sm transition-colors
-                        ${draft._dragOver
-                            ? 'border-slate-500 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
-                            : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
-                    onDragOver={e => { e.preventDefault(); set('_dragOver', true); }}
-                    onDragLeave={() => set('_dragOver', false)}
-                    onDrop={async e => {
-                        e.preventDefault();
-                        set('_dragOver', false);
-                        const file = e.dataTransfer.files?.[0];
-                        if (!file || !file.type.startsWith('image/')) return;
-                        if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                        try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
-                    }}
-                >
-                    <Image size={18} />
-                    <span>{draft.imageUrl ? 'Trocar foto' : 'Arraste ou clique para escolher'}</span>
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async e => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            if (file.size > 5 * 1024 * 1024) { toast.error('Foto muito grande. Máximo 5 MB.'); return; }
-                            try { set('imageUrl', await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
-                        }}
-                    />
-                </label>
-                {draft.imageUrl && (
-                    <div className="mt-2 relative">
-                        <img
-                            src={draft.imageUrl}
-                            alt="Preview"
-                            className="h-32 w-full object-cover rounded-lg border border-slate-200 dark:border-slate-600"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => set('imageUrl', '')}
-                            className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 transition-colors"
-                        >
-                            <X size={12} />
-                        </button>
+
+                {/* Thumbnails strip */}
+                {draft.images.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mb-2">
+                        {draft.images.map((src, idx) => (
+                            <div key={idx} className="relative group">
+                                <img src={src} alt="" className="h-16 w-16 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+                                <button type="button"
+                                    onClick={() => onChange({ ...draft, images: draft.images.filter((_, i) => i !== idx) })}
+                                    className="absolute -top-1.5 -right-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 shadow transition-colors opacity-0 group-hover:opacity-100">
+                                    <X size={10} />
+                                </button>
+                            </div>
+                        ))}
                     </div>
+                )}
+
+                {/* Add photo zone */}
+                {draft.images.length < 8 && (
+                    <label className="flex items-center gap-2 cursor-pointer w-full rounded-lg border-2 border-dashed px-3 py-2.5 text-sm transition-colors border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <Plus size={14} />
+                        <span>{draft.images.length === 0 ? 'Adicionar foto' : 'Adicionar mais'}</span>
+                        <input type="file" accept="image/*" multiple className="hidden"
+                            onChange={async e => {
+                                const files = Array.from(e.target.files ?? []);
+                                const remaining = 8 - draft.images.length;
+                                const toProcess = files.slice(0, remaining);
+                                const compressed: string[] = [];
+                                for (const file of toProcess) {
+                                    if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name}: máximo 5 MB.`); continue; }
+                                    try { compressed.push(await compressImage(file)); } catch { toast.error('Erro ao processar imagem.'); }
+                                }
+                                if (compressed.length) onChange({ ...draft, images: [...draft.images, ...compressed] });
+                                e.target.value = '';
+                            }} />
+                    </label>
                 )}
             </div>
 
@@ -209,6 +198,7 @@ function PollCreatePollModal({
     const [addingOption, setAddingOption] = useState(false);
     const [optionDraft, setOptionDraft] = useState<OptionDraft>(EMPTY_OPTION_DRAFT);
     const [savingOption, setSavingOption] = useState(false);
+    const [deletingOption, setDeletingOption] = useState<string | null>(null);
     const [currentPoll, setCurrentPoll] = useState<Poll | null>(null);
 
     async function handleCreatePoll() {
@@ -232,7 +222,7 @@ function PollCreatePollModal({
             const dto = {
                 text: optionDraft.text,
                 description: optionDraft.description || null,
-                imageUrl: optionDraft.imageUrl || null,
+                images: optionDraft.images,
             };
             await PollsApi.addOption(groupId, currentPoll.id, dto);
             const res = await PollsApi.getPoll(groupId, currentPoll.id);
@@ -243,6 +233,18 @@ function PollCreatePollModal({
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao adicionar opção.'));
         } finally { setSavingOption(false); }
+    }
+
+    async function handleDeleteOption(optionId: string) {
+        if (!currentPoll) return;
+        setDeletingOption(optionId);
+        try {
+            await PollsApi.deleteOption(groupId, currentPoll.id, optionId);
+            const res = await PollsApi.getPoll(groupId, currentPoll.id);
+            setCurrentPoll(res.data.data);
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao excluir opção.'));
+        } finally { setDeletingOption(null); }
     }
 
     function handleFinish() {
@@ -393,17 +395,50 @@ function PollCreatePollModal({
                             {/* Current options list */}
                             {(currentPoll?.options ?? []).length > 0 && (
                                 <div className="space-y-2">
-                                    {(currentPoll?.options ?? []).map((opt, i) => (
-                                        <div key={opt.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                                            <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'][i % 6] }}>
-                                                {i + 1}
+                                    {(currentPoll?.options ?? []).map((opt, i) => {
+                                        const isDeleting = deletingOption === opt.id;
+                                        const imgs = opt.images ?? [];
+                                        return (
+                                            <div key={opt.id} className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 overflow-hidden">
+                                                <div className="flex items-center gap-2 px-2 py-2">
+                                                    <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'][i % 6] }}>
+                                                        {i + 1}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{opt.text}</p>
+                                                        {opt.description && <p className="text-xs text-slate-400 truncate">{opt.description}</p>}
+                                                    </div>
+                                                    {imgs.length > 0 && (
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <Image size={11} className="text-slate-400" />
+                                                            <span className="text-[10px] text-slate-400">{imgs.length}</span>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteOption(opt.id)}
+                                                        disabled={isDeleting}
+                                                        className="h-6 w-6 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors shrink-0 disabled:opacity-40"
+                                                    >
+                                                        {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                                                    </button>
+                                                </div>
+                                                {/* Image thumbnails */}
+                                                {imgs.length > 0 && (
+                                                    <div className="flex gap-1 px-2 pb-2">
+                                                        {imgs.slice(0, 5).map((src, idx) => (
+                                                            <img key={idx} src={src} alt="" className="h-12 w-12 object-cover rounded-lg border border-slate-200 dark:border-slate-600 shrink-0" />
+                                                        ))}
+                                                        {imgs.length > 5 && (
+                                                            <div className="h-12 w-12 rounded-lg bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[11px] font-bold text-slate-500 shrink-0">
+                                                                +{imgs.length - 5}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{opt.text}</p>
-                                            </div>
-                                            <Check size={14} className="text-emerald-500 shrink-0" />
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
 
