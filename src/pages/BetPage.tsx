@@ -1040,7 +1040,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
 
 // ── Tab: Histórico ────────────────────────────────────────────────────────────
 
-function HistoryTab({ groupId }: { groupId: string }) {
+function HistoryTab({ groupId, admin }: { groupId: string; admin: boolean }) {
     const [history,       setHistory]       = useState<MatchBetHistoryDto[]>([]);
     const [leaderboard,   setLeaderboard]   = useState<BetLeaderboardEntryDto[]>([]);
     const [loading,       setLoading]       = useState(true);
@@ -1051,6 +1051,8 @@ function HistoryTab({ groupId }: { groupId: string }) {
     const myUserId = useAccountStore(
         (s) => s.accounts.find((a) => a.userId === s.activeAccountId)?.userId
     );
+
+    function canExpand(userId: string) { return admin || userId === myUserId; }
 
     async function load() {
         setLoading(true);
@@ -1191,12 +1193,20 @@ function HistoryTab({ groupId }: { groupId: string }) {
                                             const userKey    = `${match.matchId}:${userBet.userId}`;
                                             const isUserOpen = expandedUser === userKey;
                                             const isMe       = userBet.userId === myUserId;
+                                            const expandable = canExpand(userBet.userId);
 
                                             return (
                                                 <div key={userBet.userId}>
-                                                    <button type="button"
-                                                        onClick={() => setExpandedUser(isUserOpen ? null : userKey)}
-                                                        className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${isMe ? "bg-slate-50/50 dark:bg-slate-800/30" : ""}`}>
+                                                    <div
+                                                        role={expandable ? "button" : undefined}
+                                                        tabIndex={expandable ? 0 : undefined}
+                                                        onClick={expandable ? () => setExpandedUser(isUserOpen ? null : userKey) : undefined}
+                                                        onKeyDown={expandable ? (e) => e.key === "Enter" && setExpandedUser(isUserOpen ? null : userKey) : undefined}
+                                                        className={[
+                                                            "flex items-center gap-3 px-4 py-3",
+                                                            isMe ? "bg-slate-50/50 dark:bg-slate-800/30" : "",
+                                                            expandable ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" : "",
+                                                        ].filter(Boolean).join(" ")}>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
                                                                 {userBet.userName}
@@ -1222,10 +1232,12 @@ function HistoryTab({ groupId }: { groupId: string }) {
                                                                 Total +{userBet.totalForMatch}
                                                             </p>
                                                         </div>
-                                                        <ChevronDown size={14} className={`text-slate-400 transition-transform shrink-0 ${isUserOpen ? "rotate-180" : ""}`} />
-                                                    </button>
+                                                        {expandable && (
+                                                            <ChevronDown size={14} className={`text-slate-400 transition-transform shrink-0 ${isUserOpen ? "rotate-180" : ""}`} />
+                                                        )}
+                                                    </div>
 
-                                                    {isUserOpen && (
+                                                    {expandable && isUserOpen && (
                                                         <div className="bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-700/50 divide-y divide-slate-100 dark:divide-slate-700/30">
                                                             {userBet.selections.map((sel) => (
                                                                 <div key={sel.id} className="flex items-start gap-3 px-5 py-2.5">
@@ -1295,6 +1307,7 @@ type TabId = "atual" | "historico";
 
 export default function BetPage() {
     const groupId = useAccountStore((s) => s.getActive()?.activeGroupId);
+    const adminOfGroup = groupId ? isGroupAdmin(groupId) : false;
     const [tab, setTab] = useState<TabId>("atual");
 
     const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
@@ -1345,7 +1358,7 @@ export default function BetPage() {
                     </div>
 
                     {tab === "atual"     && <CurrentBetTab groupId={groupId} />}
-                    {tab === "historico" && <HistoryTab    groupId={groupId} />}
+                    {tab === "historico" && <HistoryTab    groupId={groupId} admin={adminOfGroup} />}
                 </>
             )}
         </div>

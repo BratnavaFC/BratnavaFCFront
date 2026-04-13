@@ -252,6 +252,8 @@ export const PollsApi = {
                            http.post(`/api/Polls/group/${groupId}/${pollId}/close`, dto),
   reopenPoll:            (groupId: string, pollId: string) =>
                            http.put(`/api/Polls/group/${groupId}/${pollId}/reopen`),
+  setShowVotes:          (groupId: string, pollId: string, showVotes: boolean) =>
+                           http.patch(`/api/Polls/group/${groupId}/${pollId}/show-votes`, { showVotes }),
   deletePoll:            (groupId: string, pollId: string) =>
                            http.delete(`/api/Polls/group/${groupId}/${pollId}`),
   addOption:             (groupId: string, pollId: string, dto: any) =>

@@ -44,7 +44,7 @@ interface PollOption {
     id: string;
     text: string;
     description?: string | null;
-    imageUrl?: string | null;
+    images: string[];
     sortOrder: number;
     voteCount: number;
 }
