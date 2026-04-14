@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Check, CreditCard, Loader2, RefreshCw, Pencil, Trash2, X,
-         Coins, TrendingUp, TrendingDown, Minus, ChevronDown } from "lucide-react";
+         Coins, TrendingUp, TrendingDown, Minus, ChevronDown, Share2 } from "lucide-react";
 import type { GoalDto, PlayerInMatchDto, VoteCountDto, VoteDto } from "../matchTypes";
 import type { BetPreviewDto, BetPreviewUserDto, BetCategory } from "../../bets/betTypes";
 import { cls } from "../matchUtils";
 import { GoalTracker } from "./GoalTracker";
 import { MvpResultCard } from "../ui/MvpResultCard";
+import { MatchShareCardModal } from "../../../components/modals/MatchShareCardModal";
 import { useAccountStore } from "../../../auth/accountStore";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
@@ -973,6 +974,84 @@ export function StepPost({
                     playerNameByMpId={Object.fromEntries(participants.map(p => [p.matchPlayerId, p.playerName]))}
                 />
             )}
+
+            {/* Card Fim de Jogo */}
+            {groupId && teamAHex && teamBHex && (
+                <MatchResultCardButton
+                    groupId={groupId}
+                    teamAName={teamAName ?? 'Time A'}
+                    teamAHex={teamAHex}
+                    teamBName={teamBName ?? 'Time B'}
+                    teamBHex={teamBHex}
+                    participants={participants}
+                    currentScoreA={currentScoreA}
+                    currentScoreB={currentScoreB}
+                    currentMvpNames={currentMvpNames}
+                    matchDate={matchDate}
+                />
+            )}
         </div>
+    );
+}
+
+/* ─── Match Result Card Button (separate component for state isolation) ──── */
+
+function MatchResultCardButton({
+    groupId, teamAName, teamAHex, teamBName, teamBHex,
+    participants, currentScoreA, currentScoreB, currentMvpNames, matchDate,
+}: {
+    groupId: string;
+    teamAName: string;
+    teamAHex: string;
+    teamBName: string;
+    teamBHex: string;
+    participants: PlayerInMatchDto[];
+    currentScoreA: number | null | undefined;
+    currentScoreB: number | null | undefined;
+    currentMvpNames: string[];
+    matchDate?: string;
+}) {
+    const [showCard, setShowCard] = useState(false);
+
+    const teamAPlayers = participants.filter(p => p.team === 1);
+    const teamBPlayers = participants.filter(p => p.team === 2);
+
+    const goalsA = currentScoreA ?? 0;
+    const goalsB = currentScoreB ?? 0;
+    let winnerTeamName: string | undefined;
+    if (goalsA > goalsB) winnerTeamName = teamAName;
+    else if (goalsB > goalsA) winnerTeamName = teamBName;
+    else winnerTeamName = 'Empate';
+
+    return (
+        <>
+            <button
+                type="button"
+                onClick={() => setShowCard(true)}
+                className="w-full mt-4 flex items-center justify-center gap-2 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-600 py-3 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+            >
+                <Share2 size={15} />
+                Gerar card Fim de Jogo
+            </button>
+
+            {showCard && (
+                <MatchShareCardModal
+                    groupId={groupId}
+                    template="match_result"
+                    teamAName={teamAName}
+                    teamAColorHex={teamAHex}
+                    teamAPlayers={teamAPlayers}
+                    teamBName={teamBName}
+                    teamBColorHex={teamBHex}
+                    teamBPlayers={teamBPlayers}
+                    matchPlayedAt={matchDate ?? ''}
+                    teamAGoals={goalsA}
+                    teamBGoals={goalsB}
+                    mvpName={currentMvpNames.length > 0 ? currentMvpNames.join(' & ') : undefined}
+                    winnerTeamName={winnerTeamName}
+                    onClose={() => setShowCard(false)}
+                />
+            )}
+        </>
     );
 }

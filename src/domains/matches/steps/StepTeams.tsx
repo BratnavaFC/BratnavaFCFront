@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, Check, Play, RefreshCw, Shuffle } from "lucide-react";
+import { ArrowLeftRight, Check, Play, RefreshCw, Share2, Shuffle } from "lucide-react";
+import { MatchShareCardModal, type CardTemplate } from "../../../components/modals/MatchShareCardModal";
 import { useAccountStore } from "../../../auth/accountStore";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
@@ -172,6 +173,7 @@ export function StepTeams({
     onSwapInOption,
     onAssignUnassigned,
     onSetPlayerRole,
+    matchPlayedAt,
 }: {
     admin: boolean;
     onRefresh: () => void;
@@ -222,9 +224,39 @@ export function StepTeams({
     onSwapInOption: (playerAId: string, playerBId: string) => void;
     onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
     onAssignUnassigned: (playerId: string, team: "A" | "B") => Promise<void>;
+    matchPlayedAt: string;
 }) {
     const _groupId = useAccountStore(s => s.getActive()?.activeGroupId);
     const _icons = useGroupIcons(_groupId);
+    const [shareCardData, setShareCardData] = useState<{
+        teamAPlayers: PlayerInMatchDto[];
+        teamBPlayers: PlayerInMatchDto[];
+        aHex: string;
+        bHex: string;
+        aName: string;
+        bName: string;
+    } | null>(null);
+
+    function openShareCard(
+        teamAPlayers: PlayerInMatchDto[],
+        teamBPlayers: PlayerInMatchDto[],
+        aHex: string,
+        bHex: string,
+        aName: string,
+        bName: string,
+    ) {
+        setShareCardData({ teamAPlayers, teamBPlayers, aHex, bHex, aName, bName });
+    }
+
+    function optionPlayers(team: 'A' | 'B'): PlayerInMatchDto[] {
+        const opt = generatedOptions?.[selectedTeamGenIdx];
+        if (!opt) return [];
+        const src = team === 'A' ? opt.teamA : opt.teamB;
+        return src.flatMap(pw => {
+            const p = byPlayerId.get(pw.playerId);
+            return p ? [p] : [];
+        });
+    }
 
     const byPlayerId = useMemo(() => {
         const m = new Map<string, PlayerInMatchDto>();
@@ -633,6 +665,7 @@ export function StepTeams({
 
     // ── Admin view ────────────────────────────────────────────────────────────
     return (
+        <>
         <div className="card p-4 space-y-4">
             {/* Header */}
             <div className="flex justify-end">
@@ -863,21 +896,69 @@ export function StepTeams({
                             "Escolha uma opção acima e confirme aqui."
                         )}
                     </div>
-                    <button
-                        disabled={!canAssignTeams || assigningTeams}
-                        onClick={onAssignTeamsFromGenerated}
-                        className={cls(
-                            "btn btn-primary h-9 text-sm",
-                            (!canAssignTeams || assigningTeams) && "opacity-50 pointer-events-none"
-                        )}
-                    >
-                        {assigningTeams ? "Setando..." : "Setar times"}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => openShareCard(
+                                optionPlayers('A'), optionPlayers('B'),
+                                teamAColor?.hexValue ?? currentTeamAColorHex,
+                                teamBColor?.hexValue ?? currentTeamBColorHex,
+                                teamAColor?.name ?? currentTeamAColorName,
+                                teamBColor?.name ?? currentTeamBColorName,
+                            )}
+                            className="btn h-9 text-sm flex items-center gap-1.5 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600"
+                        >
+                            <Share2 size={13} />
+                            Gerar prévia
+                        </button>
+                        <button
+                            disabled={!canAssignTeams || assigningTeams}
+                            onClick={onAssignTeamsFromGenerated}
+                            className={cls(
+                                "btn btn-primary h-9 text-sm",
+                                (!canAssignTeams || assigningTeams) && "opacity-50 pointer-events-none"
+                            )}
+                        >
+                            {assigningTeams ? "Setando..." : "Setar times"}
+                        </button>
+                    </div>
                 </div>
             )}
 
             {/* ── Assigned teams panel with inline swap + Iniciar ── */}
             {teamsSetPanel}
+
+            {/* ── Share card button — shown when teams are set ── */}
+            {teamsAlreadyAssigned && sortedTeamAPlayers.length > 0 && (
+                <button
+                    type="button"
+                    onClick={() => openShareCard(
+                        sortedTeamAPlayers, sortedTeamBPlayers,
+                        currentTeamAColorHex, currentTeamBColorHex,
+                        currentTeamAColorName, currentTeamBColorName,
+                    )}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                    <Share2 size={15} />
+                    Gerar card para o Instagram
+                </button>
+            )}
         </div>
+
+        {shareCardData && _groupId && (
+            <MatchShareCardModal
+                groupId={_groupId}
+                template="match_preview"
+                teamAName={shareCardData.aName}
+                teamAColorHex={shareCardData.aHex}
+                teamAPlayers={shareCardData.teamAPlayers}
+                teamBName={shareCardData.bName}
+                teamBColorHex={shareCardData.bHex}
+                teamBPlayers={shareCardData.teamBPlayers}
+                matchPlayedAt={matchPlayedAt}
+                onClose={() => setShareCardData(null)}
+            />
+        )}
+        </>
     );
 }

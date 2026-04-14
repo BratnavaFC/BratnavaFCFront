@@ -307,3 +307,20 @@ export const PaymentsApi = {
   getMyExtraCharges:    (groupId: string) =>
                           http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/extra-charges/me`),
 };
+
+export const MatchCardApi = {
+  generate: (groupId: string, dto: {
+    template: 'match_preview' | 'match_result';
+    teamAName: string;
+    teamAColorHex: string;
+    teamAPlayers: { name: string; isGoalkeeper: boolean }[];
+    teamBName: string;
+    teamBColorHex: string;
+    teamBPlayers: { name: string; isGoalkeeper: boolean }[];
+    playedAt?: string;
+    teamAGoals?: number;
+    teamBGoals?: number;
+    mvpName?: string;
+    winnerTeamName?: string;
+  }) => http.post<ApiResponse<string>>(`/api/MatchCard/group/${groupId}/generate`, dto),
+};
