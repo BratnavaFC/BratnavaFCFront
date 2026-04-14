@@ -95,6 +95,9 @@ export type MatchDetailsDto = {
 export type PlayerWeightDto = {
     playerId: string;
     weight: number;
+    attackRatingNorm?:   number | null;
+    defenseRatingNorm?:  number | null;
+    physicalRatingNorm?: number | null;
 };
 
 export type TeamOptionExplanationDto = {
@@ -114,6 +117,9 @@ export type TeamOptionDto = {
     synergyTotal: number;
     score: number;
     explanation?: TeamOptionExplanationDto | null;
+    attackDiff?:   number | null;
+    defenseDiff?:  number | null;
+    physicalDiff?: number | null;
 };
 
 export type TeamGenPlayerDto = {

@@ -26,6 +26,9 @@ type PlayerDto = {
     isGuest: boolean;
     status: number;
     guestStarRating?: number | null;
+    attackRating?: number | null;
+    defenseRating?: number | null;
+    overallRating?: number | null;
 };
 
 
@@ -49,6 +52,26 @@ type MyPlayerItem = {
     isGuest: boolean;
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+type RatingsSortKey = "overall" | "attack" | "defense" | "physical";
+
+/** Média dos ratings configurados. Retorna null se nenhum foi definido. */
+function computeOverall(p: PlayerDto): number | null {
+    const vals = [p.attackRating, p.defenseRating, p.overallRating]
+        .filter((v): v is number => v != null);
+    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+}
+
+function getRatingSortValue(p: PlayerDto, key: RatingsSortKey): number {
+    switch (key) {
+        case "attack":   return p.attackRating  ?? -1;
+        case "defense":  return p.defenseRating ?? -1;
+        case "physical": return p.overallRating ?? -1; // overallRating no DB = "Físico"
+        default: { const v = computeOverall(p); return v ?? -1; }
+    }
+}
+
 // ─── GroupsPage ──────────────────────────────────────────────────────────────
 
 export default function GroupsPage() {
@@ -69,6 +92,10 @@ export default function GroupsPage() {
 
     // payment badges: playerId → { pendingMonths, pendingExtras }
     const [paymentMap, setPaymentMap] = useState<Map<string, { pendingMonths: number; pendingExtras: number }>>(new Map());
+
+    // ── Estado: aba de jogadores ──
+    const [playersTab, setPlayersTab] = useState<"jogadores" | "avaliacoes">("jogadores");
+    const [ratingsSort, setRatingsSort] = useState<RatingsSortKey>("overall");
 
     // ── Estado: modais ──
     const [inviteOpen, setInviteOpen] = useState(false);
@@ -202,6 +229,12 @@ export default function GroupsPage() {
     // Carregar payment badges quando grupo muda
     useEffect(() => { loadPaymentData(); }, [expandedGroupId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Resetar aba ao trocar de grupo
+    useEffect(() => {
+        setPlayersTab("jogadores");
+        setRatingsSort("overall");
+    }, [expandedGroupId]);
+
     // Auto-expandir quando 1 grupo
     useEffect(() => {
         if (myGroups.length === 1) {
@@ -314,57 +347,211 @@ export default function GroupsPage() {
             );
         }
 
+        // ── Aba: Avaliações ─────────────────────────────────────────────────────
+
+        const ratingsSorted = [...activePlayers, ...guestPlayers].sort(
+            (a, b) => getRatingSortValue(b, ratingsSort) - getRatingSortValue(a, ratingsSort)
+        );
+
+        const sortOptions: { key: RatingsSortKey; label: string; color: string; activeClass: string }[] = [
+            { key: "overall",  label: "⭐ Overall", color: "text-indigo-600 dark:text-indigo-400",  activeClass: "bg-indigo-600 text-white" },
+            { key: "attack",   label: "⚔️ Ataque",  color: "text-rose-600 dark:text-rose-400",     activeClass: "bg-rose-500 text-white"   },
+            { key: "defense",  label: "🛡️ Defesa",  color: "text-blue-600 dark:text-blue-400",     activeClass: "bg-blue-500 text-white"   },
+            { key: "physical", label: "💪 Físico",  color: "text-amber-600 dark:text-amber-400",   activeClass: "bg-amber-500 text-white"  },
+        ];
+
+        function RatingCell({ value, active, color, barColor }: {
+            value: number | null; active: boolean; color: string; barColor: string;
+        }) {
+            return (
+                <div className="flex flex-col items-center gap-0.5 w-10 shrink-0">
+                    <span className={`text-sm font-bold tabular-nums ${value != null ? (active ? color : "text-slate-700 dark:text-slate-200") : "text-slate-300 dark:text-slate-600"}`}>
+                        {value != null ? value : "—"}
+                    </span>
+                    <div className="w-8 h-1 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                        {value != null && (
+                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${(value / 10) * 100}%` }} />
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // ── Render ───────────────────────────────────────────────────────────────
+
+        const totalActive = activePlayers.length + guestPlayers.length;
+
         return (
-            <div className="space-y-5">
-                {/* ── Mensalistas ── */}
-                {activePlayers.length === 0 ? (
-                    <div className="text-sm text-slate-400 italic">Nenhum mensalista ativo.</div>
-                ) : (
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-md bg-emerald-500 flex items-center justify-center shrink-0">
-                                <Check size={11} className="text-white" />
+            <div className="space-y-4">
+
+                {/* ── Tab bar ── */}
+                <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+                    {(["jogadores", "avaliacoes"] as const).map((t) => (
+                        <button
+                            key={t}
+                            type="button"
+                            onClick={() => setPlayersTab(t)}
+                            className={[
+                                "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+                                playersTab === t
+                                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300",
+                            ].join(" ")}
+                        >
+                            {t === "jogadores" ? "Jogadores" : "Avaliações"}
+                        </button>
+                    ))}
+                </div>
+
+                {/* ══ ABA JOGADORES ══ */}
+                {playersTab === "jogadores" && (
+                    <div className="space-y-5">
+                        {/* Mensalistas */}
+                        {activePlayers.length === 0 ? (
+                            <div className="text-sm text-slate-400 italic">Nenhum mensalista ativo.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-5 w-5 rounded-md bg-emerald-500 flex items-center justify-center shrink-0">
+                                        <Check size={11} className="text-white" />
+                                    </div>
+                                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Mensalistas</span>
+                                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">{activePlayers.length}</span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                                    {sortedPlayers.map((p) => <PlayerCard key={p.id} p={p} />)}
+                                </div>
                             </div>
-                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Mensalistas</span>
-                            <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">{activePlayers.length}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                            {sortedPlayers.map((p) => <PlayerCard key={p.id} p={p} />)}
-                        </div>
+                        )}
+
+                        {/* Convidados */}
+                        {guestPlayers.length > 0 && (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-5 w-5 rounded-md bg-amber-400 flex items-center justify-center shrink-0">
+                                        <UserPlus size={11} className="text-white" />
+                                    </div>
+                                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Convidados</span>
+                                    <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">{guestPlayers.length}</span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                                    {guestPlayers.map((p) => <PlayerCard key={p.id} p={p} />)}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Inativos (admin only) */}
+                        {inactivePlayers.length > 0 && (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-5 w-5 rounded-md bg-slate-400 flex items-center justify-center shrink-0">
+                                        <X size={11} className="text-white" />
+                                    </div>
+                                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Inativos</span>
+                                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2 py-0.5">{inactivePlayers.length}</span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                                    {inactivePlayers.map((p) => <PlayerCard key={p.id} p={p} dim />)}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* ── Convidados ── */}
-                {guestPlayers.length > 0 && (
+                {/* ══ ABA AVALIAÇÕES ══ */}
+                {playersTab === "avaliacoes" && (
                     <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-md bg-amber-400 flex items-center justify-center shrink-0">
-                                <UserPlus size={11} className="text-white" />
+                        {/* sort chips */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {sortOptions.map(({ key, label, activeClass }) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setRatingsSort(key)}
+                                    className={[
+                                        "px-3 py-1 rounded-full text-xs font-semibold transition-all",
+                                        ratingsSort === key
+                                            ? activeClass
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700",
+                                    ].join(" ")}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {totalActive === 0 ? (
+                            <div className="text-sm text-slate-400 italic py-4">Nenhum jogador ativo.</div>
+                        ) : (
+                            <div className="space-y-1.5">
+                                {/* header */}
+                                <div className="flex items-center gap-3 px-3 pb-1">
+                                    <span className="w-5 shrink-0" />
+                                    <span className="flex-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Jogador</span>
+                                    <div className="flex gap-3 shrink-0">
+                                        {sortOptions.map(({ key, label, color }) => (
+                                            <span key={key} className={`w-10 text-center text-[10px] font-semibold uppercase tracking-wide ${ratingsSort === key ? color : "text-slate-400 dark:text-slate-500"}`}>
+                                                {label.split(" ")[1] ?? label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {ratingsSorted.map((p, idx) => {
+                                    const overall = computeOverall(p);
+                                    const hasAny  = p.attackRating != null || p.defenseRating != null || p.overallRating != null;
+                                    const initials = p.name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+                                    const isMe = p.id === activePlayerId;
+                                    const rank = hasAny ? idx + 1 : null;
+
+                                    return (
+                                        <div
+                                            key={p.id}
+                                            className={[
+                                                "flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-all",
+                                                hasAny ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/40 opacity-60",
+                                                isMe ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200 dark:border-slate-700",
+                                            ].join(" ")}
+                                        >
+                                            {/* rank */}
+                                            <span className="w-5 text-center text-xs font-bold text-slate-400 dark:text-slate-500 shrink-0 tabular-nums">
+                                                {rank ?? "—"}
+                                            </span>
+
+                                            {/* avatar */}
+                                            <div className={`h-7 w-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 select-none ${isMe ? "bg-emerald-600 text-white" : p.isGuest ? "bg-amber-100 text-amber-700" : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"}`}>
+                                                {initials}
+                                            </div>
+
+                                            {/* name + icon */}
+                                            <div className="flex-1 min-w-0 flex items-center gap-1">
+                                                <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{p.name}</span>
+                                                <span className="shrink-0 leading-none">
+                                                    <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? "goalkeeper" : "player")} size={12} />
+                                                </span>
+                                                {p.isGuest && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium shrink-0 leading-none">Convidado</span>
+                                                )}
+                                                {isMe && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-white font-medium shrink-0 leading-none">Você</span>
+                                                )}
+                                            </div>
+
+                                            {/* rating cells */}
+                                            <div className="flex gap-3 shrink-0">
+                                                <RatingCell value={overall != null ? parseFloat(overall.toFixed(1)) : null} active={ratingsSort === "overall"}  color="text-indigo-600 dark:text-indigo-400" barColor="bg-indigo-500" />
+                                                <RatingCell value={p.attackRating  ?? null} active={ratingsSort === "attack"}   color="text-rose-600 dark:text-rose-400"   barColor="bg-rose-500"   />
+                                                <RatingCell value={p.defenseRating ?? null} active={ratingsSort === "defense"}  color="text-blue-600 dark:text-blue-400"   barColor="bg-blue-500"   />
+                                                <RatingCell value={p.overallRating ?? null} active={ratingsSort === "physical"} color="text-amber-600 dark:text-amber-400" barColor="bg-amber-500"  />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Convidados</span>
-                            <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">{guestPlayers.length}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                            {guestPlayers.map((p) => <PlayerCard key={p.id} p={p} />)}
-                        </div>
+                        )}
                     </div>
                 )}
 
-                {/* ── Inativos (admin only) ── */}
-                {inactivePlayers.length > 0 && (
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-md bg-slate-400 flex items-center justify-center shrink-0">
-                                <X size={11} className="text-white" />
-                            </div>
-                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Inativos</span>
-                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2 py-0.5">{inactivePlayers.length}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                            {inactivePlayers.map((p) => <PlayerCard key={p.id} p={p} dim />)}
-                        </div>
-                    </div>
-                )}
             </div>
         );
     }

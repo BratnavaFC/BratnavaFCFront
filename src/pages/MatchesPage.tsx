@@ -17,6 +17,7 @@ import type {
     TeamColorDto,
     TeamGenPlayerDto,
     TeamOptionDto,
+    PlayerWeightDto,
     StepKey,
 } from "../domains/matches/matchTypes";
 import { InviteResponse } from "../domains/matches/matchTypes";
@@ -709,6 +710,17 @@ export default function MatchesPage() {
         }
     }
 
+    /** Recalculates dimension diffs (attack/defense/physical) from per-player rating norms. */
+    function calcDimDiffs(a: PlayerWeightDto[], b: PlayerWeightDto[]) {
+        const sum = (arr: PlayerWeightDto[], key: keyof PlayerWeightDto) =>
+            arr.reduce((s, p) => s + ((p[key] as number | null | undefined) ?? 0), 0);
+        return {
+            attackDiff:   Math.abs(sum(a, "attackRatingNorm")   - sum(b, "attackRatingNorm")),
+            defenseDiff:  Math.abs(sum(a, "defenseRatingNorm")  - sum(b, "defenseRatingNorm")),
+            physicalDiff: Math.abs(sum(a, "physicalRatingNorm") - sum(b, "physicalRatingNorm")),
+        };
+    }
+
     /** Move a player between unassigned/teamA/teamB within the generated carousel (local state only). */
     function movePlayerInGeneratedOption(playerId: string, targetTeam: "A" | "B") {
         if (!teamGenOptions) return;
@@ -740,6 +752,7 @@ export default function MatchesPage() {
             teamAWeight: newAWeight,
             teamBWeight: newBWeight,
             balanceDiff,
+            ...calcDimDiffs(newA, newB),
         };
         setTeamGenOptions((prev) => prev?.map((o, i) => (i === safeIdx ? updatedOpt : o)) ?? prev);
     }
@@ -777,6 +790,7 @@ export default function MatchesPage() {
             teamAWeight: newAWeight,
             teamBWeight: newBWeight,
             balanceDiff,
+            ...calcDimDiffs(newA, newB),
         };
         setTeamGenOptions((prev) => prev?.map((o, i) => (i === safeIdx ? updatedOpt : o)) ?? prev);
     }
@@ -973,6 +987,7 @@ export default function MatchesPage() {
             onSwapInOption: swapInGeneratedOption,
             onAssignUnassigned: assignUnassigned,
             onSetPlayerRole: setPlayerRole,
+            matchPlayedAt: (current as any)?.playedAt ?? '',
         };
     }, [
         admin,
@@ -995,6 +1010,7 @@ export default function MatchesPage() {
         (current as any)?.teamAColor?.name,
         (current as any)?.teamBColor?.hexValue,
         (current as any)?.teamBColor?.name,
+        (current as any)?.playedAt,
         teamGenOptions,
         selectedTeamGenIdx,
         allPlayers,

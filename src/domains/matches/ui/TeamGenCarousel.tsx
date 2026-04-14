@@ -293,6 +293,64 @@ export function TeamGenCarousel({
                     </div>
                 )}
 
+                {/* Dimensional rating sums — shown only when at least one player is rated */}
+                {adminView && (() => {
+                    const all = [...opt.teamA, ...opt.teamB];
+                    const hasData = all.some(
+                        p => p.attackRatingNorm != null || p.defenseRatingNorm != null || p.physicalRatingNorm != null
+                    );
+                    if (!hasData) return null;
+
+                    const dimSum = (arr: PlayerWeightDto[], key: keyof PlayerWeightDto) =>
+                        arr.reduce((s, p) => s + (((p[key] as number | null | undefined) ?? 0)), 0);
+
+                    const dims = [
+                        {
+                            label: "⚔️ Ataque",
+                            sumA: dimSum(opt.teamA, "attackRatingNorm"),
+                            sumB: dimSum(opt.teamB, "attackRatingNorm"),
+                            colorA: "text-rose-600 dark:text-rose-400",
+                            colorB: "text-rose-600 dark:text-rose-400",
+                        },
+                        {
+                            label: "🛡️ Defesa",
+                            sumA: dimSum(opt.teamA, "defenseRatingNorm"),
+                            sumB: dimSum(opt.teamB, "defenseRatingNorm"),
+                            colorA: "text-blue-600 dark:text-blue-400",
+                            colorB: "text-blue-600 dark:text-blue-400",
+                        },
+                        {
+                            label: "💪 Físico",
+                            sumA: dimSum(opt.teamA, "physicalRatingNorm"),
+                            sumB: dimSum(opt.teamB, "physicalRatingNorm"),
+                            colorA: "text-amber-600 dark:text-amber-400",
+                            colorB: "text-amber-600 dark:text-amber-400",
+                        },
+                    ] as const;
+
+                    return (
+                        <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden text-xs divide-x divide-slate-100 dark:divide-slate-700">
+                            {dims.map(({ label, sumA, sumB, colorA, colorB }) => {
+                                const higher = sumA > sumB ? "A" : sumA < sumB ? "B" : null;
+                                return (
+                                    <div key={label} className="flex-1 px-3 py-2">
+                                        <div className="text-slate-400 dark:text-slate-500 mb-0.5">{label}</div>
+                                        <div className="flex items-center gap-1 tabular-nums font-semibold">
+                                            <span className={cls(colorA, higher === "A" ? "opacity-100" : "opacity-50")}>
+                                                {sumA.toFixed(2)}
+                                            </span>
+                                            <span className="text-slate-300 dark:text-slate-600 font-normal">/</span>
+                                            <span className={cls(colorB, higher === "B" ? "opacity-100" : "opacity-50")}>
+                                                {sumB.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                })()}
+
                 {/* Admin explanation */}
                 {adminView && opt.explanation && (
                     <div className="rounded-lg border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/20 p-3 space-y-1 text-xs text-slate-700 dark:text-slate-300">
