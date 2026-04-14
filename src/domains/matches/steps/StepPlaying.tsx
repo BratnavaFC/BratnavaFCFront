@@ -99,8 +99,8 @@ export function StepPlaying({
                 </div>
             </div>
 
-            {/* Botões de replay — somente admin */}
-            {admin && onPublishEvent && (
+            {/* Botões de replay — disponível para todos os participantes */}
+            {onPublishEvent && (
                 <div className="card p-4">
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 font-medium uppercase tracking-wide">
                         Replay
