@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Play, Trash2, X } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Play, Trash2, X } from "lucide-react";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 
@@ -106,6 +106,7 @@ export function VideoCard({
     onLike,
     onFavorite,
     onDelete,
+    onShare,
 }: {
     clip: ReplayClipDto;
     globalIndex: number;
@@ -116,6 +117,7 @@ export function VideoCard({
     onLike: () => void;
     onFavorite: () => void;
     onDelete?: () => void;
+    onShare?: () => void;
 }) {
     const isGol    = clip.eventType === "Gol";
     const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
@@ -235,12 +237,19 @@ export function VideoCard({
                         {formatTime(clip.recordedAt)}
                     </span>
 
-                    {/* Duration + download */}
+                    {/* Duration + share + download */}
                     <div className="flex items-center gap-1.5">
                         {duration !== null && (
                             <span className="tabular-nums" style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.65)", background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", padding: "2px 6px", borderRadius: 5 }}>
                                 {formatDuration(duration)}
                             </span>
+                        )}
+                        {onShare && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); onShare(); }}
+                                className="flex items-center justify-center rounded-md" title="Compartilhar vídeo"
+                                style={{ width: 24, height: 24, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                                <Link size={12} className="text-white" />
+                            </button>
                         )}
                         <button type="button" onClick={(e) => { e.stopPropagation(); downloadClip(clip, groupId); }}
                             className="flex items-center justify-center rounded-md" title="Baixar vídeo"
@@ -268,6 +277,7 @@ export function Lightbox({
     onLike,
     onFavorite,
     onDelete,
+    onShare,
 }: {
     clips: ReplayClipDto[];
     index: number;
@@ -280,6 +290,7 @@ export function Lightbox({
     onLike: (clipId: string) => void;
     onFavorite: (clipId: string) => void;
     onDelete?: (clipId: string) => void;
+    onShare?: (clipId: string) => void;
 }) {
     const clip      = clips[index];
     const isGol     = clip.eventType === "Gol";
@@ -399,6 +410,13 @@ export function Lightbox({
                             style={{ width: 32, height: 30, background: state.isFavoritedByMe ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${state.isFavoritedByMe ? "rgba(245,158,11,0.5)" : "rgba(255,255,255,0.14)"}`, color: state.isFavoritedByMe ? "#fcd34d" : "rgba(255,255,255,0.5)" }}>
                             <Bookmark size={13} style={{ fill: state.isFavoritedByMe ? "#f59e0b" : "none", color: state.isFavoritedByMe ? "#f59e0b" : "inherit", transition: "all 0.15s" }} />
                         </button>
+                        {onShare && (
+                            <button type="button" onClick={() => onShare(clip.id)} title="Compartilhar link"
+                                className="flex items-center justify-center rounded-xl transition-all active:scale-95"
+                                style={{ width: 32, height: 30, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.5)" }}>
+                                <Link size={13} />
+                            </button>
+                        )}
                         <button type="button" onClick={() => downloadClip(clip, groupId)} title="Baixar"
                             className="flex items-center justify-center rounded-xl transition-colors"
                             style={{ width: 32, height: 30, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.5)" }}>

@@ -267,31 +267,32 @@ export function TeamGenCarousel({
                 </div>
 
                 {/* Admin balance metrics — compact single row */}
-                {adminView && (
-                    <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden text-xs divide-x divide-slate-100 dark:divide-slate-700">
-                        <div className="flex-1 px-3 py-2">
-                            <div className="text-slate-400 dark:text-slate-500 mb-0.5">A weight</div>
-                            <div className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
-                                {fmtWeight(opt.teamAWeight)}
+                {adminView && (() => {
+                    const aTC = isWhiteHex(aHex) ? "#64748b" : aHex;
+                    const bTC = isWhiteHex(bHex) ? "#64748b" : bHex;
+                    const higherW = opt.teamAWeight > opt.teamBWeight ? "A" : opt.teamAWeight < opt.teamBWeight ? "B" : null;
+                    return (
+                        <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden text-xs divide-x divide-slate-100 dark:divide-slate-700">
+                            <div className="flex-1 px-3 py-2">
+                                <div className="text-slate-400 dark:text-slate-500 mb-0.5">⚖️ Peso</div>
+                                <div className="flex items-center gap-1 tabular-nums font-semibold">
+                                    <span style={{ color: aTC, opacity: higherW === "B" ? 0.5 : 1 }}>{fmtWeight(opt.teamAWeight)}</span>
+                                    <span className="text-slate-300 dark:text-slate-600 font-normal">/</span>
+                                    <span style={{ color: bTC, opacity: higherW === "A" ? 0.5 : 1 }}>{fmtWeight(opt.teamBWeight)}</span>
+                                </div>
+                            </div>
+                            <div className="flex-1 px-3 py-2">
+                                <div className="text-slate-400 dark:text-slate-500 mb-0.5">Diff</div>
+                                <div
+                                    className="font-semibold tabular-nums"
+                                    style={{ color: diffColor(opt.balanceDiff) }}
+                                >
+                                    {fmtWeight(opt.balanceDiff)}
+                                </div>
                             </div>
                         </div>
-                        <div className="flex-1 px-3 py-2">
-                            <div className="text-slate-400 dark:text-slate-500 mb-0.5">B weight</div>
-                            <div className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
-                                {fmtWeight(opt.teamBWeight)}
-                            </div>
-                        </div>
-                        <div className="flex-1 px-3 py-2">
-                            <div className="text-slate-400 dark:text-slate-500 mb-0.5">Diff</div>
-                            <div
-                                className="font-semibold tabular-nums"
-                                style={{ color: diffColor(opt.balanceDiff) }}
-                            >
-                                {fmtWeight(opt.balanceDiff)}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* Dimensional rating sums — shown only when at least one player is rated */}
                 {adminView && (() => {
@@ -301,46 +302,31 @@ export function TeamGenCarousel({
                     );
                     if (!hasData) return null;
 
+                    const aTC = isWhiteHex(aHex) ? "#64748b" : aHex;
+                    const bTC = isWhiteHex(bHex) ? "#64748b" : bHex;
+
                     const dimSum = (arr: PlayerWeightDto[], key: keyof PlayerWeightDto) =>
                         arr.reduce((s, p) => s + (((p[key] as number | null | undefined) ?? 0)), 0);
 
                     const dims = [
-                        {
-                            label: "⚔️ Ataque",
-                            sumA: dimSum(opt.teamA, "attackRatingNorm"),
-                            sumB: dimSum(opt.teamB, "attackRatingNorm"),
-                            colorA: "text-rose-600 dark:text-rose-400",
-                            colorB: "text-rose-600 dark:text-rose-400",
-                        },
-                        {
-                            label: "🛡️ Defesa",
-                            sumA: dimSum(opt.teamA, "defenseRatingNorm"),
-                            sumB: dimSum(opt.teamB, "defenseRatingNorm"),
-                            colorA: "text-blue-600 dark:text-blue-400",
-                            colorB: "text-blue-600 dark:text-blue-400",
-                        },
-                        {
-                            label: "💪 Físico",
-                            sumA: dimSum(opt.teamA, "physicalRatingNorm"),
-                            sumB: dimSum(opt.teamB, "physicalRatingNorm"),
-                            colorA: "text-amber-600 dark:text-amber-400",
-                            colorB: "text-amber-600 dark:text-amber-400",
-                        },
-                    ] as const;
+                        { label: "⚔️ Ataque",  sumA: dimSum(opt.teamA, "attackRatingNorm"),   sumB: dimSum(opt.teamB, "attackRatingNorm")   },
+                        { label: "🛡️ Defesa",  sumA: dimSum(opt.teamA, "defenseRatingNorm"),  sumB: dimSum(opt.teamB, "defenseRatingNorm")  },
+                        { label: "💪 Físico",  sumA: dimSum(opt.teamA, "physicalRatingNorm"), sumB: dimSum(opt.teamB, "physicalRatingNorm") },
+                    ];
 
                     return (
                         <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden text-xs divide-x divide-slate-100 dark:divide-slate-700">
-                            {dims.map(({ label, sumA, sumB, colorA, colorB }) => {
+                            {dims.map(({ label, sumA, sumB }) => {
                                 const higher = sumA > sumB ? "A" : sumA < sumB ? "B" : null;
                                 return (
                                     <div key={label} className="flex-1 px-3 py-2">
                                         <div className="text-slate-400 dark:text-slate-500 mb-0.5">{label}</div>
                                         <div className="flex items-center gap-1 tabular-nums font-semibold">
-                                            <span className={cls(colorA, higher === "A" ? "opacity-100" : "opacity-50")}>
+                                            <span style={{ color: aTC, opacity: higher === "B" ? 0.5 : 1 }}>
                                                 {sumA.toFixed(2)}
                                             </span>
                                             <span className="text-slate-300 dark:text-slate-600 font-normal">/</span>
-                                            <span className={cls(colorB, higher === "B" ? "opacity-100" : "opacity-50")}>
+                                            <span style={{ color: bTC, opacity: higher === "A" ? 0.5 : 1 }}>
                                                 {sumB.toFixed(2)}
                                             </span>
                                         </div>

@@ -139,6 +139,7 @@ export const STRATEGIES = [
     { id: 2, name: "Random" },
     { id: 3, name: "Algorithm" },
     { id: 4, name: "GroupByWins" },
+    { id: 5, name: "Por Perfil" },
 ] as const;
 
 export type StrategyId = (typeof STRATEGIES)[number]["id"];

@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
 import {
@@ -538,6 +538,8 @@ export function MatchTimeSimulationTimeline({
 export default function MatchDetailsPage() {
     const nav = useNavigate();
     const { groupId, matchId } = useParams<{ groupId: string; matchId: string }>();
+    const [searchParams] = useSearchParams();
+    const initialClipId = searchParams.get("clip") ?? undefined;
     const _icons = useGroupIcons(groupId);
 
     const [data, setData] = useState<any>(null);
@@ -1316,7 +1318,13 @@ export default function MatchDetailsPage() {
             {/* ── Replays ───────────────────────────────────────────── */}
             {replays.length > 0 && groupId && (
                 <Section title={`Replays (${replays.length})`}>
-                    <ReplaySection clips={replays} groupId={groupId} isAdmin={isAdmin} />
+                    <ReplaySection
+                        clips={replays}
+                        groupId={groupId}
+                        isAdmin={isAdmin}
+                        matchId={matchId}
+                        initialClipId={initialClipId}
+                    />
                 </Section>
             )}
 

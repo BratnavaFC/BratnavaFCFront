@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import type { ReplayClipDto } from "../matchTypes";
@@ -59,11 +59,26 @@ function Tab({
     );
 }
 
+// ── Share URL helper ──────────────────────────────────────────────────────────
+
+function buildShareUrl(groupId: string, matchId: string, clipId: string): string {
+    const { origin, pathname } = window.location;
+    return `${origin}${pathname}#/app/history/${groupId}/${matchId}?clip=${clipId}`;
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
-type Props = { clips: ReplayClipDto[]; groupId: string; isAdmin?: boolean };
+type Props = {
+    clips: ReplayClipDto[];
+    groupId: string;
+    isAdmin?: boolean;
+    /** ID da partida — necessário para gerar links de compartilhamento */
+    matchId?: string;
+    /** Abre automaticamente o lightbox para este clipId (vindo de ?clip= na URL) */
+    initialClipId?: string;
+};
 
-export function ReplaySection({ clips, groupId, isAdmin }: Props) {
+export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId }: Props) {
     const [filter, setFilter]               = useState<Filter>("all");
     const [page, setPage]                   = useState(1);
     const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
@@ -72,6 +87,21 @@ export function ReplaySection({ clips, groupId, isAdmin }: Props) {
 
     // Sync state when clips prop changes (e.g. refresh)
     useEffect(() => { setClipStates(buildInitialState(clips)); }, [clips]);
+
+    // Ref para garantir que o auto-open só dispare uma vez por montagem
+    const hasAutoOpened = useRef(false);
+
+    // Copia o link de compartilhamento do clipe para a área de transferência
+    const shareClip = useCallback(async (clipId: string) => {
+        if (!matchId) return;
+        const url = buildShareUrl(groupId, matchId, clipId);
+        try {
+            await navigator.clipboard.writeText(url);
+            toast.success("Link copiado!");
+        } catch {
+            toast.error("Não foi possível copiar o link.");
+        }
+    }, [groupId, matchId]);
 
     const toggleLike = useCallback(async (clipId: string) => {
         setClipStates((prev) => {
@@ -144,6 +174,16 @@ export function ReplaySection({ clips, groupId, isAdmin }: Props) {
     const gols    = useMemo(() => visibleClips.filter((c) => c.eventType === "Gol"),    [visibleClips]);
     const jogadas = useMemo(() => visibleClips.filter((c) => c.eventType === "Jogada"), [visibleClips]);
 
+    // Auto-abre o lightbox quando a URL contém ?clip=<clipId>
+    useEffect(() => {
+        if (!initialClipId || visibleClips.length === 0 || hasAutoOpened.current) return;
+        const idx = visibleClips.findIndex((c) => c.id === initialClipId);
+        if (idx === -1) return;
+        hasAutoOpened.current = true;
+        setFilter("all");
+        setLightboxIdx(idx);
+    }, [initialClipId, visibleClips]);
+
     const filtered = useMemo(() => {
         if (filter === "Gol")    return gols;
         if (filter === "Jogada") return jogadas;
@@ -196,6 +236,7 @@ export function ReplaySection({ clips, groupId, isAdmin }: Props) {
                             onLike={() => toggleLike(clip.id)}
                             onFavorite={() => toggleFavorite(clip.id)}
                             onDelete={() => handleDelete(clip.id)}
+                            onShare={matchId ? () => shareClip(clip.id) : undefined}
                         />
                     );
                 })}
@@ -244,6 +285,7 @@ export function ReplaySection({ clips, groupId, isAdmin }: Props) {
                     onLike={toggleLike}
                     onFavorite={toggleFavorite}
                     onDelete={handleDelete}
+                    onShare={matchId ? shareClip : undefined}
                 />
             )}
         </>
