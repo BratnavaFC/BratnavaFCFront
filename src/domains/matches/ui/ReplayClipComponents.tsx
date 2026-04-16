@@ -126,7 +126,6 @@ export function VideoCard({
 }) {
     const isGol    = clip.eventType === "Gol";
     const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
-    const [duration, setDuration] = useState<number | null>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
     return (
@@ -141,7 +140,7 @@ export function VideoCard({
             <div className="relative aspect-video bg-slate-900 overflow-hidden">
                 {/* Thumbnail */}
                 <div className="absolute inset-0 opacity-55 group-hover:opacity-70 transition-opacity duration-300">
-                    <LazyVideoThumb src={streamUrl} onDuration={setDuration} />
+                    <LazyVideoThumb src={streamUrl} onDuration={() => {}} />
                 </div>
 
                 {/* Gradient overlay */}
@@ -242,13 +241,8 @@ export function VideoCard({
                         {formatTime(clip.recordedAt)}
                     </span>
 
-                    {/* Duration + share + download */}
+                    {/* Share + download */}
                     <div className="flex items-center gap-1.5">
-                        {duration !== null && (
-                            <span className="tabular-nums" style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.65)", background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", padding: "2px 6px", borderRadius: 5 }}>
-                                {formatDuration(duration)}
-                            </span>
-                        )}
                         {onShare && (
                             <button type="button" onClick={(e) => { e.stopPropagation(); onShare(); }}
                                 className="flex items-center justify-center rounded-md" title="Compartilhar vídeo"
@@ -257,9 +251,9 @@ export function VideoCard({
                             </button>
                         )}
                         <button type="button" onClick={(e) => { e.stopPropagation(); downloadClip(clip, groupId); }}
-                            className="flex items-center justify-center rounded-md active:scale-90 transition-transform" title="Baixar vídeo"
-                            style={{ width: 28, height: 28, background: "rgba(59,130,246,0.7)", backdropFilter: "blur(4px)", border: "1px solid rgba(147,197,253,0.4)" }}>
-                            <Download size={13} className="text-white" />
+                            className="flex items-center justify-center rounded-md" title="Baixar vídeo"
+                            style={{ width: 24, height: 24, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                            <Download size={12} className="text-white" />
                         </button>
                     </div>
                 </div>
