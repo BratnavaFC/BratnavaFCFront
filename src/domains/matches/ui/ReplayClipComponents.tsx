@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Play, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 
@@ -32,12 +33,16 @@ export async function downloadClip(clip: ReplayClipDto, groupId: string) {
         .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         .replace(/:/g, "-");
     const filename = `${clip.eventType}_${time}.mp4`;
-    const res  = await MatchesApi.downloadReplay(groupId, clip.id);
-    const blob = new Blob([res.data], { type: "video/mp4" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    try {
+        const res  = await MatchesApi.downloadReplay(groupId, clip.id);
+        const blob = new Blob([res.data], { type: "video/mp4" });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url; a.download = filename; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+        toast.error("Não foi possível baixar o vídeo.");
+    }
 }
 
 export function formatTime(iso: string) {
@@ -121,7 +126,6 @@ export function VideoCard({
 }) {
     const isGol    = clip.eventType === "Gol";
     const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
-    const [duration, setDuration] = useState<number | null>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
     return (
@@ -136,7 +140,7 @@ export function VideoCard({
             <div className="relative aspect-video bg-slate-900 overflow-hidden">
                 {/* Thumbnail */}
                 <div className="absolute inset-0 opacity-55 group-hover:opacity-70 transition-opacity duration-300">
-                    <LazyVideoThumb src={streamUrl} onDuration={setDuration} />
+                    <LazyVideoThumb src={streamUrl} onDuration={() => {}} />
                 </div>
 
                 {/* Gradient overlay */}
@@ -237,13 +241,8 @@ export function VideoCard({
                         {formatTime(clip.recordedAt)}
                     </span>
 
-                    {/* Duration + share + download */}
+                    {/* Share + download */}
                     <div className="flex items-center gap-1.5">
-                        {duration !== null && (
-                            <span className="tabular-nums" style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.65)", background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", padding: "2px 6px", borderRadius: 5 }}>
-                                {formatDuration(duration)}
-                            </span>
-                        )}
                         {onShare && (
                             <button type="button" onClick={(e) => { e.stopPropagation(); onShare(); }}
                                 className="flex items-center justify-center rounded-md" title="Compartilhar vídeo"
