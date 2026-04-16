@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
     Vote, Plus, X, Loader2, Check, Lock, Unlock,
     CalendarPlus, Users, ChevronRight,
     Eye, EyeOff, RefreshCw,
     CheckSquare, Clock, DollarSign, CalendarDays,
-    MapPin, BarChart2,
+    MapPin, BarChart2, Link,
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PollsApi } from '../api/endpoints';
@@ -114,21 +115,39 @@ function formatCost(costType?: string | null, costAmount?: number | null): strin
     return label;
 }
 
+// ─── Share URL ────────────────────────────────────────────────────────────────
+
+function buildPollShareUrl(pollId: string): string {
+    const { origin, pathname } = window.location;
+    return `${origin}${pathname}#/app/polls?poll=${pollId}`;
+}
+
+async function copyPollLink(pollId: string) {
+    try {
+        await navigator.clipboard.writeText(buildPollShareUrl(pollId));
+        toast.success('Link copiado!');
+    } catch {
+        toast.error('Não foi possível copiar o link.');
+    }
+}
+
 // ─── EventCard ────────────────────────────────────────────────────────────────
 
 function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: () => void; loadingId: string | null }) {
     const isOpen = poll.status === 'open';
     const isLoading = loadingId === poll.id;
+    const isDisabled = !!loadingId;
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
     const icon = poll.eventIcon ?? '📅';
     const cost = formatCost(poll.costType, poll.costAmount);
 
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={!!loadingId}
-            className="w-full text-left px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group flex items-stretch gap-3 disabled:opacity-70"
+        <div
+            role="button"
+            tabIndex={isDisabled ? -1 : 0}
+            onClick={isDisabled ? undefined : onClick}
+            onKeyDown={(e) => !isDisabled && (e.key === 'Enter' || e.key === ' ') && onClick()}
+            className={`w-full text-left px-4 py-4 transition-colors group flex items-stretch gap-3 ${isDisabled ? 'opacity-70 cursor-default' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer'}`}
         >
             {/* Left: icon + date */}
             <div className="flex flex-col items-center gap-1 shrink-0 w-14">
@@ -177,17 +196,27 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
                 </div>
             </div>
 
-            {/* Right: responses + chevron */}
+            {/* Right: responses + share + chevron */}
             <div className="flex flex-col items-end justify-center gap-1 shrink-0">
                 <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                     <Users size={11} /> {poll.totalVoters} respostas
                 </span>
-                {isLoading
-                    ? <Loader2 size={15} className="text-slate-400 animate-spin" />
-                    : <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-400" />
-                }
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        title="Compartilhar link"
+                        onClick={(e) => { e.stopPropagation(); copyPollLink(poll.id); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700"
+                    >
+                        <Link size={13} className="text-slate-400 dark:text-slate-500" />
+                    </button>
+                    {isLoading
+                        ? <Loader2 size={15} className="text-slate-400 animate-spin" />
+                        : <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-400" />
+                    }
+                </div>
             </div>
-        </button>
+        </div>
     );
 }
 
@@ -196,13 +225,15 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
 function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: () => void; loadingId: string | null }) {
     const isOpen = poll.status === 'open';
     const isLoading = loadingId === poll.id;
+    const isDisabled = !!loadingId;
 
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={!!loadingId}
-            className="w-full text-left px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group flex items-center gap-3 disabled:opacity-70"
+        <div
+            role="button"
+            tabIndex={isDisabled ? -1 : 0}
+            onClick={isDisabled ? undefined : onClick}
+            onKeyDown={(e) => !isDisabled && (e.key === 'Enter' || e.key === ' ') && onClick()}
+            className={`w-full text-left px-5 py-4 transition-colors group flex items-center gap-3 ${isDisabled ? 'opacity-70 cursor-default' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer'}`}
         >
             {/* Status dot */}
             <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${isOpen ? 'bg-emerald-400' : 'bg-slate-300'}`} />
@@ -232,11 +263,22 @@ function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: ()
                 </div>
             </div>
 
-            {isLoading
-                ? <Loader2 size={15} className="text-slate-400 animate-spin shrink-0" />
-                : <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-400 shrink-0" />
-            }
-        </button>
+            {/* Share + chevron/loader */}
+            <div className="flex items-center gap-1 shrink-0">
+                <button
+                    type="button"
+                    title="Compartilhar link"
+                    onClick={(e) => { e.stopPropagation(); copyPollLink(poll.id); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700"
+                >
+                    <Link size={13} className="text-slate-400 dark:text-slate-500" />
+                </button>
+                {isLoading
+                    ? <Loader2 size={15} className="text-slate-400 animate-spin" />
+                    : <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-400" />
+                }
+            </div>
+        </div>
     );
 }
 
@@ -253,6 +295,9 @@ export default function PollsPage() {
     const isAdmin = isAdminOrGod || (!!groupId && grpAdminIds.includes(groupId));
 
     const setPendingPollsCount = usePollStore((s) => s.setPendingPollsCount);
+
+    const [searchParams] = useSearchParams();
+    const hasAutoOpened = useRef(false);
 
     const [polls, setPolls] = useState<PollSummary[]>([]);
     const [loading, setLoading] = useState(false);
@@ -283,6 +328,20 @@ export default function PollsPage() {
     }, [groupId, setPendingPollsCount]);
 
     useEffect(() => { load(); }, [load]);
+
+    // Auto-abre a votação indicada por ?poll=<pollId> na URL
+    useEffect(() => {
+        if (hasAutoOpened.current || polls.length === 0) return;
+        const pollId = searchParams.get('poll');
+        if (!pollId) return;
+        const found = polls.find(p => p.id === pollId);
+        if (!found) return;
+        hasAutoOpened.current = true;
+        setActiveTab(found.type === 'event' ? 'events' : 'polls');
+        openPollDetail(found);
+    // openPollDetail é estável dentro do mesmo render — não precisa ser dependência
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [polls, searchParams]);
 
     async function openPollDetail(summary: PollSummary) {
         if (!groupId) return;
