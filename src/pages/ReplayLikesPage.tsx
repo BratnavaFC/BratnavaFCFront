@@ -8,16 +8,16 @@ import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function downloadClip(clip: LikedReplayClipDto, _groupId: string) {
+async function downloadClip(clip: LikedReplayClipDto, groupId: string) {
     const time = new Date(clip.recordedAt)
         .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         .replace(/:/g, "-");
-    const a = document.createElement("a");
-    a.href = clip.videoUrl;
-    a.download = `${clip.eventType}_${time}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const res  = await MatchesApi.downloadReplay(groupId, clip.id);
+    const blob = new Blob([res.data], { type: "video/mp4" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `${clip.eventType}_${time}.mp4`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 

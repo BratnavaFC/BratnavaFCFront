@@ -27,17 +27,17 @@ export type Speed   = (typeof SPEEDS)[number];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-export function downloadClip(clip: ReplayClipDto, _groupId: string) {
+export async function downloadClip(clip: ReplayClipDto, groupId: string) {
     const time = new Date(clip.recordedAt)
         .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         .replace(/:/g, "-");
     const filename = `${clip.eventType}_${time}.mp4`;
-    const a = document.createElement("a");
-    a.href = clip.videoUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const res  = await MatchesApi.downloadReplay(groupId, clip.id);
+    const blob = new Blob([res.data], { type: "video/mp4" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 export function formatTime(iso: string) {
