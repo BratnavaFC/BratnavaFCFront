@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Play, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 
@@ -32,12 +33,16 @@ export async function downloadClip(clip: ReplayClipDto, groupId: string) {
         .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         .replace(/:/g, "-");
     const filename = `${clip.eventType}_${time}.mp4`;
-    const res  = await MatchesApi.downloadReplay(groupId, clip.id);
-    const blob = new Blob([res.data], { type: "video/mp4" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    try {
+        const res  = await MatchesApi.downloadReplay(groupId, clip.id);
+        const blob = new Blob([res.data], { type: "video/mp4" });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url; a.download = filename; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+        toast.error("Não foi possível baixar o vídeo.");
+    }
 }
 
 export function formatTime(iso: string) {
@@ -252,9 +257,9 @@ export function VideoCard({
                             </button>
                         )}
                         <button type="button" onClick={(e) => { e.stopPropagation(); downloadClip(clip, groupId); }}
-                            className="flex items-center justify-center rounded-md" title="Baixar vídeo"
-                            style={{ width: 24, height: 24, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.18)" }}>
-                            <Download size={12} className="text-white" />
+                            className="flex items-center justify-center rounded-md active:scale-90 transition-transform" title="Baixar vídeo"
+                            style={{ width: 28, height: 28, background: "rgba(59,130,246,0.7)", backdropFilter: "blur(4px)", border: "1px solid rgba(147,197,253,0.4)" }}>
+                            <Download size={13} className="text-white" />
                         </button>
                     </div>
                 </div>
