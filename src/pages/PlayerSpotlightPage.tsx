@@ -46,22 +46,12 @@ function cls(...args: (string | boolean | undefined | null)[]) {
     return args.filter(Boolean).join(' ');
 }
 
-function topN<T>(arr: T[], key: keyof T, n = 5): T[] {
-    return [...arr]
-        .filter(p => (p[key] as unknown as number) > 0)
-        .sort((a, b) => (b[key] as unknown as number) - (a[key] as unknown as number))
-        .slice(0, n);
-}
-
-// Ranking denso: empates compartilham a mesma posição e o próximo é sequencial.
-// Inclui todos os empatados mesmo que ultrapassem n itens.
 function topNRanked(
     items: { name: string; value: number | string }[],
     n = 5,
 ): { name: string; value: number | string; rank: number }[] {
     const sorted = [...items].filter(it => Number(it.value) > 0)
         .sort((a, b) => Number(b.value) - Number(a.value));
-
     const result: { name: string; value: number | string; rank: number }[] = [];
     let rank = 0;
     for (let i = 0; i < sorted.length; i++) {
@@ -74,36 +64,61 @@ function topNRanked(
 
 function formatDate(d: Date): string {
     return d.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
 }
 
+/** Duas iniciais do nome */
+function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+}
+
+/** Gradiente do avatar baseado no win rate */
+function avatarGradient(wr: number): string {
+    if (wr >= 0.60) return 'from-emerald-500 to-emerald-700';
+    if (wr >= 0.45) return 'from-amber-500 to-amber-700';
+    return 'from-rose-500 to-rose-700';
+}
+
+/** Cor do texto do win rate */
+function wrTextColor(wr: number): string {
+    if (wr >= 0.60) return 'text-emerald-400';
+    if (wr >= 0.45) return 'text-amber-400';
+    return 'text-rose-400';
+}
+
+/** Cor do glow de fundo do slide do jogador */
+function wrGlowRgba(wr: number): string {
+    if (wr >= 0.60) return 'rgba(52,211,153,0.13)';
+    if (wr >= 0.45) return 'rgba(251,191,36,0.13)';
+    return 'rgba(248,113,113,0.11)';
+}
+
+/** Gradiente da barra de win rate */
+function wrBarGradient(wr: number): string {
+    if (wr >= 0.60) return 'from-emerald-500 to-emerald-400';
+    if (wr >= 0.45) return 'from-amber-500 to-amber-400';
+    return 'from-rose-600 to-rose-400';
+}
+
 // ── CoverSlide ─────────────────────────────────────────────────────────────────
-// NOTE: Place the Bratnava logo image at: public/bratnava-logo.png
 function CoverSlide({ isFullscreen }: { isFullscreen: boolean }) {
-    const today = formatDate(new Date(2026, 3, 17)); // 17/04/2026 – Sexta-feira
+    const today = formatDate(new Date());
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden select-none">
-
-            {/* ── Radial amber glow in the centre ── */}
+            {/* Radial amber glow */}
             <div className="absolute inset-0 pointer-events-none"
-                style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(217,119,6,0.22) 0%, transparent 70%)' }}
-            />
+                style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(217,119,6,0.22) 0%, transparent 70%)' }} />
 
-            {/* ── Subtle dot grid ── */}
+            {/* Dot grid */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-                style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }}
-            />
+                style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
-            {/* ── Foreground logo (crisp, smaller) ── */}
-            <div className={cls(
-                'relative z-10',
-                isFullscreen ? 'w-56 h-56 mb-8' : 'w-36 h-36 mb-5',
-            )}>
+            {/* Logo */}
+            <div className={cls('relative z-10', isFullscreen ? 'w-56 h-56 mb-8' : 'w-36 h-36 mb-5')}>
                 <img
                     src={`${import.meta.env.BASE_URL}bratnava-logo.png`}
                     alt="Bratnava FC"
@@ -113,14 +128,14 @@ function CoverSlide({ isFullscreen }: { isFullscreen: boolean }) {
                 />
             </div>
 
-            {/* ── Badge "2ª edição" ── */}
+            {/* Badge edição */}
             <div className="relative z-10 mb-4 px-4 py-1 rounded-full border border-amber-400/40 bg-amber-400/10">
                 <span className={cls('font-bold tracking-[0.2em] uppercase text-amber-300', isFullscreen ? 'text-xl' : 'text-xs')}>
                     2ª Edição
                 </span>
             </div>
 
-            {/* ── Main title ── */}
+            {/* Título */}
             <h1
                 className="relative z-10 font-black text-center uppercase leading-[0.9] tracking-tight text-white"
                 style={{
@@ -137,18 +152,15 @@ function CoverSlide({ isFullscreen }: { isFullscreen: boolean }) {
                 </span>
             </h1>
 
-            {/* ── Divider ── */}
+            {/* Divider */}
             <div className="relative z-10 my-5 flex items-center gap-3 w-64">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent to-amber-400/50" />
                 <span className={cls('text-amber-400/70', isFullscreen ? 'text-2xl' : 'text-lg')}>🍔</span>
                 <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-400/50" />
             </div>
 
-            {/* ── Date ── */}
-            <p className={cls(
-                'relative z-10 text-white/70 font-semibold capitalize tracking-widest',
-                isFullscreen ? 'text-2xl' : 'text-sm',
-            )}>
+            {/* Data */}
+            <p className={cls('relative z-10 text-white/70 font-semibold capitalize tracking-widest', isFullscreen ? 'text-2xl' : 'text-sm')}>
                 {today}
             </p>
         </div>
@@ -162,23 +174,32 @@ function StatsTopList({
     items,
     valueLabel,
     accentClass,
+    barClass,
+    isFullscreen,
 }: {
     icon: any;
     label: string;
     items: { name: string; value: string | number; rank: number }[];
     valueLabel: string;
     accentClass: string;
+    barClass: string;
+    isFullscreen: boolean;
 }) {
+    const maxVal = items.length > 0 ? Math.max(...items.map(i => Number(i.value) || 0)) : 1;
+    const fs = isFullscreen;
+
     return (
-        <div className="flex flex-col gap-3">
-            <div className={cls('flex items-center gap-2 text-base font-bold uppercase tracking-widest', accentClass)}>
-                <Icon size={17} />
+        <div className={cls('flex flex-col', fs ? 'gap-4' : 'gap-2.5')}>
+            {/* Cabeçalho */}
+            <div className={cls('flex items-center gap-2 font-bold uppercase tracking-widest', accentClass, fs ? 'text-base' : 'text-[11px]')}>
+                <Icon size={fs ? 18 : 13} />
                 <span>{label}</span>
             </div>
+
             {items.length === 0 ? (
-                <p className="text-lg text-white/30 italic">Sem dados</p>
+                <p className={cls('text-white/25 italic', fs ? 'text-lg' : 'text-sm')}>Sem dados</p>
             ) : (
-                <ol className="space-y-2.5">
+                <ol className={cls(fs ? 'space-y-4' : 'space-y-2')}>
                     {Object.values(
                         items.reduce<Record<number, typeof items>>((acc, item) => {
                             (acc[item.rank] ??= []).push(item);
@@ -187,18 +208,28 @@ function StatsTopList({
                     ).map(group => {
                         const { rank, value } = group[0];
                         const names = group.map(g => g.name).join(' | ');
+                        const barW = maxVal > 0 ? (Number(value) / maxVal) * 100 : 0;
+                        const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+
                         return (
-                            <li key={rank} className="flex items-center gap-2">
-                                <span className={cls(
-                                    'text-base font-black w-7 shrink-0 text-center rounded',
-                                    rank === 1 ? 'text-amber-400' : rank === 2 ? 'text-slate-300' : rank === 3 ? 'text-amber-700' : 'text-white/25',
-                                )}>
-                                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`}
-                                </span>
-                                <span className="text-white font-semibold text-lg flex-1 truncate">{names}</span>
-                                <span className={cls('text-base font-bold shrink-0', accentClass.replace('-400', '-300').replace('-500', '-300'))}>
-                                    {value} <span className="text-white/30 font-normal">{valueLabel}</span>
-                                </span>
+                            <li key={rank}>
+                                <div className="flex items-center gap-2">
+                                    <span className={cls('font-black shrink-0 text-center leading-none', rank > 3 ? 'text-white/25' : '', fs ? 'text-xl w-8' : 'text-sm w-6')}>
+                                        {rankEmoji ?? `${rank}.`}
+                                    </span>
+                                    <span className={cls('text-white font-semibold flex-1 truncate leading-tight', fs ? 'text-xl' : 'text-sm')}>{names}</span>
+                                    <span className={cls('font-bold shrink-0', accentClass, fs ? 'text-xl' : 'text-sm')}>
+                                        {value}
+                                        {valueLabel && <span className={cls('text-white/30 font-normal ml-0.5', fs ? 'text-sm' : 'text-[10px]')}>{valueLabel}</span>}
+                                    </span>
+                                </div>
+                                {/* Barra de comparação */}
+                                <div className={cls('rounded-full bg-white/[0.06] overflow-hidden mt-1', fs ? 'ml-10 h-2' : 'ml-[26px] h-1')}>
+                                    <div
+                                        className={cls('h-full rounded-full', barClass)}
+                                        style={{ width: `${barW}%`, transition: 'width 0.5s ease-out' }}
+                                    />
+                                </div>
                             </li>
                         );
                     })}
@@ -217,38 +248,38 @@ function StatsSlide({ players, isFullscreen }: { players: PlayerSpotlightItem[];
     const top5Assists   = topNRanked(mensalistas.map(p => ({ name: p.name, value: p.assists })));
     const top5Vitorias  = topNRanked(mensalistas.map(p => ({ name: p.name, value: p.wins })));
     const top5Mvps      = topNRanked(mensalistas.map(p => ({ name: p.name, value: p.mvps })));
-
-    // Win Rate: apenas mensalistas com >= 5 jogos
-    const top5WinRate = topNRanked(
-        mensalistas
-            .filter(p => p.gamesPlayed >= 5)
-            .map(p => ({ name: p.name, value: Math.round(p.winRate * 100) }))
+    const top5WinRate   = topNRanked(
+        mensalistas.filter(p => p.gamesPlayed >= 5).map(p => ({ name: p.name, value: Math.round(p.winRate * 100) }))
     ).map(p => ({ ...p, value: `${p.value}%` }));
 
     const stats = [
-        { icon: Footprints,  label: 'Top 5 Presenças',          items: top5Presencas, valueLabel: 'jogos',    accentClass: 'text-sky-400' },
-        { icon: Goal,        label: 'Top 5 Gols',                items: top5Gols,      valueLabel: 'gols',    accentClass: 'text-emerald-400' },
-        { icon: Handshake,   label: 'Top 5 Assistências',        items: top5Assists,   valueLabel: 'assist.', accentClass: 'text-purple-400' },
-        { icon: BarChart3,   label: 'Top 5 Win Rate (mín. 5j)',  items: top5WinRate,   valueLabel: '',        accentClass: 'text-amber-400' },
-        { icon: Trophy,      label: 'Top 5 Vitórias',            items: top5Vitorias,  valueLabel: 'vitórias',accentClass: 'text-yellow-400' },
-        { icon: Medal,       label: 'Top 5 MVPs',                items: top5Mvps,      valueLabel: 'MVPs',    accentClass: 'text-rose-400' },
+        { icon: Footprints, label: 'Presenças',          items: top5Presencas, valueLabel: 'j',  accentClass: 'text-sky-400',     barClass: 'bg-sky-500/60' },
+        { icon: Goal,       label: 'Gols',               items: top5Gols,      valueLabel: '',   accentClass: 'text-emerald-400', barClass: 'bg-emerald-500/60' },
+        { icon: Handshake,  label: 'Assistências',       items: top5Assists,   valueLabel: '',   accentClass: 'text-purple-400',  barClass: 'bg-purple-500/60' },
+        { icon: BarChart3,  label: 'Win Rate (≥5j)',     items: top5WinRate,   valueLabel: '',   accentClass: 'text-amber-400',   barClass: 'bg-amber-500/60' },
+        { icon: Trophy,     label: 'Vitórias',           items: top5Vitorias,  valueLabel: '',   accentClass: 'text-yellow-400',  barClass: 'bg-yellow-500/60' },
+        { icon: Medal,      label: 'MVPs',               items: top5Mvps,      valueLabel: '',   accentClass: 'text-rose-400',    barClass: 'bg-rose-500/60' },
     ];
 
     return (
-        <div className={cls(
-            'w-full h-full flex flex-col',
-            isFullscreen ? 'p-10 md:p-14' : 'p-6 md:p-8',
-        )}>
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-                <Trophy size={isFullscreen ? 36 : 28} className="text-amber-400 shrink-0" />
-                <h2 className={cls('font-black text-white leading-none', isFullscreen ? 'text-5xl' : 'text-3xl')}>
-                    Estatísticas da Patota
-                </h2>
+        <div className={cls('w-full h-full flex flex-col', isFullscreen ? 'p-10 md:p-14' : 'p-5 md:p-7')}>
+            {/* Cabeçalho */}
+            <div className={cls('flex items-center gap-3', isFullscreen ? 'mb-8' : 'mb-5')}>
+                <div className={cls('rounded-xl bg-amber-400/15 flex items-center justify-center shrink-0', isFullscreen ? 'h-14 w-14' : 'h-9 w-9')}>
+                    <Trophy size={isFullscreen ? 28 : 18} className="text-amber-400" />
+                </div>
+                <div>
+                    <h2 className={cls('font-black text-white leading-none', isFullscreen ? 'text-5xl' : 'text-2xl')}>
+                        Estatísticas da Patota
+                    </h2>
+                    <p className={cls('text-white/35 font-medium mt-0.5 tracking-wide', isFullscreen ? 'text-base' : 'text-[11px]')}>
+                        Top 5 · apenas mensalistas
+                    </p>
+                </div>
             </div>
 
-            {/* 3 × 2 grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-7 flex-1">
+            {/* Grid 3×2 */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 flex-1">
                 {stats.map(s => (
                     <StatsTopList
                         key={s.label}
@@ -257,6 +288,8 @@ function StatsSlide({ players, isFullscreen }: { players: PlayerSpotlightItem[];
                         items={s.items}
                         valueLabel={s.valueLabel}
                         accentClass={s.accentClass}
+                        barClass={s.barClass}
+                        isFullscreen={isFullscreen}
                     />
                 ))}
             </div>
@@ -264,241 +297,262 @@ function StatsSlide({ players, isFullscreen }: { players: PlayerSpotlightItem[];
     );
 }
 
-// ── RelationList: renders a section of Top-3 relations ────────────────────────
+// ── RelationList ───────────────────────────────────────────────────────────────
 function RelationList({
     icon: Icon,
     label,
     items,
     renderExtra,
+    getBarValue,
+    maxBarValue,
     emptyMsg,
     accentClass,
+    barClass,
+    isFullscreen,
 }: {
     icon: any;
     label: string;
     items: SpotlightRelation[];
     renderExtra: (r: SpotlightRelation) => React.ReactNode;
+    getBarValue: (r: SpotlightRelation) => number;
+    maxBarValue?: number;
     emptyMsg: string;
     accentClass: string;
+    barClass: string;
+    isFullscreen: boolean;
 }) {
+    const maxVal = maxBarValue ?? 1;
+    const fs = isFullscreen;
+
     return (
-        <div className="flex flex-col gap-3">
-            <div className={cls('flex items-center gap-2 text-base font-bold uppercase tracking-widest', accentClass)}>
-                <Icon size={17} />
+        <div className={cls('flex flex-col', fs ? 'gap-4' : 'gap-2')}>
+            <div className={cls('flex items-center gap-1.5 font-bold uppercase tracking-widest', accentClass, fs ? 'text-base' : 'text-[11px]')}>
+                <Icon size={fs ? 18 : 13} />
                 <span>{label}</span>
             </div>
             {items.length === 0 ? (
-                <p className="text-lg text-white/30 italic">{emptyMsg}</p>
+                <p className={cls('text-white/25 italic', fs ? 'text-xl' : 'text-sm')}>{emptyMsg}</p>
             ) : (
-                <ol className="space-y-2.5">
-                    {items.map((r, i) => (
-                        <li key={r.playerId} className="flex items-center gap-2">
-                            <span className="text-white/30 text-base w-6 shrink-0">{i + 1}.</span>
-                            <span className="text-white font-semibold text-lg flex-1 truncate">{r.name}</span>
-                            {renderExtra(r)}
-                        </li>
-                    ))}
+                <ol className={cls(fs ? 'space-y-4' : 'space-y-1.5')}>
+                    {items.map((r, i) => {
+                        const barW = Math.min((getBarValue(r) / maxVal) * 100, 100);
+                        return (
+                            <li key={r.playerId}>
+                                <div className={cls('flex items-center', fs ? 'gap-2.5' : 'gap-1.5')}>
+                                    <span className={cls('text-white/30 shrink-0 text-right font-medium', fs ? 'text-lg w-7' : 'text-[11px] w-4')}>{i + 1}.</span>
+                                    <span className={cls('text-white font-semibold flex-1 truncate leading-tight', fs ? 'text-xl' : 'text-sm')}>{r.name}</span>
+                                    {renderExtra(r)}
+                                </div>
+                                <div className={cls('rounded-full bg-white/[0.06] overflow-hidden', fs ? 'ml-11 mt-1 h-1.5' : 'ml-[22px] mt-0.5 h-0.5')}>
+                                    <div
+                                        className={cls('h-full rounded-full', barClass)}
+                                        style={{ width: `${barW}%` }}
+                                    />
+                                </div>
+                            </li>
+                        );
+                    })}
                 </ol>
             )}
         </div>
     );
 }
 
-// ── PlayerSlide: one full card for a player ────────────────────────────────────
+// ── PlayerSlide ────────────────────────────────────────────────────────────────
 function PlayerSlide({ player, isFullscreen }: { player: PlayerSpotlightItem; isFullscreen: boolean }) {
-    const emoji = player.isGoalkeeper ? '🧤' : '⚽';
+    const wr = player.winRate;
+    const fs = isFullscreen;
 
     return (
-        <div className={cls(
-            'w-full h-full flex flex-col',
-            isFullscreen ? 'p-10 md:p-16' : 'p-6 md:p-10',
-        )}>
-            {/* ── Header ── */}
-            <div className="flex items-start justify-between gap-4 mb-8">
-                <div className="flex items-center gap-4">
-                    {/* Avatar */}
+        <div className={cls('w-full h-full flex flex-col relative', fs ? 'p-10 md:p-14' : 'p-5 md:p-7')}>
+            {/* Glow de fundo baseado no win rate */}
+            <div
+                className="absolute top-0 left-0 right-0 h-72 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse 80% 110% at 25% -10%, ${wrGlowRgba(wr)} 0%, transparent 70%)` }}
+            />
+
+            {/* ── Cabeçalho ── */}
+            <div className={cls('relative flex flex-col sm:flex-row sm:items-start', fs ? 'gap-6 mb-8' : 'gap-4 mb-5')}>
+                {/* Avatar + nome */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className={cls(
-                        'rounded-2xl bg-white/10 flex items-center justify-center shrink-0 text-3xl font-black text-white select-none',
-                        isFullscreen ? 'w-20 h-20 text-4xl' : 'w-14 h-14 text-2xl',
+                        'rounded-2xl bg-gradient-to-br flex items-center justify-center shrink-0 font-black text-white select-none shadow-lg',
+                        avatarGradient(wr),
+                        fs ? 'w-24 h-24 text-4xl' : 'w-14 h-14 text-xl',
                     )}>
-                        {emoji}
+                        {player.isGoalkeeper ? '🧤' : getInitials(player.name)}
                     </div>
-                    <div>
-                        <h2 className={cls('font-black text-white leading-none', isFullscreen ? 'text-7xl' : 'text-5xl')}>
+                    <div className="min-w-0">
+                        <h2 className={cls(
+                            'font-black text-white leading-none truncate',
+                            fs ? 'text-6xl' : 'text-4xl md:text-5xl',
+                        )}>
                             {player.name}
                         </h2>
-                        <p className="text-white/50 text-lg mt-1">{player.isGoalkeeper ? 'Goleiro' : 'Linha'}</p>
+                        <p className={cls('text-white/40 font-medium mt-1 flex items-center gap-2', fs ? 'text-xl' : 'text-sm')}>
+                            <span>{player.isGoalkeeper ? '🧤 Goleiro' : '⚽ Linha'}</span>
+                            {player.isGuest && (
+                                <span className={cls('rounded-full bg-amber-400/15 text-amber-400 border border-amber-400/25 font-semibold', fs ? 'text-sm px-3 py-1' : 'text-[10px] px-1.5 py-0.5')}>
+                                    Convidado
+                                </span>
+                            )}
+                        </p>
                     </div>
                 </div>
-                {/* Quick stats — dois grupos */}
-                <div className="flex flex-wrap gap-3 justify-end items-start">
 
-                    {/* Grupo 1: Partidas + V/E/D */}
-                    <div className="bg-white/10 rounded-2xl px-4 py-3 min-w-[200px]">
-                        <div className="text-white/40 text-[11px] font-semibold uppercase tracking-widest mb-2.5">
+                {/* Cards de estatísticas rápidas */}
+                <div className={cls('flex flex-wrap', fs ? 'gap-3' : 'gap-2')}>
+                    {/* Partidas */}
+                    <div className={cls('bg-white/[0.07] border border-white/10 rounded-2xl', fs ? 'px-7 py-5' : 'px-4 py-3')}>
+                        <div className={cls('text-white/30 font-bold uppercase tracking-widest', fs ? 'text-sm mb-4' : 'text-[10px] mb-2')}>
                             Partidas
                         </div>
-                        <div className="flex items-end gap-4">
+                        <div className={cls('flex items-end', fs ? 'gap-5' : 'gap-3')}>
                             <div className="text-center">
-                                <div className="text-white font-black text-3xl leading-none">{player.gamesPlayed}</div>
-                                <div className="text-white/40 text-[11px] mt-1">total</div>
+                                <div className={cls('text-white font-black leading-none', fs ? 'text-5xl' : 'text-2xl')}>{player.gamesPlayed}</div>
+                                <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>total</div>
                             </div>
-                            <div className="w-px self-stretch bg-white/10 mx-1" />
-                            <div className="flex gap-3">
+                            <div className="w-px self-stretch bg-white/10" />
+                            <div className={cls('flex', fs ? 'gap-4' : 'gap-2.5')}>
                                 <div className="text-center">
-                                    <div className="text-emerald-400 font-bold text-xl leading-none">{player.wins}</div>
-                                    <div className="text-white/40 text-[11px] mt-1">V</div>
+                                    <div className={cls('text-emerald-400 font-bold leading-none', fs ? 'text-3xl' : 'text-lg')}>{player.wins}</div>
+                                    <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>V</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-amber-300 font-bold text-xl leading-none">{player.ties}</div>
-                                    <div className="text-white/40 text-[11px] mt-1">E</div>
+                                    <div className={cls('text-amber-300 font-bold leading-none', fs ? 'text-3xl' : 'text-lg')}>{player.ties}</div>
+                                    <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>E</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-red-400 font-bold text-xl leading-none">{player.losses}</div>
-                                    <div className="text-white/40 text-[11px] mt-1">D</div>
+                                    <div className={cls('text-rose-400 font-bold leading-none', fs ? 'text-3xl' : 'text-lg')}>{player.losses}</div>
+                                    <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>D</div>
                                 </div>
                             </div>
-                            <div className="w-px self-stretch bg-white/10 mx-1" />
-                            <div className="text-center">
-                                <div className="text-white font-bold text-xl leading-none">{pct(player.winRate)}</div>
-                                <div className="text-white/40 text-[11px] mt-1">win%</div>
+                            <div className="w-px self-stretch bg-white/10" />
+                            {/* Win rate com barra */}
+                            <div className={cls('text-center', fs ? 'min-w-[72px]' : 'min-w-[44px]')}>
+                                <div className={cls('font-black leading-none', wrTextColor(wr), fs ? 'text-5xl' : 'text-2xl')}>{pct(wr)}</div>
+                                <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>win%</div>
+                                <div className={cls('mt-1.5 rounded-full bg-white/10 overflow-hidden', fs ? 'h-2' : 'h-1')}>
+                                    <div
+                                        className={cls('h-full rounded-full bg-gradient-to-r', wrBarGradient(wr))}
+                                        style={{ width: `${wr * 100}%` }}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Grupo 2: Gols / Assists / MVP */}
-                    <div className="bg-white/10 rounded-2xl px-4 py-3">
-                        <div className="text-white/40 text-[11px] font-semibold uppercase tracking-widest mb-2.5">
+                    {/* Desempenho */}
+                    <div className={cls('bg-white/[0.07] border border-white/10 rounded-2xl', fs ? 'px-7 py-5' : 'px-4 py-3')}>
+                        <div className={cls('text-white/30 font-bold uppercase tracking-widest', fs ? 'text-sm mb-4' : 'text-[10px] mb-2')}>
                             Desempenho
                         </div>
-                        <div className="flex items-end gap-4">
+                        <div className={cls('flex items-end', fs ? 'gap-5' : 'gap-3')}>
                             <div className="text-center">
-                                <div className="text-white font-black text-3xl leading-none">{player.goals}</div>
-                                <div className="text-white/40 text-[11px] mt-1">gols</div>
+                                <div className={cls('text-white font-black leading-none', fs ? 'text-5xl' : 'text-2xl')}>{player.goals}</div>
+                                <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>gols</div>
                             </div>
-                            <div className="w-px self-stretch bg-white/10 mx-1" />
+                            <div className="w-px self-stretch bg-white/10" />
                             <div className="text-center">
-                                <div className="text-white font-black text-3xl leading-none">{player.assists}</div>
-                                <div className="text-white/40 text-[11px] mt-1">assist.</div>
+                                <div className={cls('text-white font-black leading-none', fs ? 'text-5xl' : 'text-2xl')}>{player.assists}</div>
+                                <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>assist.</div>
                             </div>
                             {player.mvps > 0 && (
                                 <>
-                                    <div className="w-px self-stretch bg-white/10 mx-1" />
+                                    <div className="w-px self-stretch bg-white/10" />
                                     <div className="text-center">
-                                        <div className="text-yellow-300 font-black text-3xl leading-none">{player.mvps}</div>
-                                        <div className="text-white/40 text-[11px] mt-1">MVP</div>
+                                        <div className={cls('text-yellow-300 font-black leading-none', fs ? 'text-5xl' : 'text-2xl')}>{player.mvps}</div>
+                                        <div className={cls('text-white/30 mt-0.5', fs ? 'text-sm' : 'text-[10px]')}>MVP</div>
                                     </div>
                                 </>
                             )}
                         </div>
                     </div>
-
                 </div>
             </div>
 
-            {/* ── 6 relation blocks in a 3×2 grid ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 flex-1">
+            {/* ── Grid de relações (3×2) ── */}
+            <div className={cls('grid grid-cols-2 lg:grid-cols-3 flex-1', fs ? 'gap-5 lg:gap-6' : 'gap-3 lg:gap-4')}>
                 <RelationList
-                    icon={Handshake}
-                    label="Melhores parceiros"
-                    items={player.bestPartners}
-                    accentClass="text-emerald-400"
-                    emptyMsg="Sem dados suficientes"
-                    renderExtra={r => (
-                        <span className="text-emerald-300 text-base font-bold shrink-0">
-                            {pct(r.rate)}                        </span>
-                    )}
+                    icon={Handshake}  label="Melhores parceiros"
+                    items={player.bestPartners}   accentClass="text-emerald-400" barClass="bg-emerald-500/60"
+                    emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
+                    isFullscreen={fs}
+                    renderExtra={r => <span className={cls('text-emerald-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
                 />
                 <RelationList
-                    icon={TrendingDown}
-                    label="Piores parceiros"
-                    items={player.worstPartners}
-                    accentClass="text-orange-400"
-                    emptyMsg="Sem dados suficientes"
-                    renderExtra={r => (
-                        <span className="text-orange-300 text-base font-bold shrink-0">
-                            {pct(r.rate)}                        </span>
-                    )}
+                    icon={TrendingDown} label="Piores parceiros"
+                    items={player.worstPartners}  accentClass="text-orange-400" barClass="bg-orange-500/60"
+                    emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
+                    isFullscreen={fs}
+                    renderExtra={r => <span className={cls('text-orange-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
                 />
                 <RelationList
-                    icon={Swords}
-                    label="Mais me vencem"
-                    items={player.mostBeatenBy}
-                    accentClass="text-red-400"
-                    emptyMsg="Sem dados suficientes"
-                    renderExtra={r => (
-                        <span className="text-red-300 text-base font-bold shrink-0">
-                            {pct(r.rate)}                        </span>
-                    )}
+                    icon={Swords} label="Mais me vencem"
+                    items={player.mostBeatenBy}   accentClass="text-red-400" barClass="bg-red-500/60"
+                    emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
+                    isFullscreen={fs}
+                    renderExtra={r => <span className={cls('text-red-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
                 />
                 <RelationList
-                    icon={Shield}
-                    label="Mais venci"
-                    items={player.leastBeatenBy}
-                    accentClass="text-sky-400"
-                    emptyMsg="Sem dados suficientes"
-                    renderExtra={r => (
-                        <span className="text-sky-300 text-base font-bold shrink-0">
-                            {pct(r.rate)}                        </span>
-                    )}
+                    icon={Shield} label="Mais venci"
+                    items={player.leastBeatenBy}  accentClass="text-sky-400" barClass="bg-sky-500/60"
+                    emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
+                    isFullscreen={fs}
+                    renderExtra={r => <span className={cls('text-sky-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
                 />
                 <RelationList
-                    icon={Star}
-                    label="Mais me assistiram"
-                    items={player.mostAssistedBy}
-                    accentClass="text-yellow-400"
-                    emptyMsg="Sem gols assistidos"
-                    renderExtra={r => (
-                        <span className="text-yellow-300 text-base font-bold shrink-0">
-                            {r.count}× <span className="text-white/30 font-normal">assist.</span>
-                        </span>
-                    )}
+                    icon={Star} label="Mais me assistiram"
+                    items={player.mostAssistedBy} accentClass="text-yellow-400" barClass="bg-yellow-500/60"
+                    emptyMsg="Sem gols assistidos" getBarValue={r => r.count}
+                    maxBarValue={Math.max(...player.mostAssistedBy.map(r => r.count), 1)}
+                    isFullscreen={fs}
+                    renderExtra={r => <span className={cls('text-yellow-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{r.count}×</span>}
                 />
                 <RelationList
-                    icon={Trophy}
-                    label="Mais assisti"
-                    items={player.mostAssistedTo}
-                    accentClass="text-purple-400"
-                    emptyMsg="Sem assistências dadas"
-                    renderExtra={r => (
-                        <span className="text-purple-300 text-base font-bold shrink-0">
-                            {r.count}× <span className="text-white/30 font-normal">assist.</span>
-                        </span>
-                    )}
+                    icon={Trophy} label="Mais assisti"
+                    items={player.mostAssistedTo} accentClass="text-purple-400" barClass="bg-purple-500/60"
+                    emptyMsg="Sem assistências dadas" getBarValue={r => r.count}
+                    maxBarValue={Math.max(...player.mostAssistedTo.map(r => r.count), 1)}
+                    isFullscreen={fs}
+                    renderExtra={r => <span className={cls('text-purple-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{r.count}×</span>}
                 />
             </div>
         </div>
     );
 }
 
-// ── Slide type helpers ─────────────────────────────────────────────────────────
-const SLIDE_COVER = 0;
-const SLIDE_STATS = 1;
-const PLAYER_OFFSET = 2; // slides 2..N+1 are player slides
+// ── Constants ──────────────────────────────────────────────────────────────────
+const SLIDE_COVER  = 0;
+const SLIDE_STATS  = 1;
+const PLAYER_OFFSET = 2;
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function PlayerSpotlightPage() {
-    const active    = useAccountStore(s => s.getActive());
-    const groupId   = active?.activeGroupId ?? '';
+    const active  = useAccountStore(s => s.getActive());
+    const groupId = active?.activeGroupId ?? '';
 
-    const [players, setPlayers]       = useState<PlayerSpotlightItem[]>([]);
-    const [loading, setLoading]       = useState(true);
-    const [error, setError]           = useState<string | null>(null);
-    const [current, setCurrent]       = useState(0);
-    const [playing, setPlaying]       = useState(false);
+    const [players, setPlayers]           = useState<PlayerSpotlightItem[]>([]);
+    const [loading, setLoading]           = useState(true);
+    const [error, setError]               = useState<string | null>(null);
+    const [current, setCurrent]           = useState(0);
+    const [playing, setPlaying]           = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [timerKey, setTimerKey]         = useState(0);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+    const touchStartX  = useRef(0);
 
     const totalSlides = players.length + PLAYER_OFFSET;
 
-    // ── Load data ──────────────────────────────────────────────────────────────
+    // ── Carregamento ──────────────────────────────────────────────────────────
     useEffect(() => {
         if (!groupId) return;
         setLoading(true);
         TeamGenApi.spotlight(groupId)
             .then(res => {
-                const data = (res.data.data as any)?.players ?? [];
+                const data = ((res.data.data as any)?.players ?? []).filter((p: any) => !p.isGuest);
                 setPlayers(data);
                 setCurrent(0);
             })
@@ -506,21 +560,15 @@ export default function PlayerSpotlightPage() {
             .finally(() => setLoading(false));
     }, [groupId]);
 
-    // ── Auto-advance ───────────────────────────────────────────────────────────
-    const [timerKey, setTimerKey] = useState(0);
+    // ── Navegação ─────────────────────────────────────────────────────────────
+    const goNext = useCallback(() => setCurrent(c => (c + 1) % (totalSlides || 1)), [totalSlides]);
+    const goPrev = useCallback(() => setCurrent(c => (c - 1 + (totalSlides || 1)) % (totalSlides || 1)), [totalSlides]);
 
-    const goNext = useCallback(() => {
-        setCurrent(c => (c + 1) % (totalSlides || 1));
-    }, [totalSlides]);
-
-    const goPrev = useCallback(() => {
-        setCurrent(c => (c - 1 + (totalSlides || 1)) % (totalSlides || 1));
-    }, [totalSlides]);
-
-    // Wrappers para navegação manual: avança/volta E reseta o timer
     const handleNext = useCallback(() => { goNext(); setTimerKey(k => k + 1); }, [goNext]);
     const handlePrev = useCallback(() => { goPrev(); setTimerKey(k => k + 1); }, [goPrev]);
+    const goTo = useCallback((idx: number) => { setCurrent(idx); setTimerKey(k => k + 1); }, []);
 
+    // ── Auto-avanço ───────────────────────────────────────────────────────────
     useEffect(() => {
         if (playing && totalSlides > 1) {
             intervalRef.current = setInterval(goNext, 8000);
@@ -530,7 +578,7 @@ export default function PlayerSpotlightPage() {
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     }, [playing, totalSlides, goNext, timerKey]);
 
-    // ── Fullscreen API ─────────────────────────────────────────────────────────
+    // ── Fullscreen ────────────────────────────────────────────────────────────
     const enterFullscreen = useCallback(() => {
         const el = containerRef.current;
         if (!el) return;
@@ -547,22 +595,19 @@ export default function PlayerSpotlightPage() {
     }, []);
 
     useEffect(() => {
-        function handleFSChange() {
+        const onChange = () => {
             const el = document.fullscreenElement ?? (document as any).webkitFullscreenElement;
-            if (!el) {
-                setIsFullscreen(false);
-                setPlaying(false);
-            }
-        }
-        document.addEventListener('fullscreenchange', handleFSChange);
-        document.addEventListener('webkitfullscreenchange', handleFSChange);
+            if (!el) { setIsFullscreen(false); setPlaying(false); }
+        };
+        document.addEventListener('fullscreenchange', onChange);
+        document.addEventListener('webkitfullscreenchange', onChange);
         return () => {
-            document.removeEventListener('fullscreenchange', handleFSChange);
-            document.removeEventListener('webkitfullscreenchange', handleFSChange);
+            document.removeEventListener('fullscreenchange', onChange);
+            document.removeEventListener('webkitfullscreenchange', onChange);
         };
     }, []);
 
-    // ── Keyboard navigation ────────────────────────────────────────────────────
+    // ── Teclado ───────────────────────────────────────────────────────────────
     useEffect(() => {
         function handleKey(e: KeyboardEvent) {
             if (e.key === 'ArrowRight') handleNext();
@@ -574,48 +619,43 @@ export default function PlayerSpotlightPage() {
         return () => window.removeEventListener('keydown', handleKey);
     }, [handleNext, handlePrev, isFullscreen, exitFullscreen]);
 
-    // ── Render ─────────────────────────────────────────────────────────────────
+    // ── Estados de erro/vazio ─────────────────────────────────────────────────
     if (!groupId) {
         return (
-            <div className="flex items-center justify-center h-64 text-slate-400">
+            <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
                 Selecione uma patota pelo seletor no topo.
             </div>
         );
     }
-
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64 gap-2 text-slate-500">
-                <Loader2 size={18} className="animate-spin" /> Carregando spotlight...
+            <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-500">
+                <Loader2 size={24} className="animate-spin" />
+                <span className="text-sm">Carregando spotlight...</span>
             </div>
         );
     }
-
     if (error) {
-        return <div className="text-rose-500 p-6">{error}</div>;
+        return <div className="text-rose-500 p-6 text-sm">{error}</div>;
     }
-
     if (players.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-400">
-                <Users size={36} className="opacity-40" />
-                <p>Nenhum dado disponível. Finalize algumas partidas primeiro.</p>
+                <Users size={36} className="opacity-30" />
+                <p className="text-sm">Nenhum dado disponível. Finalize algumas partidas primeiro.</p>
             </div>
         );
     }
 
-    // Background gradient shifts per slide
+    // ── Gradientes por slide ──────────────────────────────────────────────────
     const gradients = [
-        // slide 0 – cover: amber/orange festive
-        'from-slate-900 via-amber-950 to-orange-950',
-        // slide 1 – stats: teal/blue
-        'from-slate-900 via-teal-950 to-slate-900',
-        // slide 2+ – players: cycling
+        'from-slate-900 via-amber-950 to-orange-950',   // capa
+        'from-slate-900 via-teal-950 to-slate-900',     // stats
         'from-slate-900 via-indigo-950 to-slate-900',
         'from-slate-900 via-emerald-950 to-slate-900',
         'from-slate-900 via-purple-950 to-slate-900',
-        'from-slate-900 via-rose-950  to-slate-900',
-        'from-slate-900 via-sky-950   to-slate-900',
+        'from-slate-900 via-rose-950 to-slate-900',
+        'from-slate-900 via-sky-950 to-slate-900',
         'from-slate-900 via-amber-950 to-slate-900',
     ];
 
@@ -631,101 +671,98 @@ export default function PlayerSpotlightPage() {
         return players[idx - PLAYER_OFFSET]?.name ?? '';
     }
 
-    const gradient = getGradient(current);
-
     return (
         <div
             ref={containerRef}
             className={cls(
-                'relative flex flex-col bg-gradient-to-br transition-all duration-700',
-                gradient,
-                isFullscreen
-                    ? 'fixed inset-0 z-50'
-                    : 'rounded-2xl overflow-hidden min-h-[560px]',
+                'relative flex flex-col bg-gradient-to-br transition-colors duration-700',
+                getGradient(current),
+                isFullscreen ? 'fixed inset-0 z-50' : 'rounded-2xl overflow-hidden min-h-[560px]',
             )}
         >
-            {/* ── Slide area ─────────────────────────────────────────────── */}
-            <div className="flex-1 overflow-hidden relative">
-                {/* Decorative dots */}
-                <div className="absolute inset-0 pointer-events-none opacity-5"
-                    style={{
-                        backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-                        backgroundSize: '32px 32px',
-                    }}
-                />
+            {/* ── Área do slide ── */}
+            <div
+                className="flex-1 overflow-hidden relative"
+                onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+                onTouchEnd={e => {
+                    const dx = e.changedTouches[0].clientX - touchStartX.current;
+                    if (dx > 50) handlePrev();
+                    if (dx < -50) handleNext();
+                }}
+            >
+                {/* Grid decorativo */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
-                {current === SLIDE_COVER && (
-                    <CoverSlide isFullscreen={isFullscreen} />
-                )}
-                {current === SLIDE_STATS && (
-                    <StatsSlide players={players} isFullscreen={isFullscreen} />
-                )}
-                {current >= PLAYER_OFFSET && (
-                    <PlayerSlide
-                        player={players[current - PLAYER_OFFSET]}
-                        isFullscreen={isFullscreen}
+                {/* Slide com fade-in */}
+                <div key={current} className="w-full h-full spotlight-fade">
+                    {current === SLIDE_COVER && <CoverSlide isFullscreen={isFullscreen} />}
+                    {current === SLIDE_STATS && <StatsSlide players={players} isFullscreen={isFullscreen} />}
+                    {current >= PLAYER_OFFSET && (
+                        <PlayerSlide player={players[current - PLAYER_OFFSET]} isFullscreen={isFullscreen} />
+                    )}
+                </div>
+            </div>
+
+            {/* ── Barra de progresso ── */}
+            <div className="shrink-0 h-[3px] bg-white/[0.06] overflow-hidden">
+                {playing && (
+                    <div
+                        key={`${current}-${timerKey}`}
+                        className="h-full bg-white/40 rounded-full"
+                        style={{ animation: 'spotlight-progress 8s linear forwards' }}
                     />
                 )}
             </div>
 
-            {/* ── Controls bar ───────────────────────────────────────────── */}
+            {/* ── Barra de controles ── */}
             <div className={cls(
-                'shrink-0 flex items-center gap-4 justify-between border-t border-white/10 bg-black/30 backdrop-blur-sm',
-                isFullscreen ? 'px-16 py-5' : 'px-6 py-4',
+                'shrink-0 flex items-center gap-3 border-t border-white/10 bg-black/20 backdrop-blur-sm',
+                isFullscreen ? 'px-16 py-5' : 'px-4 py-3',
             )}>
-                {/* Prev */}
+                {/* Anterior */}
                 <button
                     onClick={handlePrev}
                     disabled={totalSlides <= 1}
-                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition disabled:opacity-30"
+                    title="Anterior (←)"
+                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-all disabled:opacity-30 shrink-0"
                 >
                     <ChevronLeft size={18} />
                 </button>
 
-                {/* Dots + label */}
-                <div className="flex flex-col items-center gap-3 flex-1">
-                    {/* Dots */}
+                {/* Centro: dots + rótulo */}
+                <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                        {/* Cover dot */}
+                        {/* Capa */}
                         <button
-                            onClick={() => setCurrent(SLIDE_COVER)}
-                            className={cls(
-                                'rounded-full transition-all duration-300',
-                                current === SLIDE_COVER
-                                    ? 'w-6 h-2 bg-amber-400'
-                                    : 'w-2 h-2 bg-white/30 hover:bg-white/60',
-                            )}
+                            onClick={() => goTo(SLIDE_COVER)}
                             title="Capa"
+                            className={cls('rounded-full transition-all duration-300',
+                                current === SLIDE_COVER ? 'w-5 h-2 bg-amber-400' : 'w-2 h-2 bg-white/25 hover:bg-white/50')}
                         />
-                        {/* Stats dot */}
+                        {/* Stats */}
                         <button
-                            onClick={() => setCurrent(SLIDE_STATS)}
-                            className={cls(
-                                'rounded-full transition-all duration-300',
-                                current === SLIDE_STATS
-                                    ? 'w-6 h-2 bg-teal-400'
-                                    : 'w-2 h-2 bg-white/30 hover:bg-white/60',
-                            )}
+                            onClick={() => goTo(SLIDE_STATS)}
                             title="Estatísticas"
+                            className={cls('rounded-full transition-all duration-300',
+                                current === SLIDE_STATS ? 'w-5 h-2 bg-teal-400' : 'w-2 h-2 bg-white/25 hover:bg-white/50')}
                         />
-                        {/* Player dots */}
+                        {/* Separador visual */}
+                        {players.length > 0 && (
+                            <div className="w-px h-3 bg-white/15 mx-0.5 shrink-0" />
+                        )}
+                        {/* Jogadores */}
                         {players.map((p, i) => (
                             <button
                                 key={p.playerId}
-                                onClick={() => setCurrent(i + PLAYER_OFFSET)}
-                                className={cls(
-                                    'rounded-full transition-all duration-300',
-                                    current === i + PLAYER_OFFSET
-                                        ? 'w-6 h-2 bg-white'
-                                        : 'w-2 h-2 bg-white/30 hover:bg-white/60',
-                                )}
+                                onClick={() => goTo(i + PLAYER_OFFSET)}
                                 title={p.name}
+                                className={cls('rounded-full transition-all duration-300',
+                                    current === i + PLAYER_OFFSET ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-white/25 hover:bg-white/50')}
                             />
                         ))}
                     </div>
-
-                    {/* Slide label */}
-                    <span className="text-white/60 text-xs font-medium tracking-wide">
+                    <span className="text-white/45 text-[11px] font-medium tracking-wide truncate max-w-full">
                         {current + 1} / {totalSlides} · {getSlideLabel(current)}
                     </span>
                 </div>
@@ -733,49 +770,46 @@ export default function PlayerSpotlightPage() {
                 {/* Play / Pause */}
                 <button
                     onClick={() => setPlaying(p => !p)}
+                    title={playing ? 'Pausar (Espaço)' : 'Reproduzir — avança a cada 8s (Espaço)'}
                     className={cls(
-                        'h-11 w-11 rounded-full flex items-center justify-center text-white transition shadow-lg',
-                        playing
-                            ? 'bg-white/20 hover:bg-white/30'
-                            : 'bg-white/10 hover:bg-white/20',
+                        'h-9 w-9 rounded-full flex items-center justify-center text-white transition-all active:scale-95 shrink-0',
+                        playing ? 'bg-white/25 hover:bg-white/35' : 'bg-white/10 hover:bg-white/20',
                     )}
-                    title={playing ? 'Pausar (Espaço)' : 'Play – avança a cada 8s (Espaço)'}
                 >
-                    {playing ? <Pause size={18} /> : <Play size={18} />}
+                    {playing ? <Pause size={16} /> : <Play size={16} />}
                 </button>
 
-                {/* Fullscreen toggle */}
+                {/* Fullscreen */}
                 <button
                     onClick={isFullscreen ? exitFullscreen : enterFullscreen}
-                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
-                    title={isFullscreen ? 'Sair do fullscreen (Esc)' : 'Tela cheia + Play'}
+                    title={isFullscreen ? 'Sair da tela cheia (Esc)' : 'Tela cheia'}
+                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-all shrink-0"
                 >
-                    {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                 </button>
 
-                {/* Next */}
+                {/* Próximo */}
                 <button
                     onClick={handleNext}
                     disabled={totalSlides <= 1}
-                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition disabled:opacity-30"
+                    title="Próximo (→)"
+                    className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-all disabled:opacity-30 shrink-0"
                 >
                     <ChevronRight size={18} />
                 </button>
             </div>
 
-            {/* Progress bar when playing */}
-            {playing && (
-                <div
-                    key={`${current}-progress`}
-                    className="absolute bottom-0 left-0 h-0.5 bg-white/60 rounded-full"
-                    style={{ animation: 'spotlight-progress 8s linear forwards' }}
-                />
-            )}
-
             <style>{`
                 @keyframes spotlight-progress {
                     from { width: 0%; }
                     to   { width: 100%; }
+                }
+                .spotlight-fade {
+                    animation: spotlightFadeIn 0.3s ease-out both;
+                }
+                @keyframes spotlightFadeIn {
+                    from { opacity: 0; transform: translateY(8px); }
+                    to   { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
         </div>

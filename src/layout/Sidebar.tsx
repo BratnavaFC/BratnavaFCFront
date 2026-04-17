@@ -67,8 +67,8 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         { to: "/app/absences", label: "Ausências",  icon: CalendarOff },
         { to: "/app/polls",    label: "Votações",   icon: Vote,        badge: pendingPollsCount || undefined },
         { to: "/app/payments", label: "Pagamentos", icon: DollarSign, badge: pendingPaymentsCount || undefined },
-        // ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight", icon: Presentation }] : []),
-        ...((isGroupAdm || isGod) && activeGrpId ? [{
+        ...(isGroupAdm || isGod ? [{ to: "/app/spotlight", label: "Spotlight", icon: Presentation }] : []),
+        ...(activeGrpId ? [{
             to: `/app/groups/${activeGrpId}/visual-stats`,
             label: "Visual Stats",
             icon: BarChart3,
