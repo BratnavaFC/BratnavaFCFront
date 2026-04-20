@@ -242,11 +242,8 @@ export default function VisualStatsPage() {
     const _icons = useGroupIcons(groupId ?? activeGroupId);
 
     useEffect(() => {
-        if (!activeGroupId) return;
-        if (activeGroupId !== groupId) {
-            navigate(`/app/groups/${activeGroupId}/visual-stats`, { replace: true });
-        }
-    }, [activeGroupId, groupId, navigate]);
+        navigate("/app", { replace: true });
+    }, [navigate]);
 
     const [data, setData] = useState<PlayerVisualStatsReport | null>(null);
     const [loading, setLoading] = useState(true);
