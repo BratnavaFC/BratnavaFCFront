@@ -624,18 +624,17 @@ export default function GroupsPage() {
             ) : myGroups.length === 1 ? (
                 /* 1 grupo — layout expandido */
                 <div className="space-y-4">
-                    <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
-                        <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    <div className="page-header">
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                             style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
                         <div className="relative flex items-center justify-between gap-4 flex-wrap">
-                            <div className="flex items-center gap-4 min-w-0">
-                                <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-xl font-black shrink-0 select-none">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-9 w-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-base font-black shrink-0 select-none">
                                     {(group?.name ?? myGroups[0].groupName).charAt(0)}
                                 </div>
                                 <div className="min-w-0">
                                     <h1 className="text-xl font-black leading-tight truncate">{group?.name ?? myGroups[0].groupName}</h1>
-                                    <p className="text-sm text-white/50 mt-0.5">
+                                    <p className="text-xs text-white/60 mt-0.5">
                                         {groupLoading ? 'Carregando...' : group
                                             ? `${activePlayers.length} mensalista${activePlayers.length !== 1 ? 's' : ''} · ${guestPlayers.length} convidado${guestPlayers.length !== 1 ? 's' : ''}`
                                             : ''}
@@ -654,16 +653,16 @@ export default function GroupsPage() {
             ) : (
                 /* 2+ grupos — accordion */
                 <div className="space-y-4">
-                    <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-5 overflow-hidden shadow-lg">
-                        <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                    <div className="page-header">
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                             style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                        <div className="relative flex items-center gap-4">
-                            <div className="h-11 w-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                                <Users2 size={22} />
+                        <div className="relative flex items-center gap-3">
+                            <div className="page-header-icon">
+                                <Users2 size={18} />
                             </div>
                             <div>
                                 <h1 className="text-xl font-black leading-tight">Minhas Patotas</h1>
-                                <p className="text-sm text-white/50 mt-0.5">{myGroups.length} patotas</p>
+                                <p className="text-xs text-white/60 mt-0.5">{myGroups.length} patotas</p>
                             </div>
                         </div>
                     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentsApi } from "../../api/endpoints";
+import { getResponseMessage } from "../../api/apiResponse";
 
 interface ExtraChargePayment {
     playerId: string; playerName: string; amount: number; discount: number;
@@ -64,7 +65,7 @@ function ExtraPaymentModal({ open, groupId, charge, payment, isAdmin, onClose, o
             });
             if (res.data.message) toast.success(res.data.message);
             onSaved(); onClose();
-        } catch { toast.error('Erro ao salvar pagamento'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao salvar pagamento')); }
         finally { setSaving(false); }
     }
 

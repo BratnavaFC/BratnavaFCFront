@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentsApi } from "../../api/endpoints";
+import { getResponseMessage } from "../../api/apiResponse";
 
 interface CreateExtraChargeModalProps {
     open: boolean;
@@ -43,7 +44,7 @@ function CreateExtraChargeModal({ open, groupId, players, onClose, onSaved }: Cr
             });
             if (res.data.message) toast.success(res.data.message);
             onSaved(); onClose();
-        } catch { toast.error('Erro ao criar cobrança'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao criar cobrança')); }
         finally { setSaving(false); }
     }
 

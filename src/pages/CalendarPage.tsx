@@ -486,18 +486,17 @@ export default function CalendarPage() {
         <div className="flex flex-col h-full overflow-hidden">
             {/* ── Header ── */}
             <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-4 sm:px-6 py-4 sm:py-5 overflow-hidden shrink-0 shadow-lg">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
 
                 {/* Row 1: icon + title + admin actions */}
                 <div className="relative flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                        <CalendarCheck size={20} />
+                    <div className="page-header-icon">
+                        <CalendarCheck size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
                         <h1 className="text-lg font-black leading-tight">Calendário</h1>
-                        <p className="text-xs text-white/50 truncate capitalize">
+                        <p className="text-xs text-white/60 truncate capitalize">
                             {loading
                                 ? <span className="inline-flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Carregando...</span>
                                 : viewTitle}

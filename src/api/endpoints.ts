@@ -306,6 +306,12 @@ export const PaymentsApi = {
                           http.get<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/monthly/${year}/me`),
   getMyExtraCharges:    (groupId: string) =>
                           http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/extra-charges/me`),
+
+  // Pagar pendências em lote
+  getMyPendingItems:    (groupId: string) =>
+                          http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/my-pending-items`),
+  paySelected:          (groupId: string, dto: any) =>
+                          http.post<ApiResponse<null>>(`/api/groups/${groupId}/payments/pay-selected`, dto),
 };
 
 export const MatchCardApi = {

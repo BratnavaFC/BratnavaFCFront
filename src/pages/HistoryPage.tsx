@@ -164,18 +164,17 @@ export default function HistoryPage() {
         <div className="space-y-5" ref={topRef}>
 
             {/* ── Header ── */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+            <div className="page-header">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
                 <div className="relative flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                            <History size={26} />
+                    <div className="flex items-center gap-3">
+                        <div className="page-header-icon">
+                            <History size={18} />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black leading-tight">Histórico</h1>
-                            <p className="text-sm text-white/50 mt-0.5">
+                            <h1 className="text-xl font-black leading-tight">Histórico</h1>
+                            <p className="text-xs text-white/60 mt-0.5">
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
                                     : !groupId ? 'Selecione um grupo'
@@ -276,13 +275,13 @@ export default function HistoryPage() {
 
                                                 {/* Date box — desktop only */}
                                                 <div className="hidden sm:flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800 px-4 py-3 shrink-0 min-w-[62px]">
-                                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                                                         {dates?.month ?? "—"}
                                                     </span>
                                                     <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">
                                                         {dates?.day ?? "—"}
                                                     </span>
-                                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                                    <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                                                         {dates?.time ?? ""}
                                                     </span>
                                                 </div>
@@ -303,7 +302,7 @@ export default function HistoryPage() {
                                                             {(teamAHex || teamBHex) && (
                                                                 <div className="flex items-center gap-1">
                                                                     <TeamDot hex={teamAHex} />
-                                                                    <span className="text-[10px] text-slate-300 dark:text-slate-600 font-bold">
+                                                                    <span className="text-xs text-slate-300 dark:text-slate-600 font-bold">
                                                                         vs
                                                                     </span>
                                                                     <TeamDot hex={teamBHex} />
@@ -313,7 +312,7 @@ export default function HistoryPage() {
                                                             {/* Status badge */}
                                                             <span
                                                                 className={[
-                                                                    "text-[10px] font-medium rounded-full border px-2 py-0.5",
+                                                                    "text-xs font-medium rounded-full border px-2 py-0.5",
                                                                     meta.cls,
                                                                 ].join(" ")}
                                                             >

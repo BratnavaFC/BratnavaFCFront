@@ -6,8 +6,8 @@ export function extractApiError(e: unknown, fallback = "Ocorreu um erro inespera
     const err = e as any;
     const data = err?.response?.data;
 
-    // 1) { message: string }
-    const msg = data?.message;
+    // 1) { message: string } or { error: string } (Result.Fail uses "error" field)
+    const msg = data?.message ?? data?.error;
     if (typeof msg === "string" && msg.trim()) return msg;
 
     // 2) ASP.NET ModelState: { errors: { campo: ["msg1", ...] } }

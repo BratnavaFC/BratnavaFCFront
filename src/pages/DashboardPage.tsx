@@ -126,7 +126,7 @@ function StatusBadge({ text }: { text?: string }) {
   else if (s.includes('pós') || s.includes('post') || s.includes('encer'))
                                                            cls = 'bg-orange-50 text-orange-700 border-orange-200';
   return (
-    <span className={`text-[10px] font-medium rounded-full border px-2.5 py-0.5 ${cls}`}>{text}</span>
+    <span className={`text-xs font-medium rounded-full border px-2.5 py-0.5 ${cls}`}>{text}</span>
   );
 }
 
@@ -253,166 +253,199 @@ export default function DashboardPage() {
     <div className="space-y-5">
 
       {/* ── Header ── */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
-        <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+      <div className="page-header">
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
           style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-        <div className="relative flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-            <LayoutDashboard size={26} />
+        <div className="relative flex items-center gap-3">
+          <div className="page-header-icon">
+            <LayoutDashboard size={18} />
           </div>
           <div>
-            <h1 className="text-2xl font-black leading-tight">Dashboard</h1>
-            <p className="text-sm text-white/50 mt-0.5">
-              {selectedPlayer ? selectedPlayer.playerName : groupId ? 'Selecione um jogador' : 'Selecione um grupo no Dashboard'}
+            <h1 className="text-xl font-black leading-tight">Dashboard</h1>
+            <p className="text-xs text-white/60 mt-0.5">
+              {selectedPlayer ? selectedPlayer.playerName : groupId ? 'Selecione um jogador' : 'Selecione um grupo'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── Partida atual ── */}
-      <div className="card p-0 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="h-6 w-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <CalendarDays size={13} className="text-blue-600" />
-            </div>
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Partida atual</span>
-          </div>
-          {groupId && (
-            <button
-              type="button"
-              onClick={loadCurrentMatch}
-              disabled={currentLoading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
-            >
-              <RefreshCw size={12} className={currentLoading ? 'animate-spin' : ''} />
-              Atualizar
-            </button>
-          )}
-        </div>
-        <div className="p-5">
-          {!groupId ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">Selecione uma patota para ver a partida atual.</p>
-          ) : currentLoading ? (
-            <div className="h-32 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
-          ) : noCurrentMatch || !currentMatch ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 py-12 text-center">
-              <Calendar size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhuma partida em andamento</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                Inicie uma partida na seção <b>Partidas</b>.
-              </p>
-            </div>
-          ) : (
-            <CurrentMatchCard match={currentMatch} playerId={selectedPlayerId} />
-          )}
-        </div>
-      </div>
+      {/* ── Grid de cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
 
-      {/* ── Últimas partidas ── */}
-      <div className="card p-0 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="h-6 w-6 rounded-lg bg-violet-500/10 flex items-center justify-center">
-              <History size={13} className="text-violet-600" />
-            </div>
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-              Últimas partidas{selectedPlayer ? ` · ${selectedPlayer.playerName}` : ''}
-            </span>
-          </div>
-          {selectedPlayerId && groupId && (
-            <button
-              type="button"
-              onClick={loadRecentMatches}
-              disabled={recentLoading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
-            >
-              <RefreshCw size={12} className={recentLoading ? 'animate-spin' : ''} />
-              Atualizar
-            </button>
-          )}
-        </div>
-        <div className="p-5">
-          {!selectedPlayerId ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">Selecione um jogador para ver suas últimas partidas.</p>
-          ) : recentLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />)}
-            </div>
-          ) : recentMatches.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 py-12 text-center">
-              <Calendar size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhuma partida encontrada</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">As últimas partidas do jogador aparecerão aqui.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentMatches.map(m => (
-                <RecentMatchCard key={m.matchId} match={m} groupId={groupId ?? ''} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Situação financeira ── */}
-      {groupId && (
-        <div className="card p-0 overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="h-6 w-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <DollarSign size={13} className="text-emerald-600" />
-              </div>
-              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Situação financeira</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/app/payments')}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
-            >
-              Ver detalhes
-            </button>
-          </div>
-          <div className="p-5">
-            {paymentSummaryLoading ? (
-              <div className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
-            ) : !paymentSummary ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Não foi possível carregar sua situação financeira.</p>
-            ) : paymentSummary.isUpToDate ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-4">
-                <CheckCircle2 size={22} className="text-emerald-500 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Em dia</p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">Você não possui pendências financeiras.</p>
+        {/* ── Partida atual — largura total ── */}
+        <div className="md:col-span-3">
+          <div className="card p-0 overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-6 w-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <CalendarDays size={13} className="text-blue-600" />
                 </div>
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Partida atual</span>
               </div>
-            ) : (
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-4">
-                  <AlertCircle size={22} className="text-amber-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Pagamentos pendentes</p>
-                    <div className="flex flex-wrap gap-2 mt-1.5">
-                      {paymentSummary.hasPendingMonthly && (
-                        <span className="text-xs rounded-full border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5">
-                          {paymentSummary.pendingMonthsCount} {paymentSummary.pendingMonthsCount === 1 ? 'mensalidade' : 'mensalidades'} em aberto
-                        </span>
-                      )}
-                      {paymentSummary.pendingExtraCharges?.length > 0 && (
-                        <span className="text-xs rounded-full border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5">
-                          {paymentSummary.pendingExtraCharges.length} {paymentSummary.pendingExtraCharges.length === 1 ? 'cobrança extra' : 'cobranças extras'}
-                        </span>
-                      )}
+              {groupId && (
+                <button
+                  type="button"
+                  onClick={loadCurrentMatch}
+                  disabled={currentLoading}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+                >
+                  <RefreshCw size={12} className={currentLoading ? 'animate-spin' : ''} />
+                  Atualizar
+                </button>
+              )}
+            </div>
+            <div className="p-5">
+              {!groupId ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">Selecione uma patota para ver a partida atual.</p>
+              ) : currentLoading ? (
+                <div className="h-32 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+              ) : noCurrentMatch || !currentMatch ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 py-10 text-center">
+                  <Calendar size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhuma partida em andamento</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    Inicie uma partida na seção <b>Partidas</b>.
+                  </p>
+                </div>
+              ) : (
+                <CurrentMatchCard match={currentMatch} playerId={selectedPlayerId} />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Últimas partidas — 2/3 ── */}
+        <div className="md:col-span-2">
+          <div className="card p-0 overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-6 w-6 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                  <History size={13} className="text-violet-600" />
+                </div>
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                  Últimas partidas{selectedPlayer ? ` · ${selectedPlayer.playerName}` : ''}
+                </span>
+                {/* Form guide dots */}
+                {recentMatches.length > 0 && !recentLoading && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    {recentMatches.slice(0, 3).map((m, i) => {
+                      const scoreA = m?.teamAGoals ?? null;
+                      const scoreB = m?.teamBGoals ?? null;
+                      const team   = m?.playerTeam as 1 | 2 | null;
+                      const outcome = (typeof scoreA === 'number' && typeof scoreB === 'number' && team)
+                        ? (team === 1 ? scoreA : scoreB) > (team === 1 ? scoreB : scoreA) ? 'win'
+                        : (team === 1 ? scoreA : scoreB) < (team === 1 ? scoreB : scoreA) ? 'loss' : 'draw'
+                        : null;
+                      return (
+                        <span
+                          key={i}
+                          title={outcome === 'win' ? 'Vitória' : outcome === 'loss' ? 'Derrota' : outcome === 'draw' ? 'Empate' : '—'}
+                          className={`h-2.5 w-2.5 rounded-full ${
+                            outcome === 'win'  ? 'bg-emerald-500' :
+                            outcome === 'loss' ? 'bg-rose-500'    :
+                            outcome === 'draw' ? 'bg-amber-400'   :
+                            'bg-slate-200 dark:bg-slate-700'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {selectedPlayerId && groupId && (
+                <button
+                  type="button"
+                  onClick={loadRecentMatches}
+                  disabled={recentLoading}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 shrink-0"
+                >
+                  <RefreshCw size={12} className={recentLoading ? 'animate-spin' : ''} />
+                  Atualizar
+                </button>
+              )}
+            </div>
+            <div className="p-5">
+              {!selectedPlayerId ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">Selecione um jogador para ver suas últimas partidas.</p>
+              ) : recentLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />)}
+                </div>
+              ) : recentMatches.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 py-10 text-center">
+                  <Calendar size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhuma partida encontrada</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">As últimas partidas do jogador aparecerão aqui.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentMatches.map(m => (
+                    <RecentMatchCard key={m.matchId} match={m} groupId={groupId ?? ''} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Situação financeira — 1/3 ── */}
+        {groupId && (
+          <div className="md:col-span-1">
+            <div className="card p-0 overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-6 w-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <DollarSign size={13} className="text-emerald-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Financeiro</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/app/payments')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 shrink-0"
+                >
+                  Ver
+                </button>
+              </div>
+              <div className="p-5">
+                {paymentSummaryLoading ? (
+                  <div className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                ) : !paymentSummary ? (
+                  <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Não disponível.</p>
+                ) : paymentSummary.isUpToDate ? (
+                  <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-4">
+                    <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Em dia</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">Sem pendências.</p>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-4">
+                    <AlertCircle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Pendências</p>
+                      <div className="flex flex-col gap-1 mt-1.5">
+                        {paymentSummary.hasPendingMonthly && (
+                          <span className="text-xs text-amber-800 dark:text-amber-300">
+                            {paymentSummary.pendingMonthsCount} {paymentSummary.pendingMonthsCount === 1 ? 'mensalidade' : 'mensalidades'}
+                          </span>
+                        )}
+                        {paymentSummary.pendingExtraCharges?.length > 0 && (
+                          <span className="text-xs text-amber-800 dark:text-amber-300">
+                            {paymentSummary.pendingExtraCharges.length} {paymentSummary.pendingExtraCharges.length === 1 ? 'cobrança extra' : 'cobranças extras'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
+      </div>
     </div>
   );
 }
@@ -571,9 +604,9 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
       {/* Date box */}
       <div className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800 px-4 py-3 shrink-0 min-w-[58px]">
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">{dates?.month ?? '—'}</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{dates?.month ?? '—'}</div>
         <div className="text-xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">{dates?.day ?? '—'}</div>
-        {dates?.time && <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{dates.time}</div>}
+        {dates?.time && <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{dates.time}</div>}
       </div>
 
       {/* Info */}
@@ -585,26 +618,26 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
             {myHex || myName ? (
               <div className="flex items-center gap-1.5">
                 {myHex && <ColorDot hex={myHex} />}
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{myName}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{myName}</span>
               </div>
             ) : (teamAHex || teamBHex) ? (
               <div className="flex items-center gap-1">
                 {teamAHex && <ColorDot hex={teamAHex} />}
-                <span className="text-[10px] text-slate-300 dark:text-slate-600 font-bold">vs</span>
+                <span className="text-xs text-slate-300 dark:text-slate-600 font-bold">vs</span>
                 {teamBHex && <ColorDot hex={teamBHex} />}
               </div>
             ) : null}
 
             {/* Resultado */}
             {outcome && (
-              <span className={`text-[10px] font-medium rounded-full border px-2 py-0.5 leading-none ${OUTCOME[outcome].cls}`}>
+              <span className={`text-xs font-medium rounded-full border px-2 py-0.5 leading-none ${OUTCOME[outcome].cls}`}>
                 {OUTCOME[outcome].label}
               </span>
             )}
 
             {/* Gols */}
             {goals > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+              <span className="flex items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'goal')} size={20} />
                 <StatNumber value={goals} />
               </span>
@@ -612,7 +645,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
             {/* Assistências */}
             {assists > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+              <span className="flex items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'assist')} size={20} />
                 <StatNumber value={assists} />
               </span>
@@ -620,7 +653,7 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
 
             {/* Gols contra */}
             {ownGoals > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px] text-red-500 font-medium">
+              <span className="flex items-center gap-0.5 text-xs text-red-500 font-medium">
                 <IconRenderer value={resolveIcon(icons, 'ownGoal')} size={20} />
                 <StatNumber value={ownGoals} />
               </span>

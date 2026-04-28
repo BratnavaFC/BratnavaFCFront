@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentsApi } from "../../api/endpoints";
+import { getResponseMessage } from "../../api/apiResponse";
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -66,7 +67,7 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
             if (res.data.message) toast.success(res.data.message);
             onSaved();
             onClose();
-        } catch { toast.error('Erro ao salvar pagamento'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao salvar pagamento')); }
         finally { setSaving(false); }
     }
 

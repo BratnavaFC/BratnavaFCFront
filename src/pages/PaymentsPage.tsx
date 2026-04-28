@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
     CheckCircle2, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
@@ -6,11 +6,13 @@ import {
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PaymentsApi, GroupSettingsApi } from '../api/endpoints';
+import { getResponseMessage } from '../api/apiResponse';
 import { usePaymentStore, calcPendingPaymentsCount } from '../stores/paymentStore';
 import MonthlyPaymentModal from '../components/modals/MonthlyPaymentModal';
 import CreateExtraChargeModal from '../components/modals/CreateExtraChargeModal';
 import ExtraPaymentModal from '../components/modals/ExtraPaymentModal';
 import BulkExtraDiscountModal from '../components/modals/BulkExtraDiscountModal';
+import PaymentSelectModal from '../components/modals/PaymentSelectModal';
 
 // ── Tipos locais ──────────────────────────────────────────────────────────────
 interface MonthlyCell {
@@ -107,7 +109,7 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                                                 const link = document.createElement('a');
                                                 link.href = `data:${mimeType};base64,${base64}`;
                                                 link.download = fileName; link.click();
-                                            } catch { toast.error('Erro ao baixar comprovante'); }
+                                            } catch (e) { toast.error(getResponseMessage(e, 'Erro ao baixar comprovante')); }
                                         }} title="Baixar comprovante" className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                                             <Download size={13} />
                                         </button>
@@ -167,6 +169,7 @@ export default function PaymentsPage() {
     // User (non-admin) view data
     const [myRow, setMyRow]           = useState<PlayerRow | null | undefined>(undefined); // undefined=loading, null=sem player
     const [myCharges, setMyCharges]   = useState<ExtraCharge[]>([]);
+    const [payModal, setPayModal]     = useState(false);
 
     // Load payment mode from group settings
     useEffect(() => {
@@ -202,7 +205,7 @@ export default function PaymentsPage() {
             setMyRow(rowData ? { ...rowData, months: rowData.months ?? [] } : null);
             setMyCharges((chargesRes.data.data as any[]) ?? []);
             setPendingPaymentsCount(calcPendingPaymentsCount((summaryRes.data as any)?.data));
-        } catch { toast.error('Erro ao carregar seus pagamentos'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar seus pagamentos')); }
     }, [groupId, year, isAdmin, activePlayerId, setPendingPaymentsCount]);
 
     useEffect(() => { if (!isAdmin && groupId) loadMyData(); }, [isAdmin, groupId, year, loadMyData]);
@@ -213,7 +216,7 @@ export default function PaymentsPage() {
         try {
             const res = await PaymentsApi.getMonthlyGrid(groupId, year);
             setGrid(res.data.data as any);
-        } catch { toast.error('Erro ao carregar grade mensal'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar grade mensal')); }
         finally { setLoading(false); }
     }, [groupId, year]);
 
@@ -223,7 +226,7 @@ export default function PaymentsPage() {
         try {
             const res = await PaymentsApi.getExtraCharges(groupId);
             setCharges((res.data.data as any[]) ?? []);
-        } catch { toast.error('Erro ao carregar cobranças'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar cobranças')); }
         finally { setLoading(false); }
     }, [groupId]);
 
@@ -239,7 +242,7 @@ export default function PaymentsPage() {
             const res = await PaymentsApi.cancelExtraCharge(groupId, chargeId);
             if (res.data.message) toast.success(res.data.message);
             loadExtra();
-        } catch { toast.error('Erro ao cancelar'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao cancelar')); }
     }
 
     // ── Helpers para cobranças extras mensais ─────────────────────────────────
@@ -280,6 +283,35 @@ export default function PaymentsPage() {
     const myCurrentCharges     = mySelectedCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && (!p || p.status !== 1); });
     const myFinalizedCharges   = mySelectedCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && !!p && p.status === 1; });
 
+    // Total de débitos pendentes (apenas para não-admin)
+    const pendingTotal = useMemo(() => {
+        if (isAdmin) return 0;
+        const nowYear  = new Date().getFullYear();
+        const nowMonth = new Date().getMonth() + 1;
+        let total = 0;
+
+        // Mensalidades pendentes (somente modo Monthly)
+        if (paymentMode === 0 && myRow) {
+            (myRow.months ?? [])
+                .filter(cell => {
+                    if (cell.status === 1) return false;
+                    if (year === nowYear && cell.month > nowMonth) return false;
+                    return true;
+                })
+                .forEach(cell => { total += Math.max(0, cell.amount - cell.discount); });
+        }
+
+        // Cobranças extras pendentes
+        myCharges
+            .filter(c => !c.isCancelled)
+            .forEach(c => {
+                const p = c.payments[0];
+                if (p && p.status !== 1) total += p.finalAmount;
+            });
+
+        return total;
+    }, [isAdmin, paymentMode, myRow, year, myCharges]);
+
     if (!groupId) {
         return (
             <div className="p-6 text-slate-500 dark:text-slate-400 text-sm">Selecione uma patota para ver os pagamentos.</div>
@@ -290,18 +322,17 @@ export default function PaymentsPage() {
         <div className="flex flex-col h-full overflow-hidden">
             {/* ── Header ── */}
             <div className="relative flex-none bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-4 sm:px-6 py-4 sm:py-5 overflow-hidden shadow-lg">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
 
                 {/* Row 1: icon + title */}
                 <div className="relative flex items-center gap-3 mb-3">
-                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                        <DollarSign size={26} />
+                    <div className="page-header-icon">
+                        <DollarSign size={18} />
                     </div>
                     <div>
                         <h1 className="text-lg font-black leading-tight">Pagamentos</h1>
-                        <p className="text-xs text-white/50">Mensalidades e cobranças extras da patota</p>
+                        <p className="text-xs text-white/60">Mensalidades e cobranças extras da patota</p>
                     </div>
                 </div>
 
@@ -473,7 +504,7 @@ export default function PaymentsPage() {
                                                                         const res = await PaymentsApi.getExtraChargeProof(groupId, charge.id, payment.playerId);
                                                                         const { base64, fileName, mimeType } = res.data.data as any;
                                                                         const link = document.createElement('a'); link.href = `data:${mimeType};base64,${base64}`; link.download = fileName; link.click();
-                                                                    } catch { toast.error('Erro ao baixar comprovante'); }
+                                                                    } catch (e) { toast.error(getResponseMessage(e, 'Erro ao baixar comprovante')); }
                                                                 }} title="Baixar comprovante" className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg">
                                                                     <Download size={14} />
                                                                 </button>
@@ -681,6 +712,24 @@ export default function PaymentsPage() {
                 )}
             </div>
 
+            {/* Rodapé de pagamento (apenas não-admin com débitos) */}
+            {!isAdmin && myRow !== undefined && pendingTotal > 0 && (
+                <div className="flex-none border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
+                    <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">Total pendente</p>
+                        <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                            R$ {pendingTotal.toFixed(2)}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setPayModal(true)}
+                        className="px-6 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-black tracking-wide hover:bg-slate-700 dark:hover:bg-slate-100 active:scale-[0.98] transition"
+                    >
+                        PAGAR
+                    </button>
+                </div>
+            )}
+
             {/* Modais */}
             {monthModal && (
                 <MonthlyPaymentModal
@@ -722,6 +771,12 @@ export default function PaymentsPage() {
                     onSaved={isAdmin ? loadExtra : loadMyData}
                 />
             )}
+            <PaymentSelectModal
+                open={payModal}
+                groupId={groupId}
+                onClose={() => setPayModal(false)}
+                onSaved={loadMyData}
+            />
         </div>
     );
 }

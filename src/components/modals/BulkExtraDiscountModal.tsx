@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DollarSign, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentsApi } from "../../api/endpoints";
+import { getResponseMessage } from "../../api/apiResponse";
 
 interface ExtraChargePayment {
     playerId: string; playerName: string; amount: number; discount: number;
@@ -55,7 +56,7 @@ function BulkExtraDiscountModal({ open, groupId, charge, onClose, onSaved }: Bul
             });
             if (res.data.message) toast.success(res.data.message);
             onSaved(); onClose();
-        } catch { toast.error('Erro ao aplicar desconto'); }
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao aplicar desconto')); }
         finally { setSaving(false); }
     }
 

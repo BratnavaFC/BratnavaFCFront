@@ -72,8 +72,8 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
             setClips((prev) => prev.filter((c) => c.id !== clipId));
             setLbIdx(null);
             toast.success("Vídeo excluído.");
-        } catch {
-            toast.error("Falha ao excluir o vídeo.");
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao excluir o vídeo."));
         }
     }
 
@@ -262,8 +262,8 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
             setClips((prev) => prev.filter((c) => c.id !== clipId));
             setLbIdx(null);
             toast.success("Vídeo excluído.");
-        } catch {
-            toast.error("Falha ao excluir o vídeo.");
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao excluir o vídeo."));
         }
     }
 
@@ -417,8 +417,8 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
             setClips((prev) => prev.filter((c) => c.id !== clipId));
             setLbIdx(null);
             toast.success("Vídeo excluído.");
-        } catch {
-            toast.error("Falha ao excluir o vídeo.");
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao excluir o vídeo."));
         }
     }
 

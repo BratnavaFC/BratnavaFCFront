@@ -8,16 +8,19 @@ import WatermarkOverlay from "../components/WatermarkOverlay";
 export default function Layout() {
     const isMobile = useIsMobile(768);
 
-    const [sidebarOpen, setSidebarOpen] = useState(false); // overlay aberto
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        const isDesktop = !window.matchMedia('(max-width: 768px)').matches;
+        if (!isDesktop) return false;
+        try { return localStorage.getItem('bratnava-sidebar-open') === 'true'; } catch { return false; }
+    });
     const [sidebarPinned, setSidebarPinned] = useState(false); // opcional desktop
     const autoCloseTimer = useRef<number | null>(null);
 
     const scheduleAutoClose = () => {
+        if (!isMobile) return; // desktop: sem auto-close, usuário controla manualmente
         if (autoCloseTimer.current) window.clearTimeout(autoCloseTimer.current);
-        // no mobile: pode auto-fechar tamb�m, mas s� se estiver aberto
         if (!sidebarOpen) return;
-        // pinned s� faz sentido no desktop; no mobile a gente ignora
-        if (!isMobile && sidebarPinned) return;
 
         autoCloseTimer.current = window.setTimeout(() => {
             setSidebarOpen(false);
@@ -46,6 +49,12 @@ export default function Layout() {
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
     }, []);
+
+    // Persiste estado do sidebar no localStorage (desktop apenas)
+    useEffect(() => {
+        if (isMobile) return;
+        try { localStorage.setItem('bratnava-sidebar-open', String(sidebarOpen)); } catch { /* noop */ }
+    }, [sidebarOpen, isMobile]);
 
     // Se entrou em mobile, n�o faz sentido manter pinned e nem sidebar aberta �presa�
     useEffect(() => {

@@ -728,19 +728,18 @@ export default function AdminUsersPage() {
         <div className="space-y-5">
 
             {/* ── Header ── */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+            <div className="page-header">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-                <div className="relative flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                        {isAdminOrGod ? <Users2 size={26} /> : <User size={26} />}
+                <div className="relative flex items-center gap-3">
+                    <div className="page-header-icon">
+                        {isAdminOrGod ? <Users2 size={18} /> : <User size={18} />}
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black leading-tight">
+                        <h1 className="text-xl font-black leading-tight">
                             {isAdminOrGod ? "Usuários" : (myUser ? fullName(myUser) : "Meu Perfil")}
                         </h1>
-                        <p className="text-sm text-white/50 mt-0.5">
+                        <p className="text-xs text-white/60 mt-0.5">
                             {isAdminOrGod
                                 ? `${result?.total ?? 0} usuário${(result?.total ?? 0) !== 1 ? 's' : ''} encontrado${(result?.total ?? 0) !== 1 ? 's' : ''}`
                                 : myUser ? `@${myUser.userName} · ${roleLabel(myUser.role)}` : 'Carregando...'}
