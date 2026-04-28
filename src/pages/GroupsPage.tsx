@@ -31,7 +31,6 @@ type PlayerDto = {
     overallRating?: number | null;
 };
 
-
 type GroupDto = {
     id: string;
     name: string;
@@ -55,6 +54,7 @@ type MyPlayerItem = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 type RatingsSortKey = "overall" | "attack" | "defense" | "physical";
+type PlayersTab = "jogadores" | "avaliacoes";
 
 /** Média dos ratings configurados. Retorna null se nenhum foi definido. */
 function computeOverall(p: PlayerDto): number | null {
@@ -65,10 +65,13 @@ function computeOverall(p: PlayerDto): number | null {
 
 function getRatingSortValue(p: PlayerDto, key: RatingsSortKey): number {
     switch (key) {
-        case "attack":   return p.attackRating  ?? -1;
-        case "defense":  return p.defenseRating ?? -1;
+        case "attack": return p.attackRating ?? -1;
+        case "defense": return p.defenseRating ?? -1;
         case "physical": return p.overallRating ?? -1; // overallRating no DB = "Físico"
-        default: { const v = computeOverall(p); return v ?? -1; }
+        default: {
+            const v = computeOverall(p);
+            return v ?? -1;
+        }
     }
 }
 
@@ -94,7 +97,7 @@ export default function GroupsPage() {
     const [paymentMap, setPaymentMap] = useState<Map<string, { pendingMonths: number; pendingExtras: number }>>(new Map());
 
     // ── Estado: aba de jogadores ──
-    const [playersTab, setPlayersTab] = useState<"jogadores" | "avaliacoes">("jogadores");
+    const [playersTab, setPlayersTab] = useState<PlayersTab>("jogadores");
     const [ratingsSort, setRatingsSort] = useState<RatingsSortKey>("overall");
 
     // ── Estado: modais ──
@@ -121,6 +124,7 @@ export default function GroupsPage() {
     const activePlayerId = myPlayerInExpandedGroup?.playerId ?? "";
     const isAdminOfGroup = isGroupAdmin(expandedGroupId ?? "");
     const isFinanceiroOfGroup = isGroupFinanceiro(expandedGroupId ?? "");
+    const canSeeRatingsTab = isAdminOfGroup || isGod;
 
     // ── Icons ligados ao grupo expandido ──
     const _icons = useGroupIcons(expandedGroupId || null);
@@ -128,7 +132,7 @@ export default function GroupsPage() {
     // ── Players derivados do grupo expandido ──
     const activePlayers = group?.players?.filter((p) => p.status === 1 && !p.isGuest) ?? [];
     const guestPlayers = group?.players?.filter((p) => p.status === 1 && p.isGuest) ?? [];
-    const inactivePlayers = (isAdminOfGroup || isGod)
+    const inactivePlayers = canSeeRatingsTab
         ? (group?.players?.filter((p) => p.status !== 1) ?? [])
         : [];
 
@@ -178,7 +182,10 @@ export default function GroupsPage() {
     }
 
     async function loadPaymentData() {
-        if (!expandedGroupId) { setPaymentMap(new Map()); return; }
+        if (!expandedGroupId) {
+            setPaymentMap(new Map());
+            return;
+        }
         if (!isGroupFinanceiro(expandedGroupId) && !isGodMode()) {
             setPaymentMap(new Map());
             return;
@@ -234,6 +241,13 @@ export default function GroupsPage() {
         setPlayersTab("jogadores");
         setRatingsSort("overall");
     }, [expandedGroupId]);
+
+    // Proteção extra: se alguém deixar a aba avaliações ativa e perder permissão, volta para jogadores
+    useEffect(() => {
+        if (playersTab === "avaliacoes" && !canSeeRatingsTab) {
+            setPlayersTab("jogadores");
+        }
+    }, [playersTab, canSeeRatingsTab]);
 
     // Auto-expandir quando 1 grupo
     useEffect(() => {
@@ -320,7 +334,7 @@ export default function GroupsPage() {
                     </div>
 
                     {/* star rating — admin only */}
-                    {p.isGuest && p.guestStarRating != null && (isAdminOfGroup || isGod) && (
+                    {p.isGuest && p.guestStarRating != null && canSeeRatingsTab && (
                         <div className="text-[12px] leading-none text-amber-400">
                             {"★".repeat(p.guestStarRating)}
                             <span className="text-slate-200">{"★".repeat(5 - p.guestStarRating)}</span>
@@ -354,10 +368,10 @@ export default function GroupsPage() {
         );
 
         const sortOptions: { key: RatingsSortKey; label: string; color: string; activeClass: string }[] = [
-            { key: "overall",  label: "⭐ Overall", color: "text-indigo-600 dark:text-indigo-400",  activeClass: "bg-indigo-600 text-white" },
-            { key: "attack",   label: "⚔️ Ataque",  color: "text-rose-600 dark:text-rose-400",     activeClass: "bg-rose-500 text-white"   },
-            { key: "defense",  label: "🛡️ Defesa",  color: "text-blue-600 dark:text-blue-400",     activeClass: "bg-blue-500 text-white"   },
-            { key: "physical", label: "💪 Físico",  color: "text-amber-600 dark:text-amber-400",   activeClass: "bg-amber-500 text-white"  },
+            { key: "overall", label: "⭐ Overall", color: "text-indigo-600 dark:text-indigo-400", activeClass: "bg-indigo-600 text-white" },
+            { key: "attack", label: "⚔️ Ataque", color: "text-rose-600 dark:text-rose-400", activeClass: "bg-rose-500 text-white" },
+            { key: "defense", label: "🛡️ Defesa", color: "text-blue-600 dark:text-blue-400", activeClass: "bg-blue-500 text-white" },
+            { key: "physical", label: "💪 Físico", color: "text-amber-600 dark:text-amber-400", activeClass: "bg-amber-500 text-white" },
         ];
 
         function RatingCell({ value, active, color, barColor }: {
@@ -380,13 +394,14 @@ export default function GroupsPage() {
         // ── Render ───────────────────────────────────────────────────────────────
 
         const totalActive = activePlayers.length + guestPlayers.length;
+        const tabs: PlayersTab[] = canSeeRatingsTab ? ["jogadores", "avaliacoes"] : ["jogadores"];
 
         return (
             <div className="space-y-4">
 
                 {/* ── Tab bar ── */}
                 <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
-                    {(["jogadores", "avaliacoes"] as const).map((t) => (
+                    {tabs.map((t) => (
                         <button
                             key={t}
                             type="button"
@@ -458,8 +473,8 @@ export default function GroupsPage() {
                     </div>
                 )}
 
-                {/* ══ ABA AVALIAÇÕES ══ */}
-                {playersTab === "avaliacoes" && (
+                {/* ══ ABA AVALIAÇÕES — admin/God only ══ */}
+                {canSeeRatingsTab && playersTab === "avaliacoes" && (
                     <div className="space-y-3">
                         {/* sort chips */}
                         <div className="flex flex-wrap gap-1.5">
@@ -499,7 +514,7 @@ export default function GroupsPage() {
 
                                 {ratingsSorted.map((p, idx) => {
                                     const overall = computeOverall(p);
-                                    const hasAny  = p.attackRating != null || p.defenseRating != null || p.overallRating != null;
+                                    const hasAny = p.attackRating != null || p.defenseRating != null || p.overallRating != null;
                                     const initials = p.name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
                                     const isMe = p.id === activePlayerId;
                                     const rank = hasAny ? idx + 1 : null;
@@ -539,10 +554,10 @@ export default function GroupsPage() {
 
                                             {/* rating cells */}
                                             <div className="flex gap-3 shrink-0">
-                                                <RatingCell value={overall != null ? parseFloat(overall.toFixed(1)) : null} active={ratingsSort === "overall"}  color="text-indigo-600 dark:text-indigo-400" barColor="bg-indigo-500" />
-                                                <RatingCell value={p.attackRating  ?? null} active={ratingsSort === "attack"}   color="text-rose-600 dark:text-rose-400"   barColor="bg-rose-500"   />
-                                                <RatingCell value={p.defenseRating ?? null} active={ratingsSort === "defense"}  color="text-blue-600 dark:text-blue-400"   barColor="bg-blue-500"   />
-                                                <RatingCell value={p.overallRating ?? null} active={ratingsSort === "physical"} color="text-amber-600 dark:text-amber-400" barColor="bg-amber-500"  />
+                                                <RatingCell value={overall != null ? parseFloat(overall.toFixed(1)) : null} active={ratingsSort === "overall"} color="text-indigo-600 dark:text-indigo-400" barColor="bg-indigo-500" />
+                                                <RatingCell value={p.attackRating ?? null} active={ratingsSort === "attack"} color="text-rose-600 dark:text-rose-400" barColor="bg-rose-500" />
+                                                <RatingCell value={p.defenseRating ?? null} active={ratingsSort === "defense"} color="text-blue-600 dark:text-blue-400" barColor="bg-blue-500" />
+                                                <RatingCell value={p.overallRating ?? null} active={ratingsSort === "physical"} color="text-amber-600 dark:text-amber-400" barColor="bg-amber-500" />
                                             </div>
                                         </div>
                                     );
@@ -561,7 +576,7 @@ export default function GroupsPage() {
     function HeaderButtons() {
         return (
             <div className="flex items-center gap-2 shrink-0">
-                {(isAdminOfGroup || isGod) && (
+                {canSeeRatingsTab && (
                     <>
                         <button
                             type="button"
@@ -591,7 +606,7 @@ export default function GroupsPage() {
                         <span className="hidden sm:inline">Sair</span>
                     </button>
                 )}
-                {(isAdminOfGroup || isGod) && group?.createdByUserId === currentUserId && (
+                {canSeeRatingsTab && group?.createdByUserId === currentUserId && (
                     <button
                         type="button"
                         className={`${darkBtn} bg-rose-500/20 border-rose-400/30 text-rose-300 hover:bg-rose-500/30`}
@@ -681,7 +696,10 @@ export default function GroupsPage() {
                                         className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className={["h-9 w-9 rounded-xl text-sm font-black flex items-center justify-center shrink-0 select-none transition-colors", isExpanded ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"].join(" ")}>
+                                            <div className={[
+                                                "h-9 w-9 rounded-xl text-sm font-black flex items-center justify-center shrink-0 select-none transition-colors",
+                                                isExpanded ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                            ].join(" ")}>
                                                 {groupName.charAt(0)}
                                             </div>
                                             <div className="min-w-0">
@@ -740,7 +758,7 @@ export default function GroupsPage() {
             <EditPlayerModal
                 open={!!editPlayer}
                 player={editPlayer}
-                isAdmin={isAdminOfGroup || isGod}
+                isAdmin={canSeeRatingsTab}
                 onClose={() => setEditPlayer(null)}
                 onSaved={loadGroup}
             />
