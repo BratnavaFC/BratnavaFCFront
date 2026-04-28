@@ -226,6 +226,7 @@ function SelectionCard({
     /** Aposta de vencedor atual (para validação cruzada com FinalScore) */
     winnerHint?: "TeamA" | "TeamB" | "Draw";
 }) {
+    const selfPlayerId = useAccountStore(s => s.getActive()?.activePlayerId);
     const isObrigatorio = sel.category === "WinningTeam";
 
     return (
@@ -331,7 +332,7 @@ function SelectionCard({
                         onChange={(e) => onUpdate({ ...sel, playerMatchId: e.target.value })}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-60 disabled:cursor-default">
                         <option value="">Selecione um jogador…</option>
-                        {players.filter((p) => p.team !== 0).map((p) => (
+                        {players.filter((p) => p.team !== 0 && p.playerId !== selfPlayerId).map((p) => (
                             <option key={p.matchPlayerId} value={p.matchPlayerId}>
                                 {p.name} ({p.team === 1 ? (teamA?.name ?? "Time A") : (teamB?.name ?? "Time B")})
                             </option>
