@@ -985,7 +985,14 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
             )}
 
             {/* Parcial das apostas — todos os usuários (admin pode expandir todos, demais só o próprio) */}
-            <BetPreviewPanel groupId={groupId} matchId={ctx.matchId} admin={adminOfGroup} players={ctx.players} />
+            {adminOfGroup && (
+                <BetPreviewPanel
+                    groupId={groupId}
+                    matchId={ctx.matchId}
+                    admin={adminOfGroup}
+                    players={ctx.players}
+                />
+            )}
 
             {/* Total + submit */}
             {!isLocked && (
