@@ -823,6 +823,14 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                                         {balance?.toLocaleString() ?? "–"}
                                     </div>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); load(); }}
+                                    disabled={loading}
+                                    title="Atualizar lista de jogadores"
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors disabled:opacity-40">
+                                    <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                                </button>
                                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${showBetStatus ? "rotate-180" : ""}`} />
                             </div>
                         </button>
@@ -984,7 +992,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                 </div>
             )}
 
-            {/* Parcial das apostas — todos os usuários (admin pode expandir todos, demais só o próprio) */}
+            {/* Parcial das apostas durante matchmaking — exclusivo para admin */}
             {adminOfGroup && (
                 <BetPreviewPanel
                     groupId={groupId}
@@ -1047,19 +1055,16 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
 
 // ── Tab: Histórico ────────────────────────────────────────────────────────────
 
-function HistoryTab({ groupId, admin }: { groupId: string; admin: boolean }) {
+function HistoryTab({ groupId }: { groupId: string }) {
     const [history,       setHistory]       = useState<MatchBetHistoryDto[]>([]);
     const [leaderboard,   setLeaderboard]   = useState<BetLeaderboardEntryDto[]>([]);
     const [loading,       setLoading]       = useState(true);
     const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
     const [expandedUser,  setExpandedUser]  = useState<string | null>(null);
-    const [showLeader,    setShowLeader]    = useState(false);
 
     const myUserId = useAccountStore(
         (s) => s.accounts.find((a) => a.userId === s.activeAccountId)?.userId
     );
-
-    function canExpand(userId: string) { return admin || userId === myUserId; }
 
     async function load() {
         setLoading(true);
@@ -1087,8 +1092,7 @@ function HistoryTab({ groupId, admin }: { groupId: string; admin: boolean }) {
         );
     }
 
-    const myEntry      = leaderboard.find((e) => e.userId === myUserId);
-    const medalColors  = ["text-amber-400", "text-slate-400", "text-orange-600"];
+    const myEntry = leaderboard.find((e) => e.userId === myUserId);
 
     return (
         <div className="space-y-5">
@@ -1110,50 +1114,6 @@ function HistoryTab({ groupId, admin }: { groupId: string; admin: boolean }) {
                                 : `${myEntry.rank}º`}
                         </p>
                     </div>
-                </div>
-            )}
-
-            {/* Leaderboard toggle */}
-            {leaderboard.length > 0 && (
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <button type="button"
-                        onClick={() => setShowLeader((v) => !v)}
-                        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <div className="flex items-center gap-2">
-                            <Trophy size={15} className="text-amber-400" />
-                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Ranking</span>
-                        </div>
-                        <ChevronDown size={16} className={`text-slate-400 transition-transform ${showLeader ? "rotate-180" : ""}`} />
-                    </button>
-                    {showLeader && (
-                        <div className="border-t border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
-                            {leaderboard.map((entry) => {
-                                const isMe     = entry.userId === myUserId;
-                                const medalCls = entry.rank <= 3 ? medalColors[entry.rank - 1] : "text-slate-500";
-                                return (
-                                    <div key={entry.userId}
-                                        className={`flex items-center gap-3 px-4 py-2.5 ${isMe ? "bg-slate-50 dark:bg-slate-800/50" : ""}`}>
-                                        <span className={`text-sm font-black w-6 text-center ${medalCls}`}>
-                                            {entry.rank <= 3 ? ["🥇", "🥈", "🥉"][entry.rank - 1] : `${entry.rank}º`}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                                                {entry.userName}
-                                                {isMe && <span className="text-xs font-normal text-slate-400 ml-1">(você)</span>}
-                                            </p>
-                                            <p className="text-xs text-slate-400">
-                                                {entry.totalBets} aposta{entry.totalBets !== 1 ? "s" : ""} · {entry.totalCorrect} acerto{entry.totalCorrect !== 1 ? "s" : ""}
-                                            </p>
-                                        </div>
-                                        <div className={`flex items-center gap-1 font-bold text-sm ${fichasColor(entry.balance)}`}>
-                                            <Coins size={12} className="text-amber-400" />
-                                            {entry.balance > 0 ? "+" : ""}{entry.balance.toLocaleString()}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -1200,7 +1160,7 @@ function HistoryTab({ groupId, admin }: { groupId: string; admin: boolean }) {
                                             const userKey    = `${match.matchId}:${userBet.userId}`;
                                             const isUserOpen = expandedUser === userKey;
                                             const isMe       = userBet.userId === myUserId;
-                                            const expandable = canExpand(userBet.userId);
+                                            const expandable = true;
 
                                             return (
                                                 <div key={userBet.userId}>
@@ -1308,18 +1268,122 @@ function HistoryTab({ groupId, admin }: { groupId: string; admin: boolean }) {
     );
 }
 
+// ── Tab: Ranking ──────────────────────────────────────────────────────────────
+
+function RankingTab({ groupId }: { groupId: string }) {
+    const [leaderboard, setLeaderboard] = useState<BetLeaderboardEntryDto[]>([]);
+    const [loading, setLoading] = useState(true);
+    const myUserId = useAccountStore(
+        (s) => s.accounts.find((a) => a.userId === s.activeAccountId)?.userId
+    );
+
+    async function load() {
+        setLoading(true);
+        try {
+            const res = await BetApi.getLeaderboard(groupId);
+            setLeaderboard((res.data as any) as BetLeaderboardEntryDto[]);
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao carregar ranking."));
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => { load(); }, [groupId]);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-16">
+                <Loader2 size={28} className="animate-spin text-slate-400" />
+            </div>
+        );
+    }
+
+    if (leaderboard.length === 0) {
+        return (
+            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400">
+                <Trophy size={36} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm font-medium">Nenhum resultado ainda</p>
+                <p className="text-xs mt-1 opacity-60">O ranking aparece após a primeira partida finalizada.</p>
+            </div>
+        );
+    }
+
+    const medalColors = ["text-amber-400", "text-slate-400", "text-orange-600"];
+    const myEntry = leaderboard.find((e) => e.userId === myUserId);
+
+    return (
+        <div className="space-y-5">
+            {myEntry && (
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Seu saldo</p>
+                        <div className={`flex items-center gap-1.5 font-black text-xl mt-0.5 ${fichasColor(myEntry.balance)}`}>
+                            <Coins size={16} className="text-amber-400" />
+                            {myEntry.balance > 0 ? "+" : ""}{myEntry.balance.toLocaleString()}
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Posição</p>
+                        <p className="text-xl font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                            {myEntry.rank <= 3
+                                ? ["🥇", "🥈", "🥉"][myEntry.rank - 1]
+                                : `${myEntry.rank}º`}
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/50">
+                {leaderboard.map((entry) => {
+                    const isMe     = entry.userId === myUserId;
+                    const medalCls = entry.rank <= 3 ? medalColors[entry.rank - 1] : "text-slate-500";
+                    return (
+                        <div key={entry.userId}
+                            className={`flex items-center gap-3 px-4 py-3 ${isMe ? "bg-slate-50 dark:bg-slate-800/50" : ""}`}>
+                            <span className={`text-sm font-black w-6 text-center ${medalCls}`}>
+                                {entry.rank <= 3 ? ["🥇", "🥈", "🥉"][entry.rank - 1] : `${entry.rank}º`}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                                    {entry.userName}
+                                    {isMe && <span className="text-xs font-normal text-slate-400 ml-1">(você)</span>}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                    {entry.totalBets} aposta{entry.totalBets !== 1 ? "s" : ""} · {entry.totalCorrect} acerto{entry.totalCorrect !== 1 ? "s" : ""}
+                                </p>
+                            </div>
+                            <div className={`flex items-center gap-1 font-bold text-sm ${fichasColor(entry.balance)}`}>
+                                <Coins size={12} className="text-amber-400" />
+                                {entry.balance > 0 ? "+" : ""}{entry.balance.toLocaleString()}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="flex justify-center pt-1">
+                <button type="button" onClick={load}
+                    className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    <RefreshCw size={12} /> Atualizar
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type TabId = "atual" | "historico";
+type TabId = "atual" | "historico" | "ranking";
 
 export default function BetPage() {
     const groupId = useAccountStore((s) => s.getActive()?.activeGroupId);
-    const adminOfGroup = groupId ? isGroupAdmin(groupId) : false;
     const [tab, setTab] = useState<TabId>("atual");
 
     const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
         { id: "atual",     label: "Aposta Atual", icon: <Target  size={15} /> },
         { id: "historico", label: "Histórico",    icon: <History size={15} /> },
+        { id: "ranking",   label: "Ranking",      icon: <Trophy  size={15} /> },
     ];
 
     return (
@@ -1365,7 +1429,8 @@ export default function BetPage() {
                     </div>
 
                     {tab === "atual"     && <CurrentBetTab groupId={groupId} />}
-                    {tab === "historico" && <HistoryTab    groupId={groupId} admin={adminOfGroup} />}
+                    {tab === "historico" && <HistoryTab    groupId={groupId} />}
+                    {tab === "ranking"   && <RankingTab    groupId={groupId} />}
                 </>
             )}
         </div>
