@@ -318,11 +318,27 @@ export function Lightbox({
         if (videoRef.current) videoRef.current.playbackRate = speed;
     }, [speed]);
 
+    // Ao mudar de clip: troca src, recarrega e dá play — sem remontar o elemento,
+    // para que o fullscreen do browser seja mantido naturalmente.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.load();
+        video.play().catch(() => {});
+    }, [clip.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
             if (e.key === "ArrowLeft"  && canPrev) onPrev();
             if (e.key === "ArrowRight" && canNext) onNext();
+            if (e.key === "f" || e.key === "F") {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (videoRef.current) {
+                    videoRef.current.requestFullscreen().catch(() => {});
+                }
+            }
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
@@ -371,10 +387,9 @@ export function Lightbox({
                     </button>
                 </div>
 
-                {/* Video player */}
+                {/* Video player — sem key para que o elemento persista entre clips e o fullscreen seja mantido */}
                 <video
                     ref={videoRef}
-                    key={clip.id}
                     src={streamUrl}
                     className="w-full rounded-2xl bg-black shadow-2xl"
                     controls
