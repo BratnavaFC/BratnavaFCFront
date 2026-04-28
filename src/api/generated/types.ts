@@ -9,6 +9,7 @@ export interface AddGoalRequestDto {
   scorerPlayerId?: string;
   assistPlayerId?: string;
   time?: string;
+  isOwnGoal?: boolean;
 }
 
 export interface AddGoalsBulkRequestDto {

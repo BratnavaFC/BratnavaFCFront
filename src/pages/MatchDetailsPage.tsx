@@ -23,6 +23,7 @@ import { resolveIcon } from "../lib/groupIcons";
 import { MvpResultCard } from "../domains/matches/ui/MvpResultCard";
 import { ReplaySection } from "../domains/matches/ui/ReplaySection";
 import type { ReplayClipDto } from "../domains/matches/matchTypes";
+import { GoalTracker } from "../domains/matches/steps/GoalTracker";
 import CssText from "../components/CssText";
 import MaskedName from "../components/MaskedName";
 
@@ -553,6 +554,59 @@ export default function MatchDetailsPage() {
     const isAdmin = isGroupAdm || isGod;
     const showStats   = useShowPlayerStats(groupId);
     const canSeeGoals = isAdmin || showStats;
+
+    // ── Add/remove goal state (for GoalTracker in finalized matches) ─────────
+    const [addingGoal, setAddingGoal] = useState(false);
+    const [removingGoal, setRemovingGoal] = useState<Record<string, boolean>>({});
+
+    async function reloadMatch() {
+        if (!groupId || !matchId) return;
+        const res = await MatchesApi.details(groupId, matchId);
+        setData(res.data.data as any);
+    }
+
+    async function handleAddGoal(
+        scorerPlayerId: string,
+        assistPlayerId: string | null,
+        time: string,
+        isOwnGoal: boolean,
+    ) {
+        if (!groupId || !matchId) return;
+        setAddingGoal(true);
+        try {
+            await MatchesApi.addGoal(groupId, matchId, { scorerPlayerId, assistPlayerId: assistPlayerId ?? undefined, time, isOwnGoal });
+            await reloadMatch();
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao adicionar gol."));
+        } finally {
+            setAddingGoal(false);
+        }
+    }
+
+    async function handleEditGoalTracker(
+        goalId: string,
+        scorerPlayerId: string,
+        assistPlayerId: string | null,
+        time: string,
+        isOwnGoal: boolean,
+    ) {
+        if (!groupId || !matchId) return;
+        try {
+            await MatchesApi.updateGoal(groupId, matchId, goalId, { scorerPlayerId, assistPlayerId, time, isOwnGoal });
+            await reloadMatch();
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao editar gol."));
+        }
+    }
+
+    function handleRemoveGoal(goalId: string) {
+        if (!groupId || !matchId) return;
+        setRemovingGoal((prev) => ({ ...prev, [goalId]: true }));
+        MatchesApi.deleteGoal(groupId, matchId, goalId)
+            .then(() => reloadMatch())
+            .catch((e) => toast.error(getResponseMessage(e, "Falha ao remover gol.")))
+            .finally(() => setRemovingGoal((prev) => ({ ...prev, [goalId]: false })));
+    }
 
     // ── Edit goal state ───────────────────────────────────────────────────────
     const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -1312,6 +1366,29 @@ export default function MatchDetailsPage() {
                         );
                     })()}
                 </div>
+            </Section>
+            )}
+
+            {/* ── Editar gols (admin only, finalized matches) ───────── */}
+            {isAdmin && data.status === 6 && (
+            <Section title="Editar gols">
+                <GoalTracker
+                    participants={[
+                        ...(data.teamAPlayers ?? []),
+                        ...(data.teamBPlayers ?? []),
+                    ]}
+                    goals={data.goals ?? []}
+                    addingGoal={addingGoal}
+                    onAddGoal={handleAddGoal}
+                    removingGoal={removingGoal}
+                    onRemoveGoal={handleRemoveGoal}
+                    onEditGoal={handleEditGoalTracker}
+                    canRemove={true}
+                    teamAName={aName}
+                    teamAHex={aColor}
+                    teamBName={bName}
+                    teamBHex={bColor}
+                />
             </Section>
             )}
 
