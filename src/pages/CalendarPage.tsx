@@ -148,6 +148,8 @@ function eventStyle(ev: CalendarEvent): { bg: string; text: string; border: stri
     }
     if (ev.type === "holiday")
         return { bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200" };
+    if (ev.type === "worldcup")
+        return { bg: "bg-lime-100", text: "text-lime-800", border: "border-lime-300" };
     if (ev.type === "event")
         return { bg: "bg-violet-100", text: "text-violet-800", border: "border-violet-200" };
     // manual: use category color if available
@@ -171,10 +173,10 @@ function eventCSSVars(ev: CalendarEvent): React.CSSProperties {
 
 function EventPill({ ev, onClick, compact = false }: { ev: CalendarEvent; onClick: () => void; compact?: boolean }) {
     const s = eventStyle(ev);
-    const icon = ev.type === "birthday" ? "🎂"
-        : ev.type === "match"   ? (isMatchPast(ev) ? "✅" : "⚽")
-        : ev.type === "holiday" ? "🎉"
-        : ev.type === "event"   ? (ev.icon ?? "🍖")
+    const icon = ev.type === "birthday"  ? "🎂"
+        : ev.type === "match"    ? (isMatchPast(ev) ? "✅" : "⚽")
+        : ev.type === "holiday"  ? "🎉"
+        : ev.type === "event"    ? (ev.icon ?? "🍖")
         : (ev.icon ?? ev.categoryIcon ?? "📅");
     return (
         <button
@@ -183,7 +185,9 @@ function EventPill({ ev, onClick, compact = false }: { ev: CalendarEvent; onClic
             style={eventCSSVars(ev)}
             className={`w-full text-left truncate rounded px-1 py-0.5 text-[11px] font-medium border ${s.bg} ${s.text} ${s.border} hover:opacity-80 transition-opacity`}
         >
-            <span className="mr-0.5">{icon}</span>
+            {ev.type === "worldcup"
+                ? <img src="https://flagcdn.com/br.svg" alt="Brasil" className="inline h-3 w-auto align-middle mr-1 shrink-0" />
+                : <span className="mr-0.5">{icon}</span>}
             {!compact && ev.time && !ev.timeTBD && <span className="mr-1 font-normal opacity-70">{ev.time}</span>}
             {ev.title}
         </button>
@@ -370,9 +374,9 @@ function DayView({
     return (
         <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-2">
             {dayEvs.map((ev, i) => {
-                const icon = ev.type === "birthday" ? "🎂"
-                    : ev.type === "match"   ? (isMatchPast(ev) ? "✅" : "⚽")
-                    : ev.type === "holiday" ? "🎉"
+                const icon = ev.type === "birthday"  ? "🎂"
+                    : ev.type === "match"    ? (isMatchPast(ev) ? "✅" : "⚽")
+                    : ev.type === "holiday"  ? "🎉"
                     : (ev.icon ?? ev.categoryIcon ?? "📅");
                 const s = eventStyle(ev);
                 return (
@@ -383,7 +387,9 @@ function DayView({
                         className={`w-full text-left rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 flex items-start gap-2.5 sm:gap-3 hover:opacity-80 transition-opacity ${s.bg} ${s.border}`}
                         type="button"
                     >
-                        <span className="text-xl sm:text-2xl leading-none mt-0.5">{icon}</span>
+                        {ev.type === "worldcup"
+                            ? <img src="https://flagcdn.com/br.svg" alt="Brasil" className="h-6 w-auto shrink-0 mt-0.5" />
+                            : <span className="text-xl sm:text-2xl leading-none mt-0.5">{icon}</span>}
                         <div className="flex-1 min-w-0">
                             <div className={`font-semibold text-sm ${s.text}`}>{ev.title}</div>
                             <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">

@@ -24,13 +24,14 @@ function EventDetailModal({
         const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
         return event.date < todayStr;
     })();
-    const icon = event.type === "birthday" ? "🎂"
-        : event.type === "match"   ? (isMatchPast ? "✅" : "⚽")
-        : event.type === "holiday" ? "🎉"
+    const icon = event.type === "birthday"  ? "🎂"
+        : event.type === "match"    ? (isMatchPast ? "✅" : "⚽")
+        : event.type === "holiday"  ? "🎉"
         : (event.categoryIcon ?? "📅");
-    const typeLabel = event.type === "birthday" ? "Aniversário"
-        : event.type === "match"   ? (isMatchPast ? "Jogo encerrado" : "Jogo")
-        : event.type === "holiday" ? "Feriado"
+    const typeLabel = event.type === "birthday"  ? "Aniversário"
+        : event.type === "match"    ? (isMatchPast ? "Jogo encerrado" : "Jogo")
+        : event.type === "holiday"  ? "Feriado"
+        : event.type === "worldcup" ? "Copa do Mundo"
         : "Evento";
 
     const dateLabel = (() => {
@@ -49,7 +50,9 @@ function EventDetailModal({
                 <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b dark:border-slate-700">
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-lg shrink-0">
-                            {icon}
+                            {event.type === "worldcup"
+                                ? <img src="https://flagcdn.com/br.svg" alt="Brasil" className="h-5 w-auto" />
+                                : icon}
                         </div>
                         <div>
                             <div className="text-base font-semibold text-slate-900 dark:text-white leading-tight">{event.title}</div>

@@ -23,6 +23,8 @@ function eventStyle(ev: CalendarEvent): { bg: string; text: string; border: stri
     }
     if (ev.type === "holiday")
         return { bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200" };
+    if (ev.type === "worldcup")
+        return { bg: "bg-lime-100", text: "text-lime-800", border: "border-lime-300" };
     if (ev.categoryColor) {
         return { bg: "bg-[var(--ev-bg)]", text: "text-[var(--ev-text)]", border: "border-[var(--ev-border)]" };
     }
@@ -43,9 +45,9 @@ function eventCSSVars(ev: CalendarEvent): React.CSSProperties {
 
 function EventPill({ ev, onClick, compact = false }: { ev: CalendarEvent; onClick: () => void; compact?: boolean }) {
     const s = eventStyle(ev);
-    const icon = ev.type === "birthday" ? "🎂"
-        : ev.type === "match"   ? (isMatchPast(ev) ? "✅" : "⚽")
-        : ev.type === "holiday" ? "🎉"
+    const icon = ev.type === "birthday"  ? "🎂"
+        : ev.type === "match"    ? (isMatchPast(ev) ? "✅" : "⚽")
+        : ev.type === "holiday"  ? "🎉"
         : (ev.categoryIcon ?? "📅");
     return (
         <button
@@ -54,7 +56,9 @@ function EventPill({ ev, onClick, compact = false }: { ev: CalendarEvent; onClic
             style={eventCSSVars(ev)}
             className={`w-full text-left truncate rounded px-1 py-0.5 text-[11px] font-medium border ${s.bg} ${s.text} ${s.border} hover:opacity-80 transition-opacity`}
         >
-            <span className="mr-0.5">{icon}</span>
+            {ev.type === "worldcup"
+                ? <img src="https://flagcdn.com/br.svg" alt="Brasil" className="inline h-3 w-auto align-middle mr-1 shrink-0" />
+                : <span className="mr-0.5">{icon}</span>}
             {!compact && ev.time && !ev.timeTBD && <span className="mr-1 font-normal opacity-70">{ev.time}</span>}
             {ev.title}
         </button>

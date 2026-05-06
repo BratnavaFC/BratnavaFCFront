@@ -1,6 +1,6 @@
 export interface CalendarEvent {
     id?: string;
-    type: 'manual' | 'birthday' | 'match' | 'holiday' | 'event';
+    type: 'manual' | 'birthday' | 'match' | 'holiday' | 'event' | 'worldcup';
     title: string;
     date: string;        // "YYYY-MM-DD"
     time?: string | null;
