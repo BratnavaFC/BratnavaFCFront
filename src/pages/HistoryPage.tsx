@@ -4,7 +4,7 @@ import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { useNavigate } from "react-router-dom";
-import { Calendar, ChevronLeft, ChevronRight, History, Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, Loader2, MapPin, RefreshCw, User } from "lucide-react";
 import { getResponseMessage } from "../api/apiResponse";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -102,11 +102,13 @@ const PAGE_SIZE = 20;
 
 export default function HistoryPage() {
     const nav = useNavigate();
-    const groupId = useAccountStore((s) => s.getActive()?.activeGroupId);
+    const groupId      = useAccountStore((s) => s.getActive()?.activeGroupId);
+    const activePlayerId = useAccountStore((s) => s.getActive()?.activePlayerId);
 
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
+    const [onlyMine, setOnlyMine] = useState(false);
 
     const topRef = useRef<HTMLDivElement | null>(null);
 
@@ -114,7 +116,8 @@ export default function HistoryPage() {
         if (!groupId) return;
         setLoading(true);
         try {
-            const histRes = await MatchesApi.history(groupId, 400);
+            const playerId = onlyMine && activePlayerId ? activePlayerId : undefined;
+            const histRes = await MatchesApi.history(groupId, 400, playerId);
 
             const list: any[] = Array.isArray(histRes.data.data) ? histRes.data.data : [];
 
@@ -130,7 +133,7 @@ export default function HistoryPage() {
     useEffect(() => {
         loadHistory();
         // eslint-disable-next-line
-    }, [groupId]);
+    }, [groupId, onlyMine]);
 
     const sorted = useMemo(() => {
         return [...(Array.isArray(items) ? items : [])].sort((a, b) => {
@@ -183,15 +186,31 @@ export default function HistoryPage() {
                         </div>
                     </div>
                     {groupId && (
-                        <button
-                            type="button"
-                            onClick={loadHistory}
-                            disabled={loading}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors disabled:opacity-50 shrink-0"
-                        >
-                            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                            Atualizar
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                            {activePlayerId && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setOnlyMine(v => !v); setPage(1); }}
+                                    className={`inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border transition-colors ${
+                                        onlyMine
+                                            ? "bg-white text-slate-900 border-white"
+                                            : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                                    }`}
+                                >
+                                    <User size={14} />
+                                    Apenas meus jogos
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={loadHistory}
+                                disabled={loading}
+                                className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                                Atualizar
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
