@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { TeamGenApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import {
@@ -236,14 +236,9 @@ type SynergySortKey = "wr" | "wins" | "assistsReceived" | "assistsGiven";
 
 export default function VisualStatsPage() {
     const { groupId } = useParams();
-    const navigate = useNavigate();
     const active = useAccountStore((s) => s.getActive());
     const activeGroupId = active?.activeGroupId;
     const _icons = useGroupIcons(groupId ?? activeGroupId);
-
-    useEffect(() => {
-        navigate("/app", { replace: true });
-    }, [navigate]);
 
     const [data, setData] = useState<PlayerVisualStatsReport | null>(null);
     const [loading, setLoading] = useState(true);

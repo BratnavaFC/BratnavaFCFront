@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, User, ShieldAlert,
-    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff, Coins,
+    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff, Coins, BarChart3,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -61,9 +61,10 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const groups: NavGroup[] = useMemo(() => {
         const adminItems: Item[] = isGroupAdm || isGod
             ? [
-                { to: "/app/spotlight",       label: "Spotlight",     icon: Presentation },
-                { to: "/app/birthday-status", label: "Aniversários",  icon: Cake },
-                { to: "/app/settings",        label: "Configurações", icon: Settings },
+                { to: "/app/spotlight",       label: "Spotlight",      icon: Presentation },
+                { to: "/app/birthday-status", label: "Aniversários",   icon: Cake },
+                { to: "/app/settings",        label: "Configurações",  icon: Settings },
+                ...(activeGrpId ? [{ to: `/app/groups/${activeGrpId}/visual-stats`, label: "Visual Stats", icon: BarChart3 }] : []),
               ]
             : [];
 

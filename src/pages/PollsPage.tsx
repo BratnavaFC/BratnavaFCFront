@@ -381,7 +381,7 @@ export default function PollsPage() {
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
                                     : !groupId ? 'Selecione um grupo'
-                                    : `${eventPolls.length} evento${eventPolls.length !== 1 ? 's' : ''} · ${votePolls.length} votaç${votePolls.length !== 1 ? 'ões' : 'ão'}`
+                                    : (() => { const ae = eventPolls.filter(p => p.status === 'open').length; const av = votePolls.filter(p => p.status === 'open').length; return `${ae} evento${ae !== 1 ? 's' : ''} aberto${ae !== 1 ? 's' : ''} · ${av} votaç${av !== 1 ? 'ões' : 'ão'} aberta${av !== 1 ? 's' : ''}`; })()
                                 }
                             </p>
                         </div>
@@ -423,9 +423,9 @@ export default function PollsPage() {
                             }`}
                         >
                             <CalendarDays size={14} /> Eventos
-                            {eventPolls.length > 0 && (
+                            {eventPolls.filter(p => p.status === 'open').length > 0 && (
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'events' ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'}`}>
-                                    {eventPolls.length}
+                                    {eventPolls.filter(p => p.status === 'open').length}
                                 </span>
                             )}
                         </button>
@@ -439,11 +439,11 @@ export default function PollsPage() {
                             }`}
                         >
                             <Vote size={14} /> Votações
-                            {votePolls.length > 0 && (
+                            {votePolls.filter(p => p.status === 'open').length > 0 && (
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'polls' ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'}`}>
-                                    {votePolls.length}
+                                    {votePolls.filter(p => p.status === 'open').length}
                                 </span>
-            )}
+                            )}
                         </button>
                     </div>
                 )}
