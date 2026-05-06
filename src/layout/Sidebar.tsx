@@ -46,7 +46,15 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
         PollsApi.getPolls(activeGrpId)
             .then((res) => {
                 const list: any[] = (res.data as any)?.data ?? [];
-                const count = list.filter((p: any) => p.status === 'open' && !p.hasVoted).length;
+                const now = Date.now();
+                const count = list.filter((p: any) => {
+                    if (p.status !== 'open' || p.hasVoted) return false;
+                    if (p.deadlineDate) {
+                        const deadline = new Date(`${p.deadlineDate}T${p.deadlineTime ?? '23:59'}:00`);
+                        if (now > deadline.getTime()) return false;
+                    }
+                    return true;
+                }).length;
                 setPendingPollsCount(count);
             })
             .catch(() => { /* silencioso */ });

@@ -321,7 +321,15 @@ export default function PollsPage() {
             const res = await PollsApi.getPolls(groupId);
             const list: PollSummary[] = res.data.data ?? [];
             setPolls(list);
-            setPendingPollsCount(list.filter(p => p.status === 'open' && !p.hasVoted).length);
+            const now = Date.now();
+            setPendingPollsCount(list.filter(p => {
+                if (p.status !== 'open' || p.hasVoted) return false;
+                if (p.deadlineDate) {
+                    const deadline = new Date(`${p.deadlineDate}T${p.deadlineTime ?? '23:59'}:00`);
+                    if (now > deadline.getTime()) return false;
+                }
+                return true;
+            }).length);
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao carregar votações.'));
         } finally { setLoading(false); }
