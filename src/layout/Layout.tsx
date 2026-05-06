@@ -95,7 +95,7 @@ export default function Layout() {
                     />
 
                     {/* Drawer */}
-                    <div className="absolute left-0 top-0 h-full w-[280px] max-w-[85vw]">
+                    <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] flex flex-col overflow-hidden">
                         <Sidebar
                             open={true}
                             pinned={false}

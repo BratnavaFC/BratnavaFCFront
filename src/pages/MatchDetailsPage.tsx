@@ -1369,8 +1369,8 @@ export default function MatchDetailsPage() {
             </Section>
             )}
 
-            {/* ── Editar gols (admin only, finalized matches) ───────── */}
-            {isAdmin && data.status === 6 && (
+            {/* ── Editar gols (admin only, partidas encerradas) ─────── */}
+            {isAdmin && data.status >= 4 && (
             <Section title="Editar gols">
                 <GoalTracker
                     participants={[
