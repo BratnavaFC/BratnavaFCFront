@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, User, ShieldAlert,
@@ -15,6 +15,7 @@ type Item = { to: string; label: string; icon?: any; imgIcon?: string; badge?: n
 type NavGroup = { groupLabel?: string; items: Item[] };
 
 export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
+    const { pathname } = useLocation();
     const userId       = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
     const roles        = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.roles ?? []);
     const activeGrpId  = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupId ?? null);
@@ -49,7 +50,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 setPendingPollsCount(count);
             })
             .catch(() => { /* silencioso */ });
-    }, [userId, activeGrpId, setPendingPollsCount]);
+    }, [userId, activeGrpId, pathname, setPendingPollsCount]);
 
     useEffect(() => {
         if (!activeGrpId) { setPendingPaymentsCount(0); return; }
