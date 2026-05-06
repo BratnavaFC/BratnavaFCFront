@@ -250,6 +250,7 @@ export default function VisualStatsPage() {
     const [sortKey, setSortKey] = useState<SortKey>("winrate");
     const [minTogether, setMinTogether] = useState(1);
     const [synergySortKey, setSynergySortKey] = useState<SynergySortKey>("wr");
+    const [perMatch, setPerMatch] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -277,6 +278,14 @@ export default function VisualStatsPage() {
 
     const MIN_GAMES_WR = 3;
 
+    function pmVal(value: number, games: number): number {
+        return games > 0 ? value / games : 0;
+    }
+    function pmFmt(value: number, games: number): string {
+        if (games === 0) return "—";
+        return (value / games).toFixed(2);
+    }
+
     const sorted = useMemo(() => {
         const q = search.trim().toLowerCase();
         let list = players.filter(p => isActive(p.status));
@@ -289,15 +298,15 @@ export default function VisualStatsPage() {
                 return normalizeWR(b.winRate) - normalizeWR(a.winRate);
             });
         }
-        else if (sortKey === "wins")     list.sort((a, b) => (b.wins || 0) - (a.wins || 0));
+        else if (sortKey === "wins")     list.sort((a, b) => perMatch ? pmVal(b.wins, b.gamesPlayed) - pmVal(a.wins, a.gamesPlayed) : (b.wins || 0) - (a.wins || 0));
         else if (sortKey === "games")    list.sort((a, b) => (b.gamesPlayed || 0) - (a.gamesPlayed || 0));
-        else if (sortKey === "mvps")     list.sort((a, b) => (b.mvps || 0) - (a.mvps || 0));
-        else if (sortKey === "goals")    list.sort((a, b) => (b.goals || 0) - (a.goals || 0));
-        else if (sortKey === "assists")  list.sort((a, b) => (b.assists || 0) - (a.assists || 0));
-        else if (sortKey === "owngoals") list.sort((a, b) => (b.ownGoals || 0) - (a.ownGoals || 0));
+        else if (sortKey === "mvps")     list.sort((a, b) => perMatch ? pmVal(b.mvps, b.gamesPlayed) - pmVal(a.mvps, a.gamesPlayed) : (b.mvps || 0) - (a.mvps || 0));
+        else if (sortKey === "goals")    list.sort((a, b) => perMatch ? pmVal(b.goals, b.gamesPlayed) - pmVal(a.goals, a.gamesPlayed) : (b.goals || 0) - (a.goals || 0));
+        else if (sortKey === "assists")  list.sort((a, b) => perMatch ? pmVal(b.assists, b.gamesPlayed) - pmVal(a.assists, a.gamesPlayed) : (b.assists || 0) - (a.assists || 0));
+        else if (sortKey === "owngoals") list.sort((a, b) => perMatch ? pmVal(b.ownGoals, b.gamesPlayed) - pmVal(a.ownGoals, a.gamesPlayed) : (b.ownGoals || 0) - (a.ownGoals || 0));
         else list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
         return list;
-    }, [players, search, sortKey]);
+    }, [players, search, sortKey, perMatch]);
 
     const selectedPlayer = useMemo(
         () => players.find((p) => p.playerId === selectedId) ?? null,
@@ -329,12 +338,12 @@ export default function VisualStatsPage() {
         const getValue = (p: PlayerVisualStatsItem): number | string => {
             switch (sortKey) {
                 case "winrate":  return p.gamesPlayed < MIN_GAMES_WR ? -Infinity : normalizeWR(p.winRate);
-                case "wins":     return p.wins || 0;
+                case "wins":     return perMatch ? pmVal(p.wins || 0, p.gamesPlayed) : p.wins || 0;
                 case "games":    return p.gamesPlayed || 0;
-                case "mvps":     return p.mvps || 0;
-                case "goals":    return p.goals || 0;
-                case "assists":  return p.assists || 0;
-                case "owngoals": return p.ownGoals || 0;
+                case "mvps":     return perMatch ? pmVal(p.mvps || 0, p.gamesPlayed) : p.mvps || 0;
+                case "goals":    return perMatch ? pmVal(p.goals || 0, p.gamesPlayed) : p.goals || 0;
+                case "assists":  return perMatch ? pmVal(p.assists || 0, p.gamesPlayed) : p.assists || 0;
+                case "owngoals": return perMatch ? pmVal(p.ownGoals || 0, p.gamesPlayed) : p.ownGoals || 0;
                 case "name":     return p.name;
                 default:         return 0;
             }
@@ -385,18 +394,42 @@ export default function VisualStatsPage() {
                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
                 {/* Title + subtitle */}
-                <div className="relative flex items-center gap-3">
-                    <div className="page-header-icon">
-                        <BarChart3 size={18} />
+                <div className="relative flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                        <div className="page-header-icon">
+                            <BarChart3 size={18} />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-black leading-tight">Estatísticas</h1>
+                            <p className="text-xs text-white/60 mt-0.5">
+                                {players.filter(p => isActive(p.status)).length} jogadores ativos
+                                {data.totalFinalizedMatches > 0 && <> · {data.totalFinalizedMatches} partidas finalizadas</>}
+                                {data.totalMatchesConsidered > 0 && <> · {data.totalMatchesConsidered} consideradas</>}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-black leading-tight">Estatísticas</h1>
-                        <p className="text-xs text-white/60 mt-0.5">
-                            {players.filter(p => isActive(p.status)).length} jogadores ativos
-                            {data.totalFinalizedMatches > 0 && <> · {data.totalFinalizedMatches} partidas finalizadas</>}
-                            {data.totalMatchesConsidered > 0 && <> · {data.totalMatchesConsidered} consideradas</>}
-                        </p>
-                    </div>
+                </div>
+
+                {/* Switch Geral / Por partida */}
+                <div className="relative mt-4 flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setPerMatch(false)}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                            !perMatch ? 'bg-white text-slate-900 border-white' : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
+                        }`}
+                    >
+                        Geral
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setPerMatch(true)}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                            perMatch ? 'bg-white text-slate-900 border-white' : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
+                        }`}
+                    >
+                        Por partida
+                    </button>
                 </div>
             </div>
 
@@ -514,32 +547,32 @@ export default function VisualStatsPage() {
                                                         <span>{p.gamesPlayed}j</span>
                                                         <span className="text-slate-200 dark:text-slate-700">·</span>
                                                         <span>
-                                                            <span className="text-green-600 font-semibold">{p.wins}V</span>
+                                                            <span className="text-green-600 font-semibold">{perMatch ? pmFmt(p.wins, p.gamesPlayed) : p.wins}V</span>
                                                             {" "}
-                                                            <span>{p.ties}E</span>
+                                                            <span>{perMatch ? pmFmt(p.ties, p.gamesPlayed) : p.ties}E</span>
                                                             {" "}
-                                                            <span className="text-red-500 font-semibold">{p.losses}D</span>
+                                                            <span className="text-red-500 font-semibold">{perMatch ? pmFmt(p.losses, p.gamesPlayed) : p.losses}D</span>
                                                         </span>
-                                                        {(p.goals || 0) > 0 && (
+                                                        {((p.goals || 0) > 0 || perMatch) && (
                                                             <>
                                                                 <span className="text-slate-200 dark:text-slate-700">·</span>
                                                                 <span className="inline-flex items-center gap-0.5 font-medium text-slate-700 dark:text-slate-300">
-                                                                    <IconRenderer value={resolveIcon(_icons, 'goal')} size={10} />{p.goals}
+                                                                    <IconRenderer value={resolveIcon(_icons, 'goal')} size={10} />{perMatch ? pmFmt(p.goals || 0, p.gamesPlayed) : p.goals}
                                                                 </span>
                                                             </>
                                                         )}
-                                                        {(p.assists || 0) > 0 && (
+                                                        {((p.assists || 0) > 0 || perMatch) && (
                                                             <>
                                                                 <span className="text-slate-200 dark:text-slate-700">·</span>
                                                                 <span className="inline-flex items-center gap-0.5 font-medium text-slate-700 dark:text-slate-300">
-                                                                    <IconRenderer value={resolveIcon(_icons, 'assist')} size={10} />{p.assists}
+                                                                    <IconRenderer value={resolveIcon(_icons, 'assist')} size={10} />{perMatch ? pmFmt(p.assists || 0, p.gamesPlayed) : p.assists}
                                                                 </span>
                                                             </>
                                                         )}
                                                         {(p.ownGoals || 0) > 0 && (
                                                             <>
                                                                 <span className="text-slate-200 dark:text-slate-700">·</span>
-                                                                <span className="font-medium text-red-500">GC {p.ownGoals}</span>
+                                                                <span className="font-medium text-red-500">GC {perMatch ? pmFmt(p.ownGoals || 0, p.gamesPlayed) : p.ownGoals}</span>
                                                             </>
                                                         )}
                                                     </div>
@@ -621,11 +654,11 @@ export default function VisualStatsPage() {
                                                     {/* V/E/D */}
                                                     <td className="px-4 py-2.5">
                                                         <div className="text-center tabular-nums text-xs mb-1.5">
-                                                            <span className="text-green-600 font-semibold">{p.wins}</span>
+                                                            <span className="text-green-600 font-semibold">{perMatch ? pmFmt(p.wins, p.gamesPlayed) : p.wins}</span>
                                                             <span className="text-slate-300 dark:text-slate-600 mx-0.5">/</span>
-                                                            <span className="text-slate-500 dark:text-slate-400">{p.ties}</span>
+                                                            <span className="text-slate-500 dark:text-slate-400">{perMatch ? pmFmt(p.ties, p.gamesPlayed) : p.ties}</span>
                                                             <span className="text-slate-300 dark:text-slate-600 mx-0.5">/</span>
-                                                            <span className="text-red-500 font-semibold">{p.losses}</span>
+                                                            <span className="text-red-500 font-semibold">{perMatch ? pmFmt(p.losses, p.gamesPlayed) : p.losses}</span>
                                                         </div>
                                                         <WDLBar wins={p.wins} ties={p.ties} losses={p.losses} />
                                                     </td>
@@ -656,7 +689,8 @@ export default function VisualStatsPage() {
                                                     <td className="px-4 py-2.5 text-right tabular-nums">
                                                         {p.mvps > 0 ? (
                                                             <span className="inline-flex items-center gap-1 text-amber-500 font-semibold text-xs">
-                                                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />{p.mvps}
+                                                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />
+                                                                {perMatch ? pmFmt(p.mvps, p.gamesPlayed) : p.mvps}
                                                             </span>
                                                         ) : (
                                                             <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
@@ -665,22 +699,22 @@ export default function VisualStatsPage() {
 
                                                     {/* Goals */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
-                                                        {(p.goals || 0) > 0
-                                                            ? <span className="font-semibold text-slate-700 dark:text-slate-300">{p.goals}</span>
+                                                        {(p.goals || 0) > 0 || perMatch
+                                                            ? <span className="font-semibold text-slate-700 dark:text-slate-300">{perMatch ? pmFmt(p.goals || 0, p.gamesPlayed) : p.goals}</span>
                                                             : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
 
                                                     {/* Assists */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
-                                                        {(p.assists || 0) > 0
-                                                            ? <span className="font-semibold text-slate-700 dark:text-slate-300">{p.assists}</span>
+                                                        {(p.assists || 0) > 0 || perMatch
+                                                            ? <span className="font-semibold text-slate-700 dark:text-slate-300">{perMatch ? pmFmt(p.assists || 0, p.gamesPlayed) : p.assists}</span>
                                                             : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
 
                                                     {/* Own goals */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
                                                         {(p.ownGoals || 0) > 0
-                                                            ? <span className="font-semibold text-red-500">{p.ownGoals}</span>
+                                                            ? <span className="font-semibold text-red-500">{perMatch ? pmFmt(p.ownGoals || 0, p.gamesPlayed) : p.ownGoals}</span>
                                                             : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
                                                 </tr>
@@ -830,18 +864,30 @@ export default function VisualStatsPage() {
                                     {/* Stat pills grid */}
                                     <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
                                         <StatPill label="Jogos" value={selectedPlayer.gamesPlayed} />
-                                        <StatPill label="Vitórias" value={selectedPlayer.wins} color="text-green-600 dark:text-green-500" />
-                                        <StatPill label="Empates" value={selectedPlayer.ties} color="text-slate-500 dark:text-slate-400" />
-                                        <StatPill label="Derrotas" value={selectedPlayer.losses} color="text-red-500" />
                                         <StatPill
-                                            label="MVPs"
-                                            value={selectedPlayer.mvps || 0}
+                                            label={perMatch ? "V/jogo" : "Vitórias"}
+                                            value={perMatch ? pmFmt(selectedPlayer.wins, selectedPlayer.gamesPlayed) : selectedPlayer.wins}
+                                            color="text-green-600 dark:text-green-500"
+                                        />
+                                        <StatPill
+                                            label={perMatch ? "E/jogo" : "Empates"}
+                                            value={perMatch ? pmFmt(selectedPlayer.ties, selectedPlayer.gamesPlayed) : selectedPlayer.ties}
+                                            color="text-slate-500 dark:text-slate-400"
+                                        />
+                                        <StatPill
+                                            label={perMatch ? "D/jogo" : "Derrotas"}
+                                            value={perMatch ? pmFmt(selectedPlayer.losses, selectedPlayer.gamesPlayed) : selectedPlayer.losses}
+                                            color="text-red-500"
+                                        />
+                                        <StatPill
+                                            label={perMatch ? "MVP/jogo" : "MVPs"}
+                                            value={perMatch ? pmFmt(selectedPlayer.mvps || 0, selectedPlayer.gamesPlayed) : (selectedPlayer.mvps || 0)}
                                             color={selectedPlayer.mvps > 0 ? "text-amber-500" : "text-slate-400 dark:text-slate-600"}
                                             icon={<IconRenderer value={resolveIcon(_icons, 'mvp')} size={13} lucideProps={{ className: "text-amber-400" }} />}
                                         />
                                         <StatPill
-                                            label="Gols"
-                                            value={selectedPlayer.goals || 0}
+                                            label={perMatch ? "Gols/jogo" : "Gols"}
+                                            value={perMatch ? pmFmt(selectedPlayer.goals || 0, selectedPlayer.gamesPlayed) : (selectedPlayer.goals || 0)}
                                             color={(selectedPlayer.goals || 0) > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-600"}
                                             icon={<IconRenderer value={resolveIcon(_icons, 'goal')} size={13} />}
                                         />
