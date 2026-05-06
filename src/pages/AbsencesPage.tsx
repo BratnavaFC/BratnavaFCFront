@@ -6,6 +6,7 @@ import { getResponseMessage } from '../api/apiResponse';
 import { IconRenderer } from '../components/IconRenderer';
 import { ABSENCE_TYPE_OPTIONS, resolveAbsenceIcon } from '../lib/absenceIcons';
 import ModalBackdrop from '../components/modals/ModalBackdrop';
+import useAccountStore from '../auth/accountStore';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -85,7 +86,7 @@ function AbsenceFormModal({
                                 onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
                                 className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-400"
                             />
-                        </div>
+        </div>
                     </div>
 
                     {/* tipo */}
@@ -151,21 +152,31 @@ function AbsenceFormModal({
     );
 }
 
+interface GroupMemberAbsenceDto {
+    playerId:   string;
+    playerName: string;
+    absences:   AbsenceDto[];
+}
+
 // ── AbsencesPage ──────────────────────────────────────────────────────────────
 
 export default function AbsencesPage() {
-    const [absences, setAbsences]     = useState<AbsenceDto[]>([]);
+    const groupId        = useAccountStore(s => s.getActive()?.activeGroupId);
+    const activePlayerId = useAccountStore(s => s.getActive()?.activePlayerId);
+
+    const [members, setMembers]       = useState<GroupMemberAbsenceDto[]>([]);
     const [loading, setLoading]       = useState(false);
     const [modalOpen, setModalOpen]   = useState(false);
     const [editTarget, setEditTarget] = useState<AbsenceDto | null>(null);
 
-    useEffect(() => { fetchMine(); }, []);
+    useEffect(() => { if (groupId) fetchAll(); }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    async function fetchMine() {
+    async function fetchAll() {
+        if (!groupId) return;
         setLoading(true);
         try {
-            const res = await AbsencesApi.mine();
-            setAbsences((res.data as any)?.data ?? []);
+            const res = await AbsencesApi.byGroup(groupId);
+            setMembers((res.data as any)?.data ?? []);
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao carregar ausências.'));
         } finally {
@@ -173,20 +184,9 @@ export default function AbsencesPage() {
         }
     }
 
-    function openCreate() {
-        setEditTarget(null);
-        setModalOpen(true);
-    }
-
-    function openEdit(a: AbsenceDto) {
-        setEditTarget(a);
-        setModalOpen(true);
-    }
-
-    function closeModal() {
-        setModalOpen(false);
-        setEditTarget(null);
-    }
+    function openCreate() { setEditTarget(null); setModalOpen(true); }
+    function openEdit(a: AbsenceDto) { setEditTarget(a); setModalOpen(true); }
+    function closeModal() { setModalOpen(false); setEditTarget(null); }
 
     async function handleSave(dto: CreateAbsenceDto) {
         try {
@@ -198,10 +198,10 @@ export default function AbsencesPage() {
                 toast.success('Ausência cadastrada.');
             }
             closeModal();
-            await fetchMine();
+            await fetchAll();
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao salvar ausência.'));
-            throw new Error(); // keep modal open via finally in child
+            throw new Error();
         }
     }
 
@@ -210,11 +210,14 @@ export default function AbsencesPage() {
         try {
             await AbsencesApi.delete(id);
             toast.success('Ausência removida.');
-            await fetchMine();
+            await fetchAll();
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao remover ausência.'));
         }
     }
+
+    const withAbsences = members.filter(m => m.absences.length > 0);
+    const totalAbsences = withAbsences.reduce((sum, m) => sum + m.absences.length, 0);
 
     const initialForm: CreateAbsenceDto = editTarget
         ? { startDate: editTarget.startDate, endDate: editTarget.endDate, absenceType: editTarget.absenceType, description: editTarget.description ?? '' }
@@ -237,7 +240,7 @@ export default function AbsencesPage() {
                             <p className="text-xs text-white/60 mt-0.5">
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
-                                    : `${absences.length} ausência${absences.length !== 1 ? 's' : ''} cadastrada${absences.length !== 1 ? 's' : ''}`}
+                                    : `${totalAbsences} ausência${totalAbsences !== 1 ? 's' : ''} na patota`}
                             </p>
                         </div>
                     </div>
@@ -250,82 +253,98 @@ export default function AbsencesPage() {
                 </div>
             </div>
 
-            {/* ── Lista ── */}
+            {/* ── Loading ── */}
             {loading && (
                 <div className="flex justify-center py-12 text-slate-400">
                     <Loader2 size={24} className="animate-spin" />
                 </div>
             )}
 
-            {!loading && absences.length === 0 && (
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-12 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500 shadow-sm">
-                    <CalendarOff size={36} className="opacity-30" />
-                    <p className="text-sm">Nenhuma ausência cadastrada.</p>
-                    <button
-                        onClick={openCreate}
-                        className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors"
-                    >
-                        <Plus size={14} /> Cadastrar ausência
-                    </button>
-                </div>
-            )}
-
-            {!loading && absences.length > 0 && (
-                <div className="flex flex-col gap-2">
-                    {absences.map(a => (
-                        <div
-                            key={a.id}
-                            className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition-shadow"
-                        >
-                            {/* ícone */}
-                            <div className={[
-                                'h-10 w-10 rounded-xl flex items-center justify-center shrink-0',
-                                a.absenceType === 2
-                                    ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
-                            ].join(' ')}>
-                                <IconRenderer value={resolveAbsenceIcon(a.absenceType)} size={18} />
-                            </div>
-
-                            {/* info */}
-                            <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-sm text-slate-900 dark:text-white">
-                                    {a.absenceTypeName}
-                                </div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                    {formatDate(a.startDate)}
-                                    {a.startDate !== a.endDate && <> até {formatDate(a.endDate)}</>}
-                                </div>
-                                {a.description && (
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate" title={a.description}>
-                                        {a.description}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* ações */}
-                            <div className="flex gap-1 shrink-0">
-                                <button
-                                    title="Editar"
-                                    onClick={() => openEdit(a)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition"
-                                >
-                                    <Pencil size={13} />
-                                </button>
-                                <button
-                                    title="Excluir"
-                                    onClick={() => handleDelete(a.id)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-red-200 dark:border-red-800/60 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"
-                                >
-                                    <Trash2 size={13} />
-                                </button>
-                            </div>
+            {/* ── Lista ── */}
+            {!loading && (
+                <div className="flex flex-col gap-4">
+                    {withAbsences.length === 0 && (
+                        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-12 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500 shadow-sm">
+                            <CalendarOff size={36} className="opacity-30" />
+                            <p className="text-sm">Nenhuma ausência registrada.</p>
                         </div>
-                    ))}
+                    )}
+
+                    {withAbsences.map(m => {
+                        const isSelf = m.playerId === activePlayerId;
+                        return (
+                            <div key={m.playerId}>
+                                {/* nome do jogador */}
+                                <div className="flex items-center gap-2 mb-2 px-1">
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        {m.playerName}
+                                    </span>
+                                    {isSelf && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                                            você
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* ausências do jogador */}
+                                <div className="flex flex-col gap-2">
+                                    {m.absences.map(a => (
+                                        <div
+                                            key={a.id}
+                                            className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 shadow-sm"
+                                        >
+                                            <div className={[
+                                                'h-9 w-9 rounded-xl flex items-center justify-center shrink-0',
+                                                a.absenceType === 2
+                                                    ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
+                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
+                                            ].join(' ')}>
+                                                <IconRenderer value={resolveAbsenceIcon(a.absenceType)} size={16} />
+                                            </div>
+
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-sm text-slate-900 dark:text-white">
+                                                    {a.absenceTypeName}
+                                                </div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                    {formatDate(a.startDate)}
+                                                    {a.startDate !== a.endDate && <> até {formatDate(a.endDate)}</>}
+                                                </div>
+                                                {a.description && (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate" title={a.description}>
+                                                        {a.description}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {isSelf && (
+                                                <div className="flex gap-1 shrink-0">
+                                                    <button
+                                                        title="Editar"
+                                                        onClick={() => openEdit(a)}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition"
+                                                    >
+                                                        <Pencil size={13} />
+                                                    </button>
+                                                    <button
+                                                        title="Excluir"
+                                                        onClick={() => handleDelete(a.id)}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-red-200 dark:border-red-800/60 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
-            {/* ── Modal de criação/edição ── */}
+            {/* ── Modal ── */}
             {modalOpen && (
                 <AbsenceFormModal
                     key={editTarget?.id ?? 'new'}

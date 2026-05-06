@@ -119,7 +119,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     }, [isAdminOrGod, isGod, isGroupAdm, pendingCount, pendingPollsCount, pendingPaymentsCount]);
 
     return (
-        <aside className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${open ? "w-64" : "w-16"}`}>
+        <aside className={`h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${open ? "w-64" : "w-16"}`}>
             <div className="h-full flex flex-col">
                 {/* Header */}
                 <div className={[
