@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import {
     Coins, Trophy, Target, TrendingUp, TrendingDown,
     Minus, Loader2, RefreshCw, Check, X, ChevronDown,
-    History, Eye,
+    History, Eye, Info, Zap, Timer, BarChart2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BetApi, MatchesApi } from "../api/endpoints";
@@ -519,7 +519,6 @@ function BetPreviewPanel({
                                 const expandable  = canExpand(userBet.userId);
                                 const isMe        = isViewAsMe(userBet.userId);
                                 const betNet      = userBet.simulatedBetEarnings;
-                                const total       = userBet.simulatedTotal;
                                 const correctCnt  = userBet.selections.filter((s) => s.isCorrect).length;
                                 const partialCnt  = userBet.selections.filter((s) => s.isPartialCredit).length;
 
@@ -555,7 +554,6 @@ function BetPreviewPanel({
                                                     {betNet > 0 ? <TrendingUp size={13} /> : betNet < 0 ? <TrendingDown size={13} /> : <Minus size={13} />}
                                                     {betNet > 0 ? "+" : ""}{betNet}
                                                 </div>
-                                                <p className="text-xs text-slate-400">Total +{total}</p>
                                             </div>
                                             {expandable && (
                                                 <ChevronDown size={14} className={`text-slate-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
@@ -1202,9 +1200,6 @@ function HistoryTab({ groupId }: { groupId: string }) {
                                                                         : <Minus size={13} />}
                                                                 {userBet.betEarnings > 0 ? "+" : ""}{userBet.betEarnings}
                                                             </div>
-                                                            <p className="text-xs text-slate-400">
-                                                                Total +{userBet.totalForMatch}
-                                                            </p>
                                                         </div>
                                                         {expandable && (
                                                             <ChevronDown size={14} className={`text-slate-400 transition-transform shrink-0 ${isUserOpen ? "rotate-180" : ""}`} />
@@ -1247,10 +1242,10 @@ function HistoryTab({ groupId }: { groupId: string }) {
                                                                     </div>
                                                                 </div>
                                                             ))}
-                                                            {/* Base reward row */}
+                                                            {/* Bônus de participação */}
                                                             <div className="flex items-center justify-between px-5 py-2 bg-white/50 dark:bg-slate-900/20">
-                                                                <span className="text-xs text-slate-400">Base por participação</span>
-                                                                <span className="text-xs font-bold text-emerald-500">+{userBet.baseReward}</span>
+                                                                <span className="text-xs text-slate-400">Bônus de participação</span>
+                                                                <span className="text-xs font-bold text-indigo-500">+{userBet.baseReward}</span>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1380,13 +1375,135 @@ function RankingTab({ groupId }: { groupId: string }) {
     );
 }
 
+// ── BetInfoModal ──────────────────────────────────────────────────────────────
+
+function BetInfoModal({ onClose }: { onClose: () => void }) {
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+            {/* Panel */}
+            <div
+                className="relative w-full max-w-md rounded-3xl bg-slate-900 text-white shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="relative px-6 pt-6 pb-5 bg-gradient-to-br from-indigo-600/30 to-slate-900 shrink-0">
+                    <div className="absolute inset-0 opacity-[0.06]"
+                        style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+                    <div className="relative flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-11 w-11 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center shrink-0">
+                                <Coins size={22} className="text-indigo-300" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black leading-tight">Como funcionam as fichas</h2>
+                                <p className="text-xs text-white/50 mt-0.5">Bratnava Coins · Sistema de apostas</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="shrink-0 h-8 w-8 rounded-xl bg-white/10 hover:bg-white/20 transition flex items-center justify-center"
+                        >
+                            <X size={15} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Rules + Example — scrollable */}
+                <div className="overflow-y-auto px-6 py-5 space-y-4">
+                    <div className="flex gap-4 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
+                        <div className="h-9 w-9 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <Zap size={17} className="text-indigo-300" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-indigo-200">200 fichas por jogo para apostar</p>
+                            <p className="text-xs text-white/55 mt-1 leading-relaxed">
+                                A cada partida, você recebe <span className="text-white font-semibold">200 Bratnava Coins</span> para usar nas apostas. Esse valor é a sua cota — não é ganho, é o que você tem para jogar.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                        <div className="h-9 w-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <Timer size={17} className="text-amber-300" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-amber-200">Fichas não usadas expiram</p>
+                            <p className="text-xs text-white/55 mt-1 leading-relaxed">
+                                Se você não apostar, os 200 somem. Não há acúmulo de cotas: <span className="text-white font-semibold">use ou perca</span>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                        <div className="h-9 w-9 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <Coins size={17} className="text-emerald-300" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-emerald-200">+50 bônus por participar</p>
+                            <p className="text-xs text-white/55 mt-1 leading-relaxed">
+                                Quem aposta ganha <span className="text-white font-semibold">+50 coins</span> garantidos no saldo, independente de acertar ou errar.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 p-4 rounded-2xl bg-slate-700/40 border border-white/10">
+                        <div className="h-9 w-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <BarChart2 size={17} className="text-slate-300" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-slate-200">Saldo = bônus + resultado das apostas</p>
+                            <p className="text-xs text-white/55 mt-1 leading-relaxed">
+                                Seu saldo acumula o <span className="text-white font-semibold">bônus de participação</span> mais o lucro ou perda líquida das suas previsões.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Example */}
+                    <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-white/10">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-white/40">Exemplo</p>
+                        </div>
+                        <div className="divide-y divide-white/[0.07]">
+                            {[
+                                { label: "Bônus de participação (×3 jogos)", value: "+150", color: "text-indigo-300" },
+                                { label: "Jogo 1 — acertou o vencedor",      value: "+100", color: "text-emerald-400" },
+                                { label: "Jogo 2 — acertou placar exato",    value: "+50",  color: "text-emerald-400" },
+                                { label: "Jogo 3 — errou tudo",              value: "−25",  color: "text-rose-400"    },
+                            ].map((row, i) => (
+                                <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                                    <span className="text-xs text-white/55">{row.label}</span>
+                                    <span className={`text-sm font-bold ${row.color}`}>{row.value}</span>
+                                </div>
+                            ))}
+                            <div className="flex items-center justify-between px-4 py-3 bg-white/5">
+                                <span className="text-xs font-bold text-white/80">Saldo final</span>
+                                <div className="flex items-center gap-1.5 text-sm font-black text-emerald-400">
+                                    <Coins size={13} className="text-amber-400" />
+                                    +275
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 type TabId = "atual" | "historico" | "ranking";
 
 export default function BetPage() {
     const groupId = useAccountStore((s) => s.getActive()?.activeGroupId);
-    const [tab, setTab] = useState<TabId>("atual");
+    const [tab,      setTab]      = useState<TabId>("atual");
+    const [showInfo, setShowInfo] = useState(false);
 
     const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
         { id: "atual",     label: "Aposta Atual", icon: <Target  size={15} /> },
@@ -1396,6 +1513,8 @@ export default function BetPage() {
 
     return (
         <div className="space-y-5">
+            {showInfo && <BetInfoModal onClose={() => setShowInfo(false)} />}
+
             {/* Header */}
             <div className="relative rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
                 <div className="absolute inset-0 pointer-events-none opacity-[0.05]"
@@ -1404,9 +1523,17 @@ export default function BetPage() {
                     <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
                         <Coins size={26} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                         <h1 className="text-2xl font-black leading-tight">Bet</h1>
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowInfo(true)}
+                        title="Como funcionam as fichas"
+                        className="h-9 w-9 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 active:scale-95 transition flex items-center justify-center shrink-0"
+                    >
+                        <Info size={17} />
+                    </button>
                 </div>
             </div>
 
