@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { TeamGenApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import {
@@ -9,6 +9,7 @@ import {
     Layers,
     Search,
     Shield,
+    TrendingUp,
     X,
 } from "lucide-react";
 import { useGroupIcons } from "../hooks/useGroupIcons";
@@ -237,6 +238,7 @@ type SynergySortKey = "wr" | "wins" | "assistsReceived" | "assistsGiven";
 
 export default function VisualStatsPage() {
     const { groupId } = useParams();
+    const navigate = useNavigate();
     const active = useAccountStore((s) => s.getActive());
     const activeGroupId = active?.activeGroupId;
     const _icons = useGroupIcons(groupId ?? activeGroupId);
@@ -830,6 +832,15 @@ export default function VisualStatsPage() {
                             <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex-1 truncate">
                                 {selectedPlayer.name}
                             </span>
+                            <button
+                                type="button"
+                                title="Ver histórico completo"
+                                onClick={() => navigate(`/app/groups/${groupId ?? activeGroupId}/player-history?playerId=${selectedPlayer.playerId}`)}
+                                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+                            >
+                                <TrendingUp size={12} />
+                                Histórico
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setSelectedId(null)}

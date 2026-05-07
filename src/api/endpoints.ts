@@ -124,6 +124,7 @@ export const MatchesApi = {
   postgame: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/postgame`),
   history: (groupId: string, take: number, playerId?: string) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/history`, { params: { take, ...(playerId ? { playerId } : {}) } }),
   playerRecent: (groupId: string, playerId: string, take = 3) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/player-recent`, { params: { playerId, take } }),
+  playerHistory: (groupId: string, playerId: string, year?: number) => http.get<ApiResponse<unknown[]>>(`/api/Matches/group/${groupId}/player-history`, { params: { playerId, ...(year ? { year } : {}) } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
     http.post<ApiResponse<unknown>>(`/api/Matches/group/${groupId}/${matchId}/guests`, dto),
   publishEvent: (groupId: string, matchId: string, dto: { type: 'Gol' | 'Jogada'; durationSeconds?: number }) =>

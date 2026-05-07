@@ -375,6 +375,7 @@ function BetPreviewPanel({
     players: BetPlayer[];
 }) {
     const myUserId = useAccountStore(s => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
+    const _icons   = useGroupIcons(groupId);
     const [preview,      setPreview]      = useState<BetPreviewDto | null>(null);
     const [loading,      setLoading]      = useState(false);
     const [expanded,     setExpanded]     = useState<Set<string>>(new Set());

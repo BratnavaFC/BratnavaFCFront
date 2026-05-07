@@ -27,6 +27,7 @@ import BirthdayStatusPage from './pages/BirthdayStatusPage';
 import AbsencesPage from './pages/AbsencesPage';
 import ReplayVaultPage from './pages/ReplayVaultPage';
 import BetPage from './pages/BetPage';
+import PlayerHistoryPage from './pages/PlayerHistoryPage';
 
 export default function App() {
     const activeAccountId = useAccountStore((s) => s.activeAccountId);
@@ -55,6 +56,7 @@ export default function App() {
                 <Route path="history/:groupId/:matchId" element={<MatchDetailsPage />} />
                 <Route path="calendar" element={<CalendarPage />} />
                 <Route path="groups/:groupId/visual-stats" element={<VisualStatsPage />} />
+                <Route path="groups/:groupId/player-history" element={<PlayerHistoryPage />} />
                 <Route path="spotlight" element={<PlayerSpotlightPage />} />
                 <Route path="payments" element={<PaymentsPage />} />
                 <Route path="polls" element={<PollsPage />} />

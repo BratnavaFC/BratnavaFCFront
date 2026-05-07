@@ -2,7 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, User, ShieldAlert,
-    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff, Coins, BarChart3,
+    Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff, Coins, BarChart3, TrendingUp,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -89,6 +89,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                     { to: "/app/matches",  label: "Partidas",   icon: CalendarDays },
                     { to: "/app/history",  label: "Histórico",  icon: History },
                     { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
+                    ...(activeGrpId && isGroupAdm ? [{ to: `/app/groups/${activeGrpId}/player-history`, label: "Player History", icon: TrendingUp }] : []),
                 ],
             },
             {

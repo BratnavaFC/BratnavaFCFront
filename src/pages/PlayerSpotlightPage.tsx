@@ -179,6 +179,7 @@ function StatsTopList({
     accentClass,
     barClass,
     isFullscreen,
+    icons: _icons,
 }: {
     icon: any;
     label: string;
@@ -187,6 +188,7 @@ function StatsTopList({
     accentClass: string;
     barClass: string;
     isFullscreen: boolean;
+    icons: import('../lib/groupIcons').GroupIconConfig;
 }) {
     const maxVal = items.length > 0 ? Math.max(...items.map(i => Number(i.value) || 0)) : 1;
     const fs = isFullscreen;
@@ -245,7 +247,7 @@ function StatsTopList({
 }
 
 // ── StatsSlide ─────────────────────────────────────────────────────────────────
-function StatsSlide({ players, isFullscreen }: { players: PlayerSpotlightItem[]; isFullscreen: boolean }) {
+function StatsSlide({ players, isFullscreen, icons }: { players: PlayerSpotlightItem[]; isFullscreen: boolean; icons: import('../lib/groupIcons').GroupIconConfig }) {
     const mensalistas = players.filter(p => !p.isGuest);
 
     const top5Presencas = topNRanked(mensalistas.map(p => ({ name: p.name, value: p.gamesPlayed })));
@@ -295,6 +297,7 @@ function StatsSlide({ players, isFullscreen }: { players: PlayerSpotlightItem[];
                         accentClass={s.accentClass}
                         barClass={s.barClass}
                         isFullscreen={isFullscreen}
+                        icons={icons}
                     />
                 ))}
             </div>
@@ -703,7 +706,7 @@ export default function PlayerSpotlightPage() {
                 {/* Slide com fade-in */}
                 <div key={current} className="w-full h-full spotlight-fade">
                     {current === SLIDE_COVER && <CoverSlide isFullscreen={isFullscreen} />}
-                    {current === SLIDE_STATS && <StatsSlide players={players} isFullscreen={isFullscreen} />}
+                    {current === SLIDE_STATS && <StatsSlide players={players} isFullscreen={isFullscreen} icons={_icons} />}
                     {current >= PLAYER_OFFSET && (
                         <PlayerSlide player={players[current - PLAYER_OFFSET]} isFullscreen={isFullscreen} />
                     )}

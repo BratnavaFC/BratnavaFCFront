@@ -30,6 +30,9 @@ export function useGroupIcons(groupId?: string | null): GroupIconConfig {
                     ownGoalIcon:    gs?.ownGoalIcon    ?? null,
                     mvpIcon:        gs?.mvpIcon        ?? null,
                     playerIcon:     gs?.playerIcon     ?? null,
+                    rank1Icon:      gs?.rank1Icon      ?? null,
+                    rank2Icon:      gs?.rank2Icon      ?? null,
+                    rank3Icon:      gs?.rank3Icon      ?? null,
                 });
                 setShowPlayerStats(groupId, gs?.showPlayerStats ?? false);
             })
@@ -38,6 +41,7 @@ export function useGroupIcons(groupId?: string | null): GroupIconConfig {
                 setConfig(groupId, {
                     goalIcon: null, goalkeeperIcon: null,
                     assistIcon: null, ownGoalIcon: null, mvpIcon: null, playerIcon: null,
+                    rank1Icon: null, rank2Icon: null, rank3Icon: null,
                 });
                 setShowPlayerStats(groupId, false);
             })
