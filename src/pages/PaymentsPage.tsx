@@ -194,7 +194,7 @@ export default function PaymentsPage() {
 
     // Loaders para usuário não-admin
     const loadMyData = useCallback(async () => {
-        if (!groupId || isAdmin) return;
+        if (!groupId) return;
         try {
             const [rowRes, chargesRes, summaryRes] = await Promise.all([
                 PaymentsApi.getMyMonthlyRow(groupId, year),
@@ -206,9 +206,9 @@ export default function PaymentsPage() {
             setMyCharges((chargesRes.data.data as any[]) ?? []);
             setPendingPaymentsCount(calcPendingPaymentsCount((summaryRes.data as any)?.data));
         } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar seus pagamentos')); }
-    }, [groupId, year, isAdmin, activePlayerId, setPendingPaymentsCount]);
+    }, [groupId, year, activePlayerId, setPendingPaymentsCount]);
 
-    useEffect(() => { if (!isAdmin && groupId) loadMyData(); }, [isAdmin, groupId, year, loadMyData]);
+    useEffect(() => { if (groupId) loadMyData(); }, [groupId, year, loadMyData]);
 
     const loadMonthly = useCallback(async () => {
         if (!groupId) return;
@@ -283,9 +283,8 @@ export default function PaymentsPage() {
     const myCurrentCharges     = mySelectedCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && (!p || p.status !== 1); });
     const myFinalizedCharges   = mySelectedCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && !!p && p.status === 1; });
 
-    // Total de débitos pendentes (apenas para não-admin)
+    // Total de débitos pendentes
     const pendingTotal = useMemo(() => {
-        if (isAdmin) return 0;
         const nowYear  = new Date().getFullYear();
         const nowMonth = new Date().getMonth() + 1;
         let total = 0;
@@ -310,7 +309,7 @@ export default function PaymentsPage() {
             });
 
         return total;
-    }, [isAdmin, paymentMode, myRow, year, myCharges]);
+    }, [paymentMode, myRow, year, myCharges]);
 
     if (!groupId) {
         return (
@@ -712,8 +711,8 @@ export default function PaymentsPage() {
                 )}
             </div>
 
-            {/* Rodapé de pagamento (apenas não-admin com débitos) */}
-            {!isAdmin && myRow !== undefined && pendingTotal > 0 && (
+            {/* Rodapé de pagamento (qualquer usuário com débitos pendentes) */}
+            {myRow !== undefined && pendingTotal > 0 && (
                 <div className="flex-none border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
                     <div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">Total pendente</p>

@@ -40,6 +40,7 @@ type PlayerVisualStatsItem = {
     losses: number;
     winRate: number;
     mvps: number;
+    mvpVotes: number;
     goals: number;
     assists: number;
     ownGoals: number;
@@ -124,10 +125,10 @@ function WRBar({ value }: { value: number }) {
 }
 
 /** Medal or position number for leaderboard rows */
-function RankBadge({ rank }: { rank: number }) {
-    if (rank === 1) return <span className="text-base leading-none select-none">🥇</span>;
-    if (rank === 2) return <span className="text-base leading-none select-none">🥈</span>;
-    if (rank === 3) return <span className="text-base leading-none select-none">🥉</span>;
+function RankBadge({ rank, icons }: { rank: number; icons: import('../lib/groupIcons').GroupIconConfig | null }) {
+    if (rank === 1) return <IconRenderer value={resolveIcon(icons, 'rank1')} size={18} className="leading-none select-none" />;
+    if (rank === 2) return <IconRenderer value={resolveIcon(icons, 'rank2')} size={18} className="leading-none select-none" />;
+    if (rank === 3) return <IconRenderer value={resolveIcon(icons, 'rank3')} size={18} className="leading-none select-none" />;
     return <span className="text-xs font-mono text-slate-400 dark:text-slate-500 tabular-nums">{rank}</span>;
 }
 
@@ -231,7 +232,7 @@ function buildGlobalSynergy(players: PlayerVisualStatsItem[]): GlobalSynergyRow[
 
 /* ===================== Page ===================== */
 
-type SortKey = "winrate" | "wins" | "games" | "mvps" | "goals" | "assists" | "owngoals" | "name";
+type SortKey = "winrate" | "wins" | "games" | "mvps" | "mvpvotes" | "goals" | "assists" | "owngoals" | "name";
 type SynergySortKey = "wr" | "wins" | "assistsReceived" | "assistsGiven";
 
 export default function VisualStatsPage() {
@@ -301,6 +302,7 @@ export default function VisualStatsPage() {
         else if (sortKey === "wins")     list.sort((a, b) => perMatch ? pmVal(b.wins, b.gamesPlayed) - pmVal(a.wins, a.gamesPlayed) : (b.wins || 0) - (a.wins || 0));
         else if (sortKey === "games")    list.sort((a, b) => (b.gamesPlayed || 0) - (a.gamesPlayed || 0));
         else if (sortKey === "mvps")     list.sort((a, b) => perMatch ? pmVal(b.mvps, b.gamesPlayed) - pmVal(a.mvps, a.gamesPlayed) : (b.mvps || 0) - (a.mvps || 0));
+        else if (sortKey === "mvpvotes") list.sort((a, b) => perMatch ? pmVal(b.mvpVotes || 0, b.gamesPlayed) - pmVal(a.mvpVotes || 0, a.gamesPlayed) : (b.mvpVotes || 0) - (a.mvpVotes || 0));
         else if (sortKey === "goals")    list.sort((a, b) => perMatch ? pmVal(b.goals, b.gamesPlayed) - pmVal(a.goals, a.gamesPlayed) : (b.goals || 0) - (a.goals || 0));
         else if (sortKey === "assists")  list.sort((a, b) => perMatch ? pmVal(b.assists, b.gamesPlayed) - pmVal(a.assists, a.gamesPlayed) : (b.assists || 0) - (a.assists || 0));
         else if (sortKey === "owngoals") list.sort((a, b) => perMatch ? pmVal(b.ownGoals, b.gamesPlayed) - pmVal(a.ownGoals, a.gamesPlayed) : (b.ownGoals || 0) - (a.ownGoals || 0));
@@ -341,6 +343,7 @@ export default function VisualStatsPage() {
                 case "wins":     return perMatch ? pmVal(p.wins || 0, p.gamesPlayed) : p.wins || 0;
                 case "games":    return p.gamesPlayed || 0;
                 case "mvps":     return perMatch ? pmVal(p.mvps || 0, p.gamesPlayed) : p.mvps || 0;
+                case "mvpvotes": return perMatch ? pmVal(p.mvpVotes || 0, p.gamesPlayed) : p.mvpVotes || 0;
                 case "goals":    return perMatch ? pmVal(p.goals || 0, p.gamesPlayed) : p.goals || 0;
                 case "assists":  return perMatch ? pmVal(p.assists || 0, p.gamesPlayed) : p.assists || 0;
                 case "owngoals": return perMatch ? pmVal(p.ownGoals || 0, p.gamesPlayed) : p.ownGoals || 0;
@@ -469,6 +472,7 @@ export default function VisualStatsPage() {
                                         { k: "wins",     label: "Vitórias" },
                                         { k: "games",    label: "Jogos" },
                                         { k: "mvps",     label: "MVPs" },
+                                        { k: "mvpvotes", label: "Votos MVP" },
                                         { k: "goals",    label: <><IconRenderer value={resolveIcon(_icons, 'goal')} size={13} />{" "}Gols</> },
                                         { k: "assists",  label: <><IconRenderer value={resolveIcon(_icons, 'assist')} size={13} />{" "}Assists</> },
                                         { k: "owngoals", label: <><IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} />{" "}GC</> },
@@ -506,7 +510,7 @@ export default function VisualStatsPage() {
                                             >
                                                 {/* Rank */}
                                                 <div className="w-6 shrink-0 flex justify-center pt-0.5">
-                                                    <RankBadge rank={sortedRanks.get(p.playerId) ?? idx + 1} />
+                                                    <RankBadge rank={sortedRanks.get(p.playerId) ?? idx + 1} icons={_icons} />
                                                 </div>
 
                                                 {/* Player info */}
@@ -575,6 +579,14 @@ export default function VisualStatsPage() {
                                                                 <span className="font-medium text-red-500">GC {perMatch ? pmFmt(p.ownGoals || 0, p.gamesPlayed) : p.ownGoals}</span>
                                                             </>
                                                         )}
+                                                        {(p.mvpVotes || 0) > 0 && (
+                                                            <>
+                                                                <span className="text-slate-200 dark:text-slate-700">·</span>
+                                                                <span className="font-medium text-slate-500 dark:text-slate-400">
+                                                                    <IconRenderer value={resolveIcon(_icons, 'mvp')} size={10} />{" "}{perMatch ? pmFmt(p.mvpVotes || 0, p.gamesPlayed) : p.mvpVotes} votos
+                                                                </span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -602,6 +614,7 @@ export default function VisualStatsPage() {
                                         <th className="px-4 py-2.5 text-center w-24">V / E / D</th>
                                         <th className="px-4 py-2.5 text-left min-w-[130px]">Win Rate</th>
                                         <th className="px-4 py-2.5 text-right w-14">MVP</th>
+                                        <th className="px-4 py-2.5 text-right w-16" title="Votos MVP">Votos</th>
                                         <th className="px-4 py-2.5 text-right w-12" title="Gols"><IconRenderer value={resolveIcon(_icons, 'goal')} size={13} /></th>
                                         <th className="px-4 py-2.5 text-right w-12" title="Assistências"><IconRenderer value={resolveIcon(_icons, 'assist')} size={13} /></th>
                                         <th className="px-4 py-2.5 text-right w-12" title="Gols contra"><IconRenderer value={resolveIcon(_icons, 'ownGoal')} size={13} /></th>
@@ -610,7 +623,7 @@ export default function VisualStatsPage() {
                                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                     {sorted.length === 0 ? (
                                         <tr>
-                                            <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+                                            <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                                                 Nenhum jogador encontrado.
                                             </td>
                                         </tr>
@@ -626,7 +639,7 @@ export default function VisualStatsPage() {
                                                 >
                                                     {/* Rank */}
                                                     <td className="px-4 py-2.5 text-center">
-                                                        <RankBadge rank={sortedRanks.get(p.playerId) ?? idx + 1} />
+                                                        <RankBadge rank={sortedRanks.get(p.playerId) ?? idx + 1} icons={_icons} />
                                                     </td>
 
                                                     {/* Name */}
@@ -697,6 +710,17 @@ export default function VisualStatsPage() {
                                                         )}
                                                     </td>
 
+                                                    {/* MVP votes */}
+                                                    <td className="px-4 py-2.5 text-right tabular-nums text-xs">
+                                                        {(p.mvpVotes || 0) > 0 ? (
+                                                            <span className="font-semibold text-slate-500 dark:text-slate-400">
+                                                                {perMatch ? pmFmt(p.mvpVotes || 0, p.gamesPlayed) : p.mvpVotes}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                                                        )}
+                                                    </td>
+
                                                     {/* Goals */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
                                                         {(p.goals || 0) > 0 || perMatch
@@ -750,7 +774,7 @@ export default function VisualStatsPage() {
                                         {/* Rank + Avatars (always inline) */}
                                         <div className="flex items-center gap-2 shrink-0">
                                             <div className="w-6 flex justify-center">
-                                                <RankBadge rank={idx + 1} />
+                                                <RankBadge rank={idx + 1} icons={_icons} />
                                             </div>
                                             <div className="flex -space-x-2 shrink-0">
                                                 <div className="h-7 w-7 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-extrabold text-[10px] ring-2 ring-white dark:ring-slate-900 select-none z-10">
@@ -862,7 +886,7 @@ export default function VisualStatsPage() {
                                     </div>
 
                                     {/* Stat pills grid */}
-                                    <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                    <div className="mt-3 grid grid-cols-3 sm:grid-cols-7 gap-2">
                                         <StatPill label="Jogos" value={selectedPlayer.gamesPlayed} />
                                         <StatPill
                                             label={perMatch ? "V/jogo" : "Vitórias"}
@@ -884,6 +908,12 @@ export default function VisualStatsPage() {
                                             value={perMatch ? pmFmt(selectedPlayer.mvps || 0, selectedPlayer.gamesPlayed) : (selectedPlayer.mvps || 0)}
                                             color={selectedPlayer.mvps > 0 ? "text-amber-500" : "text-slate-400 dark:text-slate-600"}
                                             icon={<IconRenderer value={resolveIcon(_icons, 'mvp')} size={13} lucideProps={{ className: "text-amber-400" }} />}
+                                        />
+                                        <StatPill
+                                            label={perMatch ? "Votos/jogo" : "Votos MVP"}
+                                            value={perMatch ? pmFmt(selectedPlayer.mvpVotes || 0, selectedPlayer.gamesPlayed) : (selectedPlayer.mvpVotes || 0)}
+                                            color={(selectedPlayer.mvpVotes || 0) > 0 ? "text-slate-700 dark:text-slate-300" : "text-slate-400 dark:text-slate-600"}
+                                            icon={<IconRenderer value={resolveIcon(_icons, 'mvp')} size={13} lucideProps={{ className: "text-slate-400" }} />}
                                         />
                                         <StatPill
                                             label={perMatch ? "Gols/jogo" : "Gols"}

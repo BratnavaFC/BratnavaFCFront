@@ -50,6 +50,7 @@ function BetResultsSection({
     playerNameByMpId: Record<string, string>;
 }) {
     const myUserId = useAccountStore(s => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
+    const _icons   = useGroupIcons(groupId);
     const [preview,  setPreview]  = useState<BetPreviewDto | null>(null);
     const [loading,  setLoading]  = useState(true);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -129,7 +130,9 @@ function BetResultsSection({
                         const isMe        = userBet.userId === myUserId;
                         const net         = userBet.simulatedBetEarnings;
                         const total       = userBet.simulatedTotal;
-                        const medal       = rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : `${rank + 1}º`;
+                        const medal       = rank <= 2
+                            ? <IconRenderer value={resolveIcon(_icons, `rank${rank + 1}` as 'rank1' | 'rank2' | 'rank3')} size={15} />
+                            : `${rank + 1}º`;
                         const correctCount = userBet.selections.filter((s) => s.isCorrect).length;
 
                         return (

@@ -658,6 +658,14 @@ function RecentMatchCard({ match, groupId }: { match: any; groupId: string }) {
                 <StatNumber value={ownGoals} />
               </span>
             )}
+
+            {/* MVP */}
+            {match?.isPlayerMvp && (
+              <span className="flex items-center gap-1 text-xs text-amber-500 font-semibold">
+                <IconRenderer value={resolveIcon(icons, 'mvp')} size={18} />
+                MVP
+              </span>
+            )}
           </div>
         </div>
 

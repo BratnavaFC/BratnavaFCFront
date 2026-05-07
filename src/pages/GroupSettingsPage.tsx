@@ -13,7 +13,7 @@ import { IconRenderer } from '../components/IconRenderer';
 import { invalidateGroupIcons } from '../hooks/useGroupIcons';
 import {
     GOAL_OPTIONS, GOALKEEPER_OPTIONS, ASSIST_OPTIONS,
-    OWN_GOAL_OPTIONS, MVP_OPTIONS, PLAYER_OPTIONS, DEFAULT_ICONS,
+    OWN_GOAL_OPTIONS, MVP_OPTIONS, PLAYER_OPTIONS, RANK_OPTIONS, DEFAULT_ICONS,
 } from '../lib/groupIcons';
 import { AddAdminModal } from '../components/modals/AddAdminModal';
 import { AddFinanceiroModal } from '../components/modals/AddFinanceiroModal';
@@ -119,6 +119,9 @@ export default function GroupSettingsPage() {
     const [ownGoalIcon,    setOwnGoalIcon]    = useState<string | null>(null);
     const [mvpIcon,        setMvpIcon]        = useState<string | null>(null);
     const [playerIcon,     setPlayerIcon]     = useState<string | null>(null);
+    const [rank1Icon,      setRank1Icon]      = useState<string | null>(null);
+    const [rank2Icon,      setRank2Icon]      = useState<string | null>(null);
+    const [rank3Icon,      setRank3Icon]      = useState<string | null>(null);
 
     // ── status ─────────────────────────────────────────────────────
     const [isPersisted, setIsPersisted] = useState(false);
@@ -165,6 +168,9 @@ export default function GroupSettingsPage() {
                 setOwnGoalIcon(gs.ownGoalIcon ?? null);
                 setMvpIcon(gs.mvpIcon ?? null);
                 setPlayerIcon(gs.playerIcon ?? null);
+                setRank1Icon(gs.rank1Icon ?? null);
+                setRank2Icon(gs.rank2Icon ?? null);
+                setRank3Icon(gs.rank3Icon ?? null);
                 setPaymentMode(gs.paymentMode ?? 0);
                 setMonthlyFee(gs.monthlyFee != null ? String(gs.monthlyFee) : '');
                 setMvpTieRule(gs.mvpTieRule ?? 1);
@@ -240,6 +246,9 @@ export default function GroupSettingsPage() {
                 ownGoalIcon,
                 mvpIcon,
                 playerIcon,
+                rank1Icon,
+                rank2Icon,
+                rank3Icon,
                 paymentMode,
                 monthlyFee: paymentMode === 0 && monthlyFee !== '' ? parseFloat(monthlyFee) : null,
                 mvpTieRule,
@@ -595,6 +604,9 @@ export default function GroupSettingsPage() {
                         { label: 'Gol contra',  value: ownGoalIcon,     def: DEFAULT_ICONS.ownGoalIcon,     opts: OWN_GOAL_OPTIONS,    set: setOwnGoalIcon },
                         { label: 'MVP',         value: mvpIcon,         def: DEFAULT_ICONS.mvpIcon,         opts: MVP_OPTIONS,         set: setMvpIcon },
                         { label: 'Jogador',     value: playerIcon,      def: DEFAULT_ICONS.playerIcon,      opts: PLAYER_OPTIONS,      set: setPlayerIcon },
+                        { label: '1º lugar',    value: rank1Icon,       def: DEFAULT_ICONS.rank1Icon,       opts: RANK_OPTIONS,        set: setRank1Icon },
+                        { label: '2º lugar',    value: rank2Icon,       def: DEFAULT_ICONS.rank2Icon,       opts: RANK_OPTIONS,        set: setRank2Icon },
+                        { label: '3º lugar',    value: rank3Icon,       def: DEFAULT_ICONS.rank3Icon,       opts: RANK_OPTIONS,        set: setRank3Icon },
                     ].map(({ label, value, def, opts, set }) => (
                         <div key={label} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 p-4 space-y-3">
                             <div className="flex items-center gap-3">

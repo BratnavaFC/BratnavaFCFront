@@ -1,6 +1,6 @@
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-export type IconCategory = 'goal' | 'goalkeeper' | 'assist' | 'ownGoal' | 'mvp' | 'player';
+export type IconCategory = 'goal' | 'goalkeeper' | 'assist' | 'ownGoal' | 'mvp' | 'player' | 'rank1' | 'rank2' | 'rank3';
 
 export interface GroupIconConfig {
     goalIcon: string | null;
@@ -9,6 +9,9 @@ export interface GroupIconConfig {
     ownGoalIcon: string | null;
     mvpIcon: string | null;
     playerIcon: string | null;
+    rank1Icon: string | null;
+    rank2Icon: string | null;
+    rank3Icon: string | null;
 }
 
 export interface IconOption {
@@ -25,6 +28,9 @@ export const DEFAULT_ICONS: Record<keyof GroupIconConfig, string> = {
     ownGoalIcon: '🚩',
     mvpIcon: 'lucide:Trophy',
     playerIcon: 'lucide:User',
+    rank1Icon: '🥇',
+    rank2Icon: '🥈',
+    rank3Icon: '🥉',
 };
 
 // ─── Opções disponíveis por categoria ─────────────────────────────────────────
@@ -99,6 +105,22 @@ export const PLAYER_OPTIONS: IconOption[] = [
     { value: 'letter:P', label: 'Letra P' },             // 26
 ];
 
+export const RANK_OPTIONS: IconOption[] = [
+    { value: '🥇', label: 'Medalha de ouro' },
+    { value: '🥈', label: 'Medalha de prata' },
+    { value: '🥉', label: 'Medalha de bronze' },
+    { value: '🏆', label: 'Troféu' },
+    { value: '⭐', label: 'Estrela' },
+    { value: '👑', label: 'Coroa' },
+    { value: 'lucide:Medal', label: 'Medalha (Medal)' },
+    { value: 'lucide:Trophy', label: 'Troféu (Trophy)' },
+    { value: 'lucide:Crown', label: 'Coroa (Crown)' },
+    { value: 'lucide:Star', label: 'Estrela (Star)' },
+    { value: 'letter:1', label: 'Número 1' },
+    { value: 'letter:2', label: 'Número 2' },
+    { value: 'letter:3', label: 'Número 3' },
+];
+
 export const ICON_OPTIONS_BY_CATEGORY: Record<IconCategory, IconOption[]> = {
     goal: GOAL_OPTIONS,
     goalkeeper: GOALKEEPER_OPTIONS,
@@ -106,6 +128,9 @@ export const ICON_OPTIONS_BY_CATEGORY: Record<IconCategory, IconOption[]> = {
     ownGoal: OWN_GOAL_OPTIONS,
     mvp: MVP_OPTIONS,
     player: PLAYER_OPTIONS,
+    rank1: RANK_OPTIONS,
+    rank2: RANK_OPTIONS,
+    rank3: RANK_OPTIONS,
 };
 
 export const CATEGORY_LABELS: Record<IconCategory, string> = {
@@ -115,6 +140,9 @@ export const CATEGORY_LABELS: Record<IconCategory, string> = {
     ownGoal: 'Gol contra',
     mvp: 'MVP',
     player: 'Jogador',
+    rank1: '1º lugar',
+    rank2: '2º lugar',
+    rank3: '3º lugar',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

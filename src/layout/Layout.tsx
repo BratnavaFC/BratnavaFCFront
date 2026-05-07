@@ -123,7 +123,7 @@ export default function Layout() {
                         isMobile ? "p-3" : "p-6",
                     ].join(" ")}
                 >
-                    <div className="max-w-screen-2xl mx-auto w-full">
+                    <div className="max-w-screen-2xl mx-auto w-full h-full">
                         <Outlet />
                     </div>
                 </main>

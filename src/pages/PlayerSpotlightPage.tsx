@@ -7,6 +7,9 @@ import {
     Trophy, TrendingDown, Swords, Shield, Handshake, Star,
     Loader2, Users, Goal, Medal, Footprints, BarChart3,
 } from 'lucide-react';
+import { useGroupIcons } from '../hooks/useGroupIcons';
+import { IconRenderer } from '../components/IconRenderer';
+import { resolveIcon } from '../lib/groupIcons';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type SpotlightRelation = {
@@ -209,7 +212,9 @@ function StatsTopList({
                         const { rank, value } = group[0];
                         const names = group.map(g => g.name).join(' | ');
                         const barW = maxVal > 0 ? (Number(value) / maxVal) * 100 : 0;
-                        const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+                        const rankEmoji = rank <= 3
+                            ? <IconRenderer value={resolveIcon(_icons, `rank${rank}` as 'rank1' | 'rank2' | 'rank3')} size={16} />
+                            : null;
 
                         return (
                             <li key={rank}>
@@ -531,6 +536,7 @@ const PLAYER_OFFSET = 2;
 export default function PlayerSpotlightPage() {
     const active  = useAccountStore(s => s.getActive());
     const groupId = active?.activeGroupId ?? '';
+    const _icons  = useGroupIcons(groupId);
 
     const [players, setPlayers]           = useState<PlayerSpotlightItem[]>([]);
     const [loading, setLoading]           = useState(true);

@@ -10,6 +10,9 @@ import { BetApi, MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { isGroupAdmin } from "../auth/guards";
 import { getResponseMessage } from "../api/apiResponse";
+import { useGroupIcons } from "../hooks/useGroupIcons";
+import { IconRenderer } from "../components/IconRenderer";
+import { resolveIcon } from "../lib/groupIcons";
 import type {
     CurrentMatchBetContextDto,
     BetLeaderboardEntryDto,
@@ -532,8 +535,8 @@ function BetPreviewPanel({
                                                 expandable ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors" : "",
                                             ].filter(Boolean).join(" ")}>
                                             {/* Rank */}
-                                            <span className="text-sm w-6 text-center shrink-0">
-                                                {rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : `${rank + 1}º`}
+                                            <span className="text-sm w-6 text-center shrink-0 flex items-center justify-center">
+                                                {rank === 0 ? <IconRenderer value={resolveIcon(_icons, 'rank1')} size={16} /> : rank === 1 ? <IconRenderer value={resolveIcon(_icons, 'rank2')} size={16} /> : rank === 2 ? <IconRenderer value={resolveIcon(_icons, 'rank3')} size={16} /> : `${rank + 1}º`}
                                             </span>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
@@ -615,6 +618,7 @@ function BetPreviewPanel({
 // ── Tab: Aposta Atual ─────────────────────────────────────────────────────────
 
 function CurrentBetTab({ groupId }: { groupId: string }) {
+    const _icons = useGroupIcons(groupId);
     const [ctx,        setCtx]        = useState<CurrentMatchBetContextDto | null>(null);
     const [loading,    setLoading]    = useState(true);
     const [saving,        setSaving]        = useState(false);
@@ -1057,6 +1061,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
 // ── Tab: Histórico ────────────────────────────────────────────────────────────
 
 function HistoryTab({ groupId }: { groupId: string }) {
+    const _icons = useGroupIcons(groupId);
     const [history,       setHistory]       = useState<MatchBetHistoryDto[]>([]);
     const [leaderboard,   setLeaderboard]   = useState<BetLeaderboardEntryDto[]>([]);
     const [loading,       setLoading]       = useState(true);
@@ -1111,7 +1116,7 @@ function HistoryTab({ groupId }: { groupId: string }) {
                         <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Posição</p>
                         <p className="text-xl font-black text-slate-800 dark:text-slate-100 mt-0.5">
                             {myEntry.rank <= 3
-                                ? ["🥇", "🥈", "🥉"][myEntry.rank - 1]
+                                ? <IconRenderer value={resolveIcon(_icons, `rank${myEntry.rank}` as 'rank1' | 'rank2' | 'rank3')} size={24} />
                                 : `${myEntry.rank}º`}
                         </p>
                     </div>
@@ -1272,6 +1277,7 @@ function HistoryTab({ groupId }: { groupId: string }) {
 // ── Tab: Ranking ──────────────────────────────────────────────────────────────
 
 function RankingTab({ groupId }: { groupId: string }) {
+    const _icons = useGroupIcons(groupId);
     const [leaderboard, setLeaderboard] = useState<BetLeaderboardEntryDto[]>([]);
     const [loading, setLoading] = useState(true);
     const myUserId = useAccountStore(
@@ -1328,7 +1334,7 @@ function RankingTab({ groupId }: { groupId: string }) {
                         <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Posição</p>
                         <p className="text-xl font-black text-slate-800 dark:text-slate-100 mt-0.5">
                             {myEntry.rank <= 3
-                                ? ["🥇", "🥈", "🥉"][myEntry.rank - 1]
+                                ? <IconRenderer value={resolveIcon(_icons, `rank${myEntry.rank}` as 'rank1' | 'rank2' | 'rank3')} size={24} />
                                 : `${myEntry.rank}º`}
                         </p>
                     </div>
@@ -1342,8 +1348,8 @@ function RankingTab({ groupId }: { groupId: string }) {
                     return (
                         <div key={entry.userId}
                             className={`flex items-center gap-3 px-4 py-3 ${isMe ? "bg-slate-50 dark:bg-slate-800/50" : ""}`}>
-                            <span className={`text-sm font-black w-6 text-center ${medalCls}`}>
-                                {entry.rank <= 3 ? ["🥇", "🥈", "🥉"][entry.rank - 1] : `${entry.rank}º`}
+                            <span className={`text-sm font-black w-6 text-center flex items-center justify-center ${medalCls}`}>
+                                {entry.rank <= 3 ? <IconRenderer value={resolveIcon(_icons, `rank${entry.rank}` as 'rank1' | 'rank2' | 'rank3')} size={16} /> : `${entry.rank}º`}
                             </span>
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
