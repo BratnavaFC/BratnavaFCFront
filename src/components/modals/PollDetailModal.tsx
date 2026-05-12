@@ -4,7 +4,7 @@ import {
     X, Loader2, Check, Lock, Unlock, Trash2,
     Plus, Pencil, Eye, EyeOff,
     Users, Clock, Image, ChevronLeft, ChevronRight,
-    CheckSquare, Square, BarChart2, AlertCircle,
+    CheckSquare, Square, BarChart2, AlertCircle, CalendarDays,
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
 import { extractApiError } from '../../lib/apiError';
@@ -616,6 +616,9 @@ function PollDetailModal({
     const [showClosePollModal, setShowClosePollModal] = useState(false);
     const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null);
     const [detailTab, setDetailTab] = useState<'options' | 'resultado'>('options');
+    const [showDeadlineEdit, setShowDeadlineEdit] = useState(false);
+    const [deadlineDateDraft, setDeadlineDateDraft] = useState(poll.deadlineDate ?? '');
+    const [deadlineTimeDraft, setDeadlineTimeDraft] = useState(poll.deadlineTime ?? '');
 
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
     const isOpen = poll.status === 'open' && !deadlinePassed;
@@ -705,6 +708,27 @@ function PollDetailModal({
             toast.success(value ? 'Votos agora visíveis.' : 'Votos agora anônimos.');
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao alterar visibilidade.'));
+        } finally { setActionLoading(null); }
+    }
+
+    async function handleUpdateDeadline(clear = false) {
+        setActionLoading('deadline');
+        try {
+            await PollsApi.updateDeadline(groupId, poll.id, {
+                deadlineDate:  clear ? null : (deadlineDateDraft || null),
+                deadlineTime:  clear ? null : (deadlineTimeDraft || null),
+                clearDeadline: clear,
+            });
+            onUpdated({
+                ...poll,
+                status:       poll.status === 'closed' ? 'open' : poll.status,
+                deadlineDate: clear ? null : (deadlineDateDraft || null),
+                deadlineTime: clear ? null : (deadlineTimeDraft || null),
+            });
+            setShowDeadlineEdit(false);
+            toast.success(clear ? 'Prazo removido.' : 'Prazo atualizado!');
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao atualizar prazo.'));
         } finally { setActionLoading(null); }
     }
 
@@ -983,6 +1007,63 @@ function PollDetailModal({
                     )}
                 </div>
 
+                {/* Inline deadline editor (admin) */}
+                {isAdmin && showDeadlineEdit && (
+                    <div className="px-5 py-3 border-t dark:border-slate-700 bg-amber-50/60 dark:bg-amber-900/10 space-y-2.5 shrink-0">
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                            <CalendarDays size={12} /> Alterar prazo de vencimento
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                            <div>
+                                <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Data</label>
+                                <input
+                                    type="date"
+                                    value={deadlineDateDraft}
+                                    onChange={e => setDeadlineDateDraft(e.target.value)}
+                                    className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:bg-slate-700 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Horário <span className="text-slate-400">(opcional)</span></label>
+                                <input
+                                    type="time"
+                                    value={deadlineTimeDraft}
+                                    onChange={e => setDeadlineTimeDraft(e.target.value)}
+                                    className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:bg-slate-700 dark:text-white"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={() => handleUpdateDeadline(false)}
+                                disabled={!!actionLoading || !deadlineDateDraft}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                                {actionLoading === 'deadline' ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                Salvar
+                            </button>
+                            {poll.deadlineDate && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleUpdateDeadline(true)}
+                                    disabled={!!actionLoading}
+                                    className="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-sm hover:bg-rose-50 dark:hover:bg-rose-900/20 disabled:opacity-50"
+                                >
+                                    Remover prazo
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setShowDeadlineEdit(false)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Footer */}
                 <div className="px-5 py-3 border-t dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/30 flex items-center gap-2 flex-wrap shrink-0">
                     {/* Vote button (members) */}
@@ -1014,7 +1095,17 @@ function PollDetailModal({
 
                     {/* Admin controls */}
                     {isAdmin && (
-                        <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex items-center gap-2 ml-auto flex-wrap">
+                            <button
+                                type="button"
+                                onClick={() => { setShowDeadlineEdit(p => !p); setDeadlineDateDraft(poll.deadlineDate ?? ''); setDeadlineTimeDraft(poll.deadlineTime ?? ''); }}
+                                disabled={!!actionLoading}
+                                title="Alterar prazo de vencimento"
+                                className={`px-3 py-2 rounded-xl border text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${showDeadlineEdit ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
+                            >
+                                <CalendarDays size={13} />
+                                Prazo
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => handleSetShowVotes(!poll.showVotes)}
