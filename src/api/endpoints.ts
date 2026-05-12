@@ -75,6 +75,7 @@ export const PlayersApi = {
   mine: () => http.get<ApiResponse<unknown[]>>("/api/Players/mine"),
   byUser: (userId: string) => http.get<ApiResponse<unknown[]>>(`/api/Players/by-user/${userId}`),
   leaveGroup: (playerId: string) => http.post<ApiResponse<null>>(`/api/Players/${playerId}/leave`),
+  removeFromGroup: (playerId: string) => http.post<ApiResponse<null>>(`/api/Players/${playerId}/remove-from-group`),
 };
 
 export const TeamColorApi = {
@@ -269,6 +270,8 @@ export const PollsApi = {
                            http.delete(`/api/Polls/group/${groupId}/${pollId}/vote`),
   adminCastVote:         (groupId: string, pollId: string, dto: { playerId: string; optionIds: string[] }) =>
                            http.post(`/api/Polls/group/${groupId}/${pollId}/admin-vote`, dto),
+  updateDeadline:        (groupId: string, pollId: string, dto: { deadlineDate?: string | null; deadlineTime?: string | null; clearDeadline?: boolean }) =>
+                           http.patch(`/api/Polls/group/${groupId}/${pollId}/deadline`, dto),
 };
 
 export const PaymentsApi = {

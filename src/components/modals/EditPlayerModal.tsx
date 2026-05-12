@@ -1,6 +1,6 @@
 // src/components/modals/EditPlayerModal.tsx
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Pencil, X, Swords, Shield, Star } from "lucide-react";
+import { Loader2, Pencil, X, Swords, Shield, Star, UserMinus, AlertTriangle } from "lucide-react";
 import { PlayersApi } from "../../api/endpoints";
 import { StarRating } from "./AddGuestModal";
 
@@ -135,6 +135,8 @@ export function EditPlayerModal({
     const [overallRating, setOverallRating] = useState<number | null>(null);
     const [loading,       setLoading]       = useState(false);
     const [err,           setErr]           = useState<string | null>(null);
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const [removing,      setRemoving]      = useState(false);
     const nameRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -156,6 +158,8 @@ export function EditPlayerModal({
             setOverallRating(player.overallRating ?? null);
             setLoading(false);
             setErr(null);
+            setConfirmRemove(false);
+            setRemoving(false);
             setTimeout(() => nameRef.current?.focus(), 60);
         }
     }, [open, player]);
@@ -194,12 +198,34 @@ export function EditPlayerModal({
         }
     }
 
+    async function handleRemove() {
+        if (!player) return;
+        setRemoving(true);
+        setErr(null);
+        try {
+            await PlayersApi.removeFromGroup(player.id);
+            onSaved();
+            onClose();
+        } catch (e: any) {
+            setErr(
+                e?.response?.data?.error ??
+                e?.response?.data?.message ??
+                "Erro ao remover jogador."
+            );
+            setConfirmRemove(false);
+        } finally {
+            setRemoving(false);
+        }
+    }
+
     function handleKey(e: React.KeyboardEvent) {
         if (e.key === "Enter" && !loading) handleSave();
         if (e.key === "Escape") onClose();
     }
 
     if (!open || !player) return null;
+
+    const canRemove = isAdmin && !player.isGuest && !!player.userId;
 
     const hasAnyRating = attackRating !== null || defenseRating !== null || overallRating !== null;
 
@@ -374,18 +400,64 @@ export function EditPlayerModal({
                     </div>
 
                     {/* footer */}
-                    <div className="px-5 pb-5 shrink-0">
+                    <div className="px-5 pb-5 space-y-3 shrink-0">
                         <button
                             type="button"
                             className="btn btn-primary w-full flex items-center justify-center gap-2"
                             onClick={handleSave}
-                            disabled={loading}
+                            disabled={loading || removing}
                         >
                             {loading
                                 ? <><Loader2 size={15} className="animate-spin" /> Salvando...</>
                                 : "Salvar"
                             }
                         </button>
+
+                        {/* Remove from group — admin only, non-guests with a linked account */}
+                        {canRemove && !confirmRemove && (
+                            <button
+                                type="button"
+                                onClick={() => setConfirmRemove(true)}
+                                disabled={loading || removing}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors disabled:opacity-50"
+                            >
+                                <UserMinus size={15} />
+                                Remover da patota
+                            </button>
+                        )}
+
+                        {/* Confirmation panel */}
+                        {canRemove && confirmRemove && (
+                            <div className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-3 space-y-2">
+                                <div className="flex items-start gap-2">
+                                    <AlertTriangle size={15} className="text-rose-500 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                                        <strong>{player.name}</strong> voltará a ser convidado e perderá o vínculo com a conta de usuário. O histórico de partidas é preservado.
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmRemove(false)}
+                                        disabled={removing}
+                                        className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleRemove}
+                                        disabled={removing}
+                                        className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                    >
+                                        {removing
+                                            ? <><Loader2 size={12} className="animate-spin" /> Removendo...</>
+                                            : <><UserMinus size={12} /> Confirmar remoção</>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
