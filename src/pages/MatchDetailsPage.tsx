@@ -1393,7 +1393,7 @@ export default function MatchDetailsPage() {
             )}
 
             {/* ── Replays ───────────────────────────────────────────── */}
-            {replays.length > 0 && groupId && (
+            {(replays.length > 0 || isAdmin) && groupId && (
                 <Section title={`Replays (${replays.length})`}>
                     <ReplaySection
                         clips={replays}
@@ -1401,6 +1401,7 @@ export default function MatchDetailsPage() {
                         isAdmin={isAdmin}
                         matchId={matchId}
                         initialClipId={initialClipId}
+                        onClipAdded={(clip) => setReplays((prev) => [...prev, clip])}
                     />
                 </Section>
             )}

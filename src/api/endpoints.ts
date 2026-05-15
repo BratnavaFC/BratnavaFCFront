@@ -1,5 +1,7 @@
-import { http } from './http';
+import axios from 'axios';
+import { http, apiBaseUrl } from './http';
 import type { ApiResponse } from './apiResponse';
+import type { PublicClipDto, PublicMatchReplaysDto } from '../domains/matches/matchTypes';
 import type {
   CreateUserDto, LoginDto, RefreshTokenDto,
   CreateGroupDto, UpdateGroupDto,
@@ -152,6 +154,25 @@ export const MatchesApi = {
     http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-favorites`),
   deleteReplay: (groupId: string, clipId: string) =>
     http.delete(`/api/Matches/group/${groupId}/replays/${clipId}`),
+  uploadReplay: (groupId: string, matchId: string, file: File, eventType: "Gol" | "Jogada") => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("eventType", eventType);
+    return http.post<ApiResponse<ReplayClipDto>>(
+      `/api/Matches/group/${groupId}/${matchId}/replays/upload`,
+      form,
+    );
+  },
+};
+
+// Axios sem interceptors de auth — para endpoints públicos
+const publicHttp = axios.create({ baseURL: apiBaseUrl });
+
+export const PublicApi = {
+    getClip: (clipId: string) =>
+        publicHttp.get<PublicClipDto>(`/api/public/clips/${clipId}`),
+    getMatchReplays: (matchId: string) =>
+        publicHttp.get<PublicMatchReplaysDto>(`/api/public/matches/${matchId}/replays`),
 };
 
 export const BetApi = {

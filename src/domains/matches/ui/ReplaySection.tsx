@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Share2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import type { ReplayClipDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 import { type ClipStateMap, VideoCard, Lightbox } from "./ReplayClipComponents";
+import { UploadReplayModal } from "./UploadReplayModal";
+import { ShareTypeModal } from "./ShareTypeModal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,11 +61,26 @@ function Tab({
     );
 }
 
-// ── Share URL helper ──────────────────────────────────────────────────────────
+// ── Share URL helpers ─────────────────────────────────────────────────────────
 
-function buildShareUrl(groupId: string, matchId: string, clipId: string): string {
+function buildInternalClipUrl(groupId: string, matchId: string, clipId: string): string {
     const { origin, pathname } = window.location;
     return `${origin}${pathname}#/app/history/${groupId}/${matchId}?clip=${clipId}`;
+}
+
+function buildInternalMatchUrl(groupId: string, matchId: string): string {
+    const { origin, pathname } = window.location;
+    return `${origin}${pathname}#/app/history/${groupId}/${matchId}`;
+}
+
+function buildExternalClipUrl(clipId: string): string {
+    const { origin, pathname } = window.location;
+    return `${origin}${pathname}#/public/clip/${clipId}`;
+}
+
+function buildExternalMatchUrl(matchId: string): string {
+    const { origin, pathname } = window.location;
+    return `${origin}${pathname}#/public/match/${matchId}`;
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
@@ -72,18 +89,22 @@ type Props = {
     clips: ReplayClipDto[];
     groupId: string;
     isAdmin?: boolean;
-    /** ID da partida — necessário para gerar links de compartilhamento */
+    /** ID da partida — necessário para gerar links de compartilhamento e upload */
     matchId?: string;
     /** Abre automaticamente o lightbox para este clipId (vindo de ?clip= na URL) */
     initialClipId?: string;
+    /** Callback chamado quando um novo clip é adicionado via upload manual */
+    onClipAdded?: (clip: ReplayClipDto) => void;
 };
 
-export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId }: Props) {
+export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId, onClipAdded }: Props) {
     const [filter, setFilter]               = useState<Filter>("all");
     const [page, setPage]                   = useState(1);
     const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
     const [clipStates, setClipStates]       = useState<ClipStateMap>(() => buildInitialState(clips));
     const [deletedIds, setDeletedIds]       = useState<Set<string>>(new Set());
+    const [showUpload, setShowUpload]       = useState(false);
+    const [shareModal, setShareModal]       = useState<{ type: "clip"; clipId: string } | { type: "match" } | null>(null);
 
     // Sync state when clips prop changes (e.g. refresh)
     useEffect(() => { setClipStates(buildInitialState(clips)); }, [clips]);
@@ -91,17 +112,19 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId 
     // Ref para garantir que o auto-open só dispare uma vez por montagem
     const hasAutoOpened = useRef(false);
 
-    // Copia o link de compartilhamento do clipe para a área de transferência
-    const shareClip = useCallback(async (clipId: string) => {
-        if (!matchId) return;
-        const url = buildShareUrl(groupId, matchId, clipId);
+    const copyToClipboard = useCallback(async (url: string) => {
         try {
             await navigator.clipboard.writeText(url);
             toast.success("Link copiado!");
         } catch {
             toast.error("Não foi possível copiar o link.");
         }
-    }, [groupId, matchId]);
+    }, []);
+
+    const shareClip = useCallback((clipId: string) => {
+        if (!matchId) return;
+        setShareModal({ type: "clip", clipId });
+    }, [matchId]);
 
     const toggleLike = useCallback(async (clipId: string) => {
         setClipStates((prev) => {
@@ -205,19 +228,89 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId 
 
     if (visibleClips.length === 0) {
         return (
-            <p className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-                Nenhum replay disponível.
-            </p>
+            <>
+                <div className="flex items-center justify-between py-6">
+                    <p className="text-sm text-slate-400 dark:text-slate-500">
+                        Nenhum replay disponível.
+                    </p>
+                    {isAdmin && matchId && (
+                        <button
+                            type="button"
+                            onClick={() => setShowUpload(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200 transition"
+                        >
+                            <Upload size={13} />
+                            Upload
+                        </button>
+                    )}
+                </div>
+                {shareModal && matchId && (
+                    <ShareTypeModal
+                        title={shareModal.type === "clip" ? "Compartilhar vídeo" : "Compartilhar replays"}
+                        onClose={() => setShareModal(null)}
+                        onInternal={() => {
+                            const url = shareModal.type === "clip"
+                                ? buildInternalClipUrl(groupId, matchId, shareModal.clipId)
+                                : buildInternalMatchUrl(groupId, matchId);
+                            copyToClipboard(url);
+                            setShareModal(null);
+                        }}
+                        onExternal={() => {
+                            const url = shareModal.type === "clip"
+                                ? buildExternalClipUrl(shareModal.clipId)
+                                : buildExternalMatchUrl(matchId);
+                            copyToClipboard(url);
+                            setShareModal(null);
+                        }}
+                    />
+                )}
+                {showUpload && matchId && (
+                    <UploadReplayModal
+                        groupId={groupId}
+                        matchId={matchId}
+                        onClose={() => setShowUpload(false)}
+                        onUploaded={(clip) => {
+                            onClipAdded?.(clip);
+                            toast.success(`"${clip.eventType}" adicionado!`);
+                        }}
+                    />
+                )}
+            </>
         );
     }
 
     return (
         <>
-            {/* ── Filter tabs ── */}
-            <div className="flex items-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl w-fit mb-5">
-                <Tab label="Todos"   count={visibleClips.length}    active={filter === "all"}     onClick={() => setFilter("all")} />
-                {gols.length    > 0 && <Tab label="Gols"    count={gols.length}    active={filter === "Gol"}    onClick={() => setFilter("Gol")} />}
-                {jogadas.length > 0 && <Tab label="Jogadas" count={jogadas.length} active={filter === "Jogada"} onClick={() => setFilter("Jogada")} />}
+            {/* ── Filter tabs + share/upload buttons ── */}
+            <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl w-fit">
+                    <Tab label="Todos"   count={visibleClips.length}    active={filter === "all"}     onClick={() => setFilter("all")} />
+                    {gols.length    > 0 && <Tab label="Gols"    count={gols.length}    active={filter === "Gol"}    onClick={() => setFilter("Gol")} />}
+                    {jogadas.length > 0 && <Tab label="Jogadas" count={jogadas.length} active={filter === "Jogada"} onClick={() => setFilter("Jogada")} />}
+                </div>
+                <div className="flex items-center gap-2">
+                    {matchId && (
+                        <button
+                            type="button"
+                            onClick={() => setShareModal({ type: "match" })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                            title="Compartilhar replays"
+                        >
+                            <Share2 size={13} />
+                            Partilhar
+                        </button>
+                    )}
+                    {isAdmin && matchId && (
+                        <button
+                            type="button"
+                            onClick={() => setShowUpload(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200 transition"
+                        >
+                            <Upload size={13} />
+                            Upload
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* ── Grid ── */}
@@ -286,6 +379,41 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId 
                     onFavorite={toggleFavorite}
                     onDelete={handleDelete}
                     onShare={matchId ? shareClip : undefined}
+                />
+            )}
+
+            {/* ── Upload modal ── */}
+            {showUpload && matchId && (
+                <UploadReplayModal
+                    groupId={groupId}
+                    matchId={matchId}
+                    onClose={() => setShowUpload(false)}
+                    onUploaded={(clip) => {
+                        onClipAdded?.(clip);
+                        toast.success(`"${clip.eventType}" adicionado!`);
+                    }}
+                />
+            )}
+
+            {/* ── Share modal ── */}
+            {shareModal && matchId && (
+                <ShareTypeModal
+                    title={shareModal.type === "clip" ? "Compartilhar vídeo" : "Compartilhar replays"}
+                    onClose={() => setShareModal(null)}
+                    onInternal={() => {
+                        const url = shareModal.type === "clip"
+                            ? buildInternalClipUrl(groupId, matchId, shareModal.clipId)
+                            : buildInternalMatchUrl(groupId, matchId);
+                        copyToClipboard(url);
+                        setShareModal(null);
+                    }}
+                    onExternal={() => {
+                        const url = shareModal.type === "clip"
+                            ? buildExternalClipUrl(shareModal.clipId)
+                            : buildExternalMatchUrl(matchId);
+                        copyToClipboard(url);
+                        setShareModal(null);
+                    }}
                 />
             )}
         </>

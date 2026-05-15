@@ -162,3 +162,25 @@ export type ReplayClipDto = {
 export type LikedReplayClipDto = ReplayClipDto & {
     matchId: string;
 };
+
+export type PublicClipDto = {
+    id: string;
+    videoUrl: string;
+    eventType: "Gol" | "Jogada";
+    recordedAt: string;
+    goalNumber: number | null;
+    totalGoals: number | null;
+};
+
+export type PublicMatchReplaysDto = {
+    matchId: string;
+    playedAt: string;
+    placeName: string | null;
+    teamAGoals: number | null;
+    teamBGoals: number | null;
+    teamAColorName: string | null;
+    teamAColorHex: string | null;
+    teamBColorName: string | null;
+    teamBColorHex: string | null;
+    clips: PublicClipDto[];
+};
