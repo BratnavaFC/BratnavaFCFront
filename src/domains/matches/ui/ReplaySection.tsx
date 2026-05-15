@@ -297,7 +297,7 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId,
                             title="Compartilhar replays"
                         >
                             <Share2 size={13} />
-                            Partilhar
+                            Compartilhar
                         </button>
                     )}
                     {isAdmin && matchId && (
