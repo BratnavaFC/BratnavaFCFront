@@ -8,7 +8,7 @@ import { EditPlayerModal } from "../components/modals/EditPlayerModal";
 import { CreatorLeaveModal } from "../components/modals/CreatorLeaveModal";
 import { GroupsApi, PaymentsApi, PlayersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
-import { AlertCircle, Check, CheckCircle2, ChevronDown, Loader2, LogOut, Pencil, Plus, UserPlus, Users2, X } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Loader2, LogOut, Pencil, Plus, UserPlus, Users2, X } from "lucide-react";
 import { isGodMode, isGroupFinanceiro } from "../auth/guards";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
@@ -172,15 +172,6 @@ export default function GroupsPage() {
         if (expandedGroupId) openGroup(expandedGroupId);
     }
 
-    function toggleGroup(groupId: string) {
-        if (expandedGroupId === groupId) {
-            setExpandedGroupId(null);
-            setGroup(null);
-        } else {
-            openGroup(groupId);
-        }
-    }
-
     async function loadPaymentData() {
         if (!expandedGroupId) {
             setPaymentMap(new Map());
@@ -249,12 +240,15 @@ export default function GroupsPage() {
         }
     }, [playersTab, canSeeRatingsTab]);
 
-    // Auto-expandir quando 1 grupo
+    // Auto-expandir: sempre abre o grupo ativo do store (ou o primeiro como fallback)
     useEffect(() => {
-        if (myGroups.length === 1) {
-            openGroup(myGroups[0].groupId);
-        }
-    }, [myGroups.length]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (myGroups.length === 0) return;
+        const storeGroupId = active?.activeGroupId;
+        const target = (storeGroupId && myGroups.find(g => g.groupId === storeGroupId))
+            ? storeGroupId
+            : myGroups[0].groupId;
+        if (expandedGroupId !== target) openGroup(target);
+    }, [myGroups.length, active?.activeGroupId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     async function handleLeave() {
         if (!activePlayerId) return;
@@ -636,122 +630,41 @@ export default function GroupsPage() {
                     <Users2 size={36} className="opacity-30" />
                     <p className="text-white/50 text-sm">Você não faz parte de nenhuma patota.</p>
                 </div>
-            ) : myGroups.length === 1 ? (
-                /* 1 grupo — layout expandido */
-                <div className="space-y-4">
-                    <div className="page-header">
-                        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-                            style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                        <div className="relative flex items-center justify-between gap-4 flex-wrap">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-9 w-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-base font-black shrink-0 select-none">
-                                    {(group?.name ?? myGroups[0].groupName).charAt(0)}
-                                </div>
-                                <div className="min-w-0">
-                                    <h1 className="text-xl font-black leading-tight truncate">{group?.name ?? myGroups[0].groupName}</h1>
-                                    <p className="text-xs text-white/60 mt-0.5">
-                                        {groupLoading ? 'Carregando...' : group
-                                            ? `${activePlayers.length} mensalista${activePlayers.length !== 1 ? 's' : ''} · ${guestPlayers.length} convidado${guestPlayers.length !== 1 ? 's' : ''}`
-                                            : ''}
-                                    </p>
-                                </div>
-                            </div>
-                            {groupLoading
-                                ? <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />
-                                : group ? <HeaderButtons /> : null}
-                        </div>
-                    </div>
-                    <div className="card p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
-                        <GroupContent />
-                    </div>
-                </div>
             ) : (
-                /* 2+ grupos — accordion */
-                <div className="space-y-4">
-                    <div className="page-header">
-                        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-                            style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                        <div className="relative flex items-center gap-3">
-                            <div className="page-header-icon">
-                                <Users2 size={18} />
+                /* 1 ou mais grupos — sempre mostra só o grupo ativo (troca via Topbar) */
+                (() => {
+                    const activeInfo = myGroups.find(g => g.groupId === expandedGroupId) ?? myGroups[0];
+                    const groupName  = group?.name ?? activeInfo?.groupName ?? "";
+                    return (
+                        <div className="space-y-4">
+                            <div className="page-header">
+                                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+                                    style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                                <div className="relative flex items-center justify-between gap-4 flex-wrap">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="h-9 w-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-base font-black shrink-0 select-none">
+                                            {groupName.charAt(0)}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h1 className="text-xl font-black leading-tight truncate">{groupName}</h1>
+                                            <p className="text-xs text-white/60 mt-0.5">
+                                                {groupLoading ? 'Carregando...' : group
+                                                    ? `${activePlayers.length} mensalista${activePlayers.length !== 1 ? 's' : ''} · ${guestPlayers.length} convidado${guestPlayers.length !== 1 ? 's' : ''}`
+                                                    : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {groupLoading
+                                        ? <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />
+                                        : group ? <HeaderButtons /> : null}
+                                </div>
                             </div>
-                            <div>
-                                <h1 className="text-xl font-black leading-tight">Minhas Patotas</h1>
-                                <p className="text-xs text-white/60 mt-0.5">{myGroups.length} patotas</p>
+                            <div className="card p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                                <GroupContent />
                             </div>
                         </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        {myGroups.map(({ groupId, groupName }) => {
-                            const isExpanded = expandedGroupId === groupId;
-                            const isAdminHere = isGroupAdmin(groupId) || isGod;
-                            const myPlayerHere = myPlayers.find(p => p.groupId === groupId);
-                            return (
-                                <div key={groupId} className={["card p-0 overflow-hidden transition-shadow", isExpanded ? "shadow-md ring-1 ring-slate-900/10 dark:ring-slate-700/50" : "shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"].join(" ")}>
-                                    {/* Linha clicável */}
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleGroup(groupId)}
-                                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className={[
-                                                "h-9 w-9 rounded-xl text-sm font-black flex items-center justify-center shrink-0 select-none transition-colors",
-                                                isExpanded ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                                            ].join(" ")}>
-                                                {groupName.charAt(0)}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="font-semibold text-slate-900 dark:text-white text-sm truncate">{groupName}</div>
-                                                {isAdminHere && (
-                                                    <div className="text-[11px] text-slate-400 dark:text-slate-500">Você administra</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            {isExpanded && (
-                                                <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                                                    {isAdminHere && (
-                                                        <>
-                                                            <button type="button" className="btn btn-secondary flex items-center gap-1 text-xs px-2.5 py-1.5" onClick={() => setAddGuestOpen(true)}>
-                                                                <Plus size={13} /><span className="hidden sm:inline">Convidado</span>
-                                                            </button>
-                                                            <button type="button" className="btn btn-primary flex items-center gap-1 text-xs px-2.5 py-1.5" onClick={() => setInviteOpen(true)}>
-                                                                <UserPlus size={13} /><span className="hidden sm:inline">Convidar</span>
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    {!isAdminHere && myPlayerHere && !myPlayerHere.isGuest && (
-                                                        <button type="button" className="btn flex items-center gap-1 text-xs px-2.5 py-1.5 text-rose-600 border border-rose-200 hover:bg-rose-50" onClick={() => setLeaveConfirmOpen(true)}>
-                                                            <LogOut size={13} /><span className="hidden sm:inline">Sair</span>
-                                                        </button>
-                                                    )}
-                                                    {isAdminHere && group?.createdByUserId === currentUserId && (
-                                                        <button type="button" className="btn flex items-center gap-1 text-xs px-2.5 py-1.5 text-rose-600 border border-rose-200 hover:bg-rose-50" onClick={() => setCreatorLeaveOpen(true)}>
-                                                            <LogOut size={13} /><span className="hidden sm:inline">Sair</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                            <ChevronDown
-                                                size={16}
-                                                className={["text-slate-400 dark:text-slate-500 transition-transform duration-200", isExpanded ? "rotate-180" : ""].join(" ")}
-                                            />
-                                        </div>
-                                    </button>
-
-                                    {/* Conteúdo expandido */}
-                                    {isExpanded && (
-                                        <div className="border-t border-slate-100 dark:border-slate-800 p-5">
-                                            <GroupContent />
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                    );
+                })()
             )}
 
             {/* Modais — sempre presentes */}
