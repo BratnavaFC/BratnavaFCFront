@@ -19,8 +19,8 @@ interface MonthlyCell {
     month: number; status: number; amount: number; discount: number;
     discountReason?: string; paidAt?: string; hasProof: boolean; proofFileName?: string;
 }
-interface PlayerRow  { playerId: string; playerName: string; months: MonthlyCell[]; }
-interface MonthlyGrid { year: number; monthlyFee?: number; players: PlayerRow[]; }
+interface PlayerRow  { playerId: string; playerName: string; months: MonthlyCell[]; isGoalkeeper?: boolean; }
+interface MonthlyGrid { year: number; monthlyFee?: number; goalkeeperMonthlyFee?: number; players: PlayerRow[]; }
 
 interface ExtraChargePayment {
     playerId: string; playerName: string; amount: number; discount: number;
@@ -538,12 +538,18 @@ export default function PaymentsPage() {
                                 <button onClick={() => setYear(y => y + 1)}
                                     className="px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 text-sm">›</button>
                             </div>
-                            {grid?.monthlyFee != null && (
-                                <span className="text-sm text-slate-500 dark:text-slate-400">
-                                    Mensalidade: <strong>R$ {grid.monthlyFee.toFixed(2)}</strong>
+                            {grid?.monthlyFee != null ? (
+                                <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-3 flex-wrap">
+                                    {grid.goalkeeperMonthlyFee != null ? (
+                                        <>
+                                            <span>Jogador: <strong>R$ {grid.monthlyFee.toFixed(2)}</strong></span>
+                                            <span>Goleiro: <strong>R$ {grid.goalkeeperMonthlyFee.toFixed(2)}</strong></span>
+                                        </>
+                                    ) : (
+                                        <span>Mensalidade: <strong>R$ {grid.monthlyFee.toFixed(2)}</strong></span>
+                                    )}
                                 </span>
-                            )}
-                            {!grid?.monthlyFee && (
+                            ) : (
                                 <span className="text-sm text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg">
                                     Mensalidade não configurada nas settings da patota
                                 </span>

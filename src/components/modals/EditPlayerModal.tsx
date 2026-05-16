@@ -129,6 +129,7 @@ export function EditPlayerModal({
     const [skillPoints,   setSkillPoints]   = useState(0);
     const [active,        setActive]        = useState(true);
     const [isGuest,       setIsGuest]       = useState(false);
+    const [isGoalkeeper,  setIsGoalkeeper]  = useState(false);
     const [starRating,    setStarRating]    = useState<number | null>(null);
     const [attackRating,  setAttackRating]  = useState<number | null>(null);
     const [defenseRating, setDefenseRating] = useState<number | null>(null);
@@ -152,6 +153,7 @@ export function EditPlayerModal({
             setSkillPoints(player.skillPoints);
             setActive(player.status === 1);
             setIsGuest(player.isGuest);
+            setIsGoalkeeper(player.isGoalkeeper);
             setStarRating(player.guestStarRating ?? null);
             setAttackRating(player.attackRating ?? null);
             setDefenseRating(player.defenseRating ?? null);
@@ -177,6 +179,7 @@ export function EditPlayerModal({
             const dto: any = { name: name.trim() };
             if (isAdmin) {
                 dto.skillPoints    = skillPoints;
+                dto.isGoalkeeper   = isGoalkeeper;
                 dto.status         = active ? 1 : 2;
                 dto.isGuest        = isGuest;
                 dto.attackRating   = attackRating;
@@ -295,6 +298,25 @@ export function EditPlayerModal({
                                         </span>
                                     </label>
                                 )}
+
+                                {/* Toggle Goleiro/Linha */}
+                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                    <div
+                                        role="switch"
+                                        aria-checked={isGoalkeeper}
+                                        onClick={() => !loading && setIsGoalkeeper(v => !v)}
+                                        className={[
+                                            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                                            isGoalkeeper ? "bg-violet-500" : "bg-slate-300",
+                                            loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
+                                        ].join(" ")}
+                                    >
+                                        <span className={["inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", isGoalkeeper ? "translate-x-6" : "translate-x-1"].join(" ")} />
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        {isGoalkeeper ? "Goleiro" : "Jogador de linha"}
+                                    </span>
+                                </label>
 
                                 {/* Star rating — só para convidados */}
                                 {isGuest && (

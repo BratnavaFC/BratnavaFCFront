@@ -103,8 +103,9 @@ export default function GroupSettingsPage() {
 
     // ── pagamento ──────────────────────────────────────────────────
     /** 0 = Monthly, 1 = PerGame */
-    const [paymentMode, setPaymentMode] = useState<number>(0);
-    const [monthlyFee,  setMonthlyFee]  = useState<string>('');
+    const [paymentMode,           setPaymentMode]           = useState<number>(0);
+    const [monthlyFee,            setMonthlyFee]            = useState<string>('');
+    const [goalkeeperMonthlyFee,  setGoalkeeperMonthlyFee]  = useState<string>('');
 
     // ── regra de empate MVP ────────────────────────────────────────
     /** 0 = NoMvp, 1 = AllMvp, 2 = AllMvpUpToMax */
@@ -173,6 +174,7 @@ export default function GroupSettingsPage() {
                 setRank3Icon(gs.rank3Icon ?? null);
                 setPaymentMode(gs.paymentMode ?? 0);
                 setMonthlyFee(gs.monthlyFee != null ? String(gs.monthlyFee) : '');
+                setGoalkeeperMonthlyFee(gs.goalkeeperMonthlyFee != null ? String(gs.goalkeeperMonthlyFee) : '');
                 setMvpTieRule(gs.mvpTieRule ?? 1);
                 setMvpTieMaxPlayers(gs.mvpTieMaxPlayers ?? 2);
                 setShowPlayerStats(gs.showPlayerStats ?? false);
@@ -251,6 +253,7 @@ export default function GroupSettingsPage() {
                 rank3Icon,
                 paymentMode,
                 monthlyFee: paymentMode === 0 && monthlyFee !== '' ? parseFloat(monthlyFee) : null,
+                goalkeeperMonthlyFee: paymentMode === 0 && goalkeeperMonthlyFee !== '' ? parseFloat(goalkeeperMonthlyFee) : null,
                 mvpTieRule,
                 mvpTieMaxPlayers: mvpTieRule === 2 ? mvpTieMaxPlayers : undefined,
                 showPlayerStats,
@@ -460,11 +463,18 @@ export default function GroupSettingsPage() {
                                         ))}
                                     </div>
                                     {paymentMode === 0 && (
-                                        <Field label="Mensalidade (R$)">
-                                            <input className="input" type="number" min={0} step={0.01}
-                                                placeholder="Ex: 50.00" value={monthlyFee}
-                                                onChange={(e) => setMonthlyFee(e.target.value)} />
-                                        </Field>
+                                        <>
+                                            <Field label="Mensalidade Jogador (R$)">
+                                                <input className="input" type="number" min={0} step={0.01}
+                                                    placeholder="Ex: 50.00" value={monthlyFee}
+                                                    onChange={(e) => setMonthlyFee(e.target.value)} />
+                                            </Field>
+                                            <Field label="Mensalidade Goleiro (R$)">
+                                                <input className="input" type="number" min={0} step={0.01}
+                                                    placeholder="Padrão: igual ao jogador" value={goalkeeperMonthlyFee}
+                                                    onChange={(e) => setGoalkeeperMonthlyFee(e.target.value)} />
+                                            </Field>
+                                        </>
                                     )}
                                     <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
                                         {paymentMode === 0
