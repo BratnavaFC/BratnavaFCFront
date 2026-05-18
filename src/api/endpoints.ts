@@ -58,6 +58,7 @@ export const GroupsApi = {
   addFinanceiro: (groupId: string, userId: string) => http.post<ApiResponse<null>>(`/api/Groups/${groupId}/financeiros`, { userId }),
   removeFinanceiro: (groupId: string, userId: string) => http.delete<ApiResponse<null>>(`/api/Groups/${groupId}/financeiros/${userId}`),
   listByFinanceiro: (financeiroId: string) => http.get<ApiResponse<unknown[]>>(`/api/Groups/financeiro/${financeiroId}`),
+  myRoles: (groupId: string) => http.get<ApiResponse<{ isAdmin: boolean; isFinanceiro: boolean }>>(`/api/Groups/${groupId}/my-roles`),
   leaveAsCreator: (groupId: string, dto: { transferToUserId?: string; promoteAndTransferUserId?: string; deleteGroup?: boolean }) =>
     http.post<ApiResponse<null>>(`/api/Groups/${groupId}/leave-creator`, dto),
 };

@@ -9,7 +9,7 @@ import { CreatorLeaveModal } from "../components/modals/CreatorLeaveModal";
 import { GroupsApi, PaymentsApi, PlayersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { AlertCircle, Check, CheckCircle2, Loader2, LogOut, Pencil, Plus, UserPlus, Users2, X } from "lucide-react";
-import { isGodMode, isGroupFinanceiro } from "../auth/guards";
+import { isGodMode } from "../auth/guards";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { resolveIcon } from "../lib/groupIcons";
@@ -78,8 +78,9 @@ function getRatingSortValue(p: PlayerDto, key: RatingsSortKey): number {
 // ─── GroupsPage ──────────────────────────────────────────────────────────────
 
 export default function GroupsPage() {
-    const isGroupAdmin = useAccountStore((s) => s.isGroupAdmin);
-    const active = useAccountStore((s) => s.getActive());
+    const active              = useAccountStore((s) => s.getActive());
+    const isAdminOfGroup      = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupIsAdmin ?? false);
+    const isFinanceiroOfGroup = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupIsFinanceiro ?? false);
     const currentUserId = active?.userId ?? "";
     const isGod = isGodMode();
 
@@ -122,8 +123,6 @@ export default function GroupsPage() {
         ? myPlayers.find(p => p.groupId === expandedGroupId) ?? null
         : null;
     const activePlayerId = myPlayerInExpandedGroup?.playerId ?? "";
-    const isAdminOfGroup = isGroupAdmin(expandedGroupId ?? "");
-    const isFinanceiroOfGroup = isGroupFinanceiro(expandedGroupId ?? "");
     const canSeeRatingsTab = isAdminOfGroup || isGod;
 
     // ── Icons ligados ao grupo expandido ──
@@ -177,7 +176,7 @@ export default function GroupsPage() {
             setPaymentMap(new Map());
             return;
         }
-        if (!isGroupFinanceiro(expandedGroupId) && !isGodMode()) {
+        if (!isFinanceiroOfGroup && !isGodMode()) {
             setPaymentMap(new Map());
             return;
         }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     LogOut,
@@ -203,35 +203,53 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
     useClickOutside(playerMenuRef, () => setPlayerMenuOpen(false));
 
     /* ── fetch logic ── */
+    const fetchGroupRoles = useCallback((groupId: string) => {
+        GroupsApi.myRoles(groupId)
+            .then((res) => {
+                const r = (res.data?.data as any) ?? {};
+                updateActive({ activeGroupIsAdmin: !!r.isAdmin, activeGroupIsFinanceiro: !!r.isFinanceiro });
+            })
+            .catch(() => updateActive({ activeGroupIsAdmin: false, activeGroupIsFinanceiro: false }));
+    }, [updateActive]);
+
+    const fetchAdminIds = useCallback((userId: string) => {
+        GroupsApi.listByAdmin(userId)
+            .then((res) => {
+                const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                updateActive({ groupAdminIds: ids });
+            }).catch(() => {});
+        GroupsApi.listByFinanceiro(userId)
+            .then((res) => {
+                const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
+                updateActive({ groupFinanceiroIds: ids });
+            }).catch(() => {});
+    }, [updateActive]);
+
     useEffect(() => {
         if (!active?.userId) { setMyPlayers([]); return; }
         const userId = active.userId;
-
-        function fetchAdminIds() {
-            GroupsApi.listByAdmin(userId)
-                .then((res) => {
-                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
-                    updateActive({ groupAdminIds: ids });
-                }).catch(() => {});
-            GroupsApi.listByFinanceiro(userId)
-                .then((res) => {
-                    const ids = ((res.data?.data ?? []) as unknown[]).map((g: any) => g.id ?? g.groupId).filter(Boolean) as string[];
-                    updateActive({ groupFinanceiroIds: ids });
-                }).catch(() => {});
-        }
 
         PlayersApi.mine()
             .then((res) => {
                 const list = ((res.data?.data ?? []) as unknown) as MyPlayerDto[];
                 setMyPlayers(list);
-                if (list.length > 0 && !active.activePlayerId)
-                    updateActive({ activePlayerId: list[0].playerId, activeGroupId: list[0].groupId });
+                if (list.length > 0 && !active.activePlayerId) {
+                    const groupId = list[0].groupId;
+                    updateActive({ activePlayerId: list[0].playerId, activeGroupId: groupId });
+                    fetchGroupRoles(groupId);
+                } else if (active.activeGroupId) {
+                    fetchGroupRoles(active.activeGroupId);
+                }
             })
             .catch(() => setMyPlayers([]));
 
-        fetchAdminIds();
+        fetchAdminIds(userId);
 
-        function onFocus() { fetchAdminIds(); }
+        function onFocus() {
+            fetchAdminIds(userId);
+            const grpId = useAccountStore.getState().getActive()?.activeGroupId;
+            if (grpId) fetchGroupRoles(grpId);
+        }
         window.addEventListener("focus", onFocus);
         return () => window.removeEventListener("focus", onFocus);
     }, [active?.userId]);
@@ -251,7 +269,13 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
     function handlePlayerChange(playerId: string) {
         const player = myPlayers.find((p) => p.playerId === playerId);
         if (!player) return;
-        updateActive({ activePlayerId: player.playerId, activeGroupId: player.groupId });
+        updateActive({
+            activePlayerId:          player.playerId,
+            activeGroupId:           player.groupId,
+            activeGroupIsAdmin:      false,
+            activeGroupIsFinanceiro: false,
+        });
+        fetchGroupRoles(player.groupId);
         setPlayerMenuOpen(false);
         nav("/app");
     }

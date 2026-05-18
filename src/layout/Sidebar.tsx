@@ -18,12 +18,12 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const { pathname } = useLocation();
     const userId       = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.userId);
     const roles        = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.roles ?? []);
-    const activeGrpId  = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupId ?? null);
-    const grpAdminIds  = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.groupAdminIds ?? []);
+    const activeGrpId        = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupId ?? null);
+    const activeGroupIsAdmin = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupIsAdmin ?? false);
 
     const isAdminOrGod = roles.includes("Admin") || roles.includes("GodMode");
     const isGod        = roles.includes("GodMode");
-    const isGroupAdm   = isAdminOrGod || (!!activeGrpId && grpAdminIds.includes(activeGrpId));
+    const isGroupAdm   = activeGroupIsAdmin;
 
     const pendingCount            = useInviteStore((s) => s.pendingCount);
     const setPendingCount         = useInviteStore((s) => s.setPendingCount);
@@ -68,7 +68,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     }, [userId, activeGrpId, setPendingPaymentsCount]);
 
     const groups: NavGroup[] = useMemo(() => {
-        const adminItems: Item[] = isGroupAdm || isGod
+        const adminItems: Item[] = isGroupAdm
             ? [
                 { to: "/app/spotlight",       label: "Spotlight",      icon: Presentation },
                 { to: "/app/birthday-status", label: "Aniversários",   icon: Cake },
@@ -127,7 +127,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 ],
             },
         ].filter((g) => g.items.length > 0);
-    }, [isAdminOrGod, isGod, isGroupAdm, pendingCount, pendingPollsCount, pendingPaymentsCount]);
+    }, [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount, pendingPollsCount, pendingPaymentsCount]);
 
     return (
         <aside className={`h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${open ? "w-64" : "w-16"}`}>

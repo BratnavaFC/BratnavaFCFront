@@ -139,14 +139,12 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function PaymentsPage() {
-    const active             = useAccountStore(s => s.getActive());
-    const isGroupFinanceiro  = useAccountStore(s => s.isGroupFinanceiro);
-    const groupId            = active?.activeGroupId ?? '';
-    const activePlayerId     = active?.activePlayerId ?? '';
-    const isAdmin = !!(active && (
-        active.roles.includes('GodMode') ||
-        (active.activeGroupId && isGroupFinanceiro(active.activeGroupId))
-    ));
+    const active         = useAccountStore(s => s.getActive());
+    const groupId        = active?.activeGroupId ?? '';
+    const activePlayerId = active?.activePlayerId ?? '';
+    const isAdmin = useAccountStore(s =>
+        s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupIsFinanceiro ?? false
+    );
 
     const setPendingPaymentsCount = usePaymentStore((s) => s.setPendingPaymentsCount);
 

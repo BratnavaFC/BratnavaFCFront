@@ -16,6 +16,8 @@ export type Account = {
     activePlayerId?: string | null; // jogador/perfil selecionado
     groupAdminIds?: string[];       // IDs das patotas onde o usuário é admin
     groupFinanceiroIds?: string[];  // IDs das patotas onde o usuário é financeiro
+    activeGroupIsAdmin?: boolean;       // role do usuário na patota ATIVA (atualiza a cada troca)
+    activeGroupIsFinanceiro?: boolean;  // idem para financeiro
 };
 
 type AccountState = {
