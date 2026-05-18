@@ -340,6 +340,48 @@ export const PaymentsApi = {
                           http.post<ApiResponse<null>>(`/api/groups/${groupId}/payments/pay-selected`, dto),
 };
 
+export type AppNotificationDto = {
+  id: string;
+  title: string;
+  body: string;
+  type: string | null;
+  dataJson: string | null;
+  isRead: boolean;
+  createdAt: string;
+  groupId: string | null;
+};
+
+export const NotificationsApi = {
+  mine: (params?: { groupId?: string; page?: number; pageSize?: number }) =>
+    http.get<{ data: AppNotificationDto[]; total: number; page: number; pageSize: number }>(
+      '/api/Notifications/mine', { params }),
+
+  unreadCount: (groupId?: string) =>
+    http.get<{ data: number }>(
+      '/api/Notifications/mine/unread-count',
+      groupId ? { params: { groupId } } : undefined),
+
+  markRead: (id: string) =>
+    http.patch<{ data: boolean }>(`/api/Notifications/${id}/read`),
+
+  markAllRead: (groupId?: string) =>
+    http.patch<{ data: boolean }>(
+      '/api/Notifications/mine/read-all', {},
+      groupId ? { params: { groupId } } : undefined),
+
+  delete: (id: string) =>
+    http.delete<{ data: boolean }>(`/api/Notifications/${id}`),
+};
+
+export const GodModeApi = {
+  notifyGroup: (groupId: string, dto: { title: string; body: string }) =>
+    http.post<ApiResponse<null>>(`/api/admin/groups/${groupId}/notify`, dto),
+  notifyUser: (userId: string, dto: { title: string; body: string }) =>
+    http.post<ApiResponse<null>>(`/api/admin/users/${userId}/notify`, dto),
+  notifyAll: (dto: { title: string; body: string }) =>
+    http.post<ApiResponse<{ sent: number }>>(`/api/admin/users/notify-all`, dto),
+};
+
 export const MatchCardApi = {
   generate: (groupId: string, dto: {
     template: 'match_preview' | 'match_result';
