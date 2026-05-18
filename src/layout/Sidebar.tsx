@@ -23,7 +23,9 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
 
     const isAdminOrGod = roles.includes("Admin") || roles.includes("GodMode");
     const isGod        = roles.includes("GodMode");
-    const isGroupAdm   = activeGroupIsAdmin;
+    // GodMode/Admin users always have full group-admin access; activeGroupIsAdmin
+    // is the per-group reactive flag for regular users.
+    const isGroupAdm   = activeGroupIsAdmin || isAdminOrGod;
 
     const pendingCount            = useInviteStore((s) => s.pendingCount);
     const setPendingCount         = useInviteStore((s) => s.setPendingCount);

@@ -11,10 +11,11 @@ import {
     Check,
     UserPlus,
     ChevronRight,
+    Bell,
 } from "lucide-react";
 import { useAccountStore } from "../auth/accountStore";
 import { isAdmin } from "../auth/guards";
-import { PlayersApi, GroupsApi, GroupSettingsApi } from "../api/endpoints";
+import { PlayersApi, GroupsApi, GroupSettingsApi, NotificationsApi, type AppNotificationDto } from "../api/endpoints";
 import { Field } from "../components/Field";
 
 type MyPlayerDto = {
@@ -176,6 +177,19 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () =
     }, [ref, handler]);
 }
 
+/* ─── formatNotifDate ──────────────────────────────────────────────────── */
+
+function formatNotifDate(iso: string): string {
+    const d   = new Date(iso);
+    const now = new Date();
+    const diff = (now.getTime() - d.getTime()) / 1000;
+    if (diff < 60)     return "agora";
+    if (diff < 3600)   return `${Math.floor(diff / 60)}min atrás`;
+    if (diff < 86400)  return `${Math.floor(diff / 3600)}h atrás`;
+    if (diff < 172800) return "ontem";
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
 /* ─── Topbar ───────────────────────────────────────────────────────────── */
 
 export default function Topbar({ isMobile = false, onMenuClick }: Props) {
@@ -196,14 +210,32 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
     const [userMenuOpen, setUserMenuOpen]   = useState(false);
     const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
 
+    // ── notification bell ──────────────────────────────────────────────────
+    const [bellOpen, setBellOpen]           = useState(false);
+    const [unreadCount, setUnreadCount]     = useState(0);
+    const [notifications, setNotifications] = useState<AppNotificationDto[]>([]);
+    const [notifLoading, setNotifLoading]   = useState(false);
+    const [notifPage, setNotifPage]         = useState(1);
+    const [notifTotal, setNotifTotal]       = useState(0);
+    const [notifLoadingMore, setNotifLoadingMore] = useState(false);
+    const PAGE_SIZE = 20;
+
     const userMenuRef   = useRef<HTMLDivElement>(null);
     const playerMenuRef = useRef<HTMLDivElement>(null);
+    const bellRef       = useRef<HTMLDivElement>(null);
 
     useClickOutside(userMenuRef,   () => setUserMenuOpen(false));
     useClickOutside(playerMenuRef, () => setPlayerMenuOpen(false));
+    useClickOutside(bellRef,       () => setBellOpen(false));
 
     /* ── fetch logic ── */
     const fetchGroupRoles = useCallback((groupId: string) => {
+        // GodMode tem acesso total — não precisa consultar o backend
+        const roles = useAccountStore.getState().getActive()?.roles ?? [];
+        if (roles.includes("GodMode")) {
+            updateActive({ activeGroupIsAdmin: true, activeGroupIsFinanceiro: true });
+            return;
+        }
         GroupsApi.myRoles(groupId)
             .then((res) => {
                 const r = (res.data?.data as any) ?? {};
@@ -253,6 +285,77 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
         window.addEventListener("focus", onFocus);
         return () => window.removeEventListener("focus", onFocus);
     }, [active?.userId]);
+
+    // ── unread-count polling (scoped to active group) ───────────────────────
+    useEffect(() => {
+        // Troca de grupo/conta: fecha o painel e reseta paginação
+        setBellOpen(false);
+        setNotifications([]);
+        setNotifPage(1);
+        setNotifTotal(0);
+
+        if (!active?.userId) { setUnreadCount(0); return; }
+
+        const groupId = active.activeGroupId ?? undefined;
+
+        const fetchCount = () => {
+            NotificationsApi.unreadCount(groupId)
+                .then(res => setUnreadCount(res.data?.data ?? 0))
+                .catch(() => {});
+        };
+
+        fetchCount();
+        const interval = setInterval(fetchCount, 60_000);
+        window.addEventListener("focus", fetchCount);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("focus", fetchCount);
+        };
+    }, [active?.userId, active?.activeGroupId]);
+
+    function handleBellClick() {
+        const nextOpen = !bellOpen;
+        setBellOpen(nextOpen);
+        if (nextOpen) {
+            const groupId = active?.activeGroupId ?? undefined;
+            setNotifLoading(true);
+            setNotifPage(1);
+            NotificationsApi.mine({ pageSize: PAGE_SIZE, page: 1, groupId })
+                .then(res => {
+                    setNotifications(res.data?.data ?? []);
+                    setNotifTotal(res.data?.total ?? 0);
+                })
+                .catch(() => {})
+                .finally(() => setNotifLoading(false));
+        }
+    }
+
+    function handleLoadMore() {
+        const groupId  = active?.activeGroupId ?? undefined;
+        const nextPage = notifPage + 1;
+        setNotifLoadingMore(true);
+        NotificationsApi.mine({ pageSize: PAGE_SIZE, page: nextPage, groupId })
+            .then(res => {
+                setNotifications(prev => [...prev, ...(res.data?.data ?? [])]);
+                setNotifTotal(res.data?.total ?? 0);
+                setNotifPage(nextPage);
+            })
+            .catch(() => {})
+            .finally(() => setNotifLoadingMore(false));
+    }
+
+    function handleMarkRead(id: string) {
+        NotificationsApi.markRead(id).catch(() => {});
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+
+    function handleMarkAllRead() {
+        const groupId = active?.activeGroupId ?? undefined;
+        NotificationsApi.markAllRead(groupId).catch(() => {});
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+    }
 
     /* ── derived ── */
     const activePlayer = useMemo(
@@ -379,6 +482,89 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                             <Plus size={16} className="text-slate-600 dark:text-slate-400" />
                         </button>
                     )}
+
+                    {/* Notification bell */}
+                    <div ref={bellRef} className="relative">
+                        <button
+                            type="button"
+                            title="Notificações"
+                            onClick={handleBellClick}
+                            className="relative h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.97] transition grid place-items-center"
+                        >
+                            <Bell size={16} className="text-slate-600 dark:text-slate-400" />
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-4 min-w-[1rem] px-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center leading-none pointer-events-none">
+                                    {unreadCount > 99 ? "99+" : unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {bellOpen && (
+                            <div className="absolute right-0 top-full mt-1.5 z-50 w-80 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl dark:ring-1 dark:ring-slate-700/40 overflow-hidden">
+                                {/* Header */}
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Notificações</span>
+                                    {unreadCount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={handleMarkAllRead}
+                                            className="text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium"
+                                        >
+                                            Marcar tudo como lido
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Body */}
+                                {notifLoading ? (
+                                    <div className="flex items-center justify-center py-10">
+                                        <Loader2 size={20} className="animate-spin text-slate-400" />
+                                    </div>
+                                ) : notifications.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-400 dark:text-slate-600">
+                                        <Bell size={24} className="opacity-40" />
+                                        <span className="text-sm">Sem notificações</span>
+                                    </div>
+                                ) : (
+                                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                                        {notifications.map(n => (
+                                            <button
+                                                key={n.id}
+                                                type="button"
+                                                onClick={() => { if (!n.isRead) handleMarkRead(n.id); }}
+                                                className={`w-full text-left px-4 py-3 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800 flex gap-3 items-start ${!n.isRead ? "bg-sky-50/60 dark:bg-sky-900/10" : ""}`}
+                                            >
+                                                <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 transition-colors ${!n.isRead ? "bg-sky-500" : "bg-transparent"}`} />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className={`font-medium truncate ${!n.isRead ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}>
+                                                        {n.title}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-500 line-clamp-2 mt-0.5">{n.body}</div>
+                                                    <div className="text-[10px] text-slate-400 dark:text-slate-600 mt-1">{formatNotifDate(n.createdAt)}</div>
+                                                </div>
+                                            </button>
+                                        ))}
+
+                                        {/* Carregar mais */}
+                                        {notifications.length < notifTotal && (
+                                            <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleLoadMore}
+                                                    disabled={notifLoadingMore}
+                                                    className="w-full flex items-center justify-center gap-2 text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium disabled:opacity-50"
+                                                >
+                                                    {notifLoadingMore
+                                                        ? <><Loader2 size={12} className="animate-spin" /> Carregando...</>
+                                                        : `Carregar mais (${notifTotal - notifications.length} restantes)`}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* User menu */}
                     <div ref={userMenuRef} className="relative">
