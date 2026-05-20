@@ -13,6 +13,7 @@ type GoalDto = {
     assistPlayerId?: string | null;
     assistName?: string | null;
     time?: string | null; // "21:05" ou "21:05:12"
+    isOwnGoal?: boolean;
 };
 
 function cls(...xs: Array<string | false | null | undefined>) {
@@ -176,8 +177,12 @@ export function MatchTimeSimulationTimeline({
                 const tSec = goalToGameSeconds(g, inferredStart, totalMinutes) ?? totalMinutes * 60;
                 const minute = clamp(Math.floor(tSec / 60), 0, totalMinutes);
 
-                const teamRaw = teamByPlayerId.get(String(g.scorerPlayerId));
-                const team = (teamRaw === 1 ? 1 : teamRaw === 2 ? 2 : 0) as 1 | 2 | 0;
+                const teamRaw    = teamByPlayerId.get(String(g.scorerPlayerId));
+                const teamScorer = (teamRaw === 1 ? 1 : teamRaw === 2 ? 2 : 0) as 1 | 2 | 0;
+                // Gol contra: o ponto vai para o time adversário
+                const team = (g.isOwnGoal && teamScorer !== 0)
+                    ? (teamScorer === 1 ? 2 : 1) as 1 | 2 | 0
+                    : teamScorer;
 
                 return { ...g, tSec, minute, team };
             })
