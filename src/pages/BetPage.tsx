@@ -91,7 +91,11 @@ function selectionIsValid(sel: SelectionForm): boolean {
     }
 }
 
-function formatValue(category: string, value: string | null | undefined): string {
+function formatValue(
+    category: string,
+    value: string | null | undefined,
+    playerName?: string | null,
+): string {
     if (!value) return "–";
     if (category === "WinningTeam") {
         return value === "TeamA" ? "Time A" : value === "TeamB" ? "Time B" : "Empate";
@@ -102,10 +106,11 @@ function formatValue(category: string, value: string | null | undefined): string
     // PlayerGoals | PlayerAssists: "{matchPlayerId}|{count}"
     const parts = value.split("|");
     if (parts.length >= 2) {
-        const n = parts[1];
+        const n      = parts[1];
+        const prefix = playerName ? `${playerName} — ` : "";
         return category === "PlayerGoals"
-            ? `${n} gol${n !== "1" ? "s" : ""}`
-            : `${n} assist.`;
+            ? `${prefix}${n} gol${n !== "1" ? "s" : ""}`
+            : `${prefix}${n} assist.`;
     }
     return value;
 }
@@ -1220,13 +1225,13 @@ function HistoryTab({ groupId }: { groupId: string }) {
                                                                         <p className="text-xs text-slate-400 mt-0.5">
                                                                             Previsto:{" "}
                                                                             <span className="font-medium text-slate-600 dark:text-slate-300">
-                                                                                {formatValue(sel.category, sel.predictedValue)}
+                                                                                {formatValue(sel.category, sel.predictedValue, sel.playerName)}
                                                                             </span>
                                                                             {sel.actualValue && (
                                                                                 <>
                                                                                     {" "}· Real:{" "}
                                                                                     <span className="font-medium text-slate-600 dark:text-slate-300">
-                                                                                        {formatValue(sel.category, sel.actualValue)}
+                                                                                        {formatValue(sel.category, sel.actualValue, sel.playerName)}
                                                                                     </span>
                                                                                 </>
                                                                             )}

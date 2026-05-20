@@ -19,6 +19,7 @@ export interface BetSelectionDto {
     fichasEarned:    number | null;
     isCorrect:       boolean | null;
     isPartialCredit: boolean | null;
+    playerName:      string | null; // nome do jogador apostado (PlayerGoals/PlayerAssists)
 }
 
 export interface MatchBetDto {
