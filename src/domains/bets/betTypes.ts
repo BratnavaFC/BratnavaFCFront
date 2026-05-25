@@ -96,10 +96,19 @@ export interface BetPreviewUserDto {
 }
 
 export interface BetPreviewDto {
-    matchId:       string;
-    currentScoreA: number;
-    currentScoreB: number;
-    userBets:      BetPreviewUserDto[];
+    matchId:            string;
+    currentScoreA:      number;
+    currentScoreB:      number;
+    userBets:           BetPreviewUserDto[];
+    participationBonus: number;
+}
+
+// ── Bettable match (carousel) ─────────────────────────────────────────────────
+
+export interface BettableMatchDto {
+    matchId:   string;
+    playedAt:  string;
+    placeName: string;
 }
 
 // ── Form state types ──────────────────────────────────────────────────────────

@@ -22,6 +22,7 @@ import type {
     MatchBetHistoryDto,
     BetPreviewDto,
     BetPreviewUserDto,
+    BettableMatchDto,
 } from "../domains/bets/betTypes";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -429,8 +430,8 @@ function BetPreviewPanel({
         }
     }
 
-    // Carrega automaticamente na montagem
-    useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Recarrega ao montar e sempre que a partida/grupo mudar
+    useEffect(() => { load(); }, [groupId, matchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     /** Formata o valor mostrando o nome do jogador quando disponível. */
     function formatPreviewValue(category: string, value: string | null | undefined): string {
@@ -621,10 +622,17 @@ function BetPreviewPanel({
 
 // ── Tab: Aposta Atual ─────────────────────────────────────────────────────────
 
+const DEFAULT_SELECTIONS: SelectionForm[] = [
+    { category: "WinningTeam", predictedValue: "", fichasWagered: 50, winTeam: undefined },
+];
+
 function CurrentBetTab({ groupId }: { groupId: string }) {
     const _icons = useGroupIcons(groupId);
+    const [bettableMatches, setBettableMatches] = useState<BettableMatchDto[]>([]);
+    const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
     const [ctx,        setCtx]        = useState<CurrentMatchBetContextDto | null>(null);
     const [loading,    setLoading]    = useState(true);
+    const [ctxLoading, setCtxLoading] = useState(false);
     const [saving,        setSaving]        = useState(false);
     const [deleting,      setDeleting]      = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -632,29 +640,22 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
     const [balance,    setBalance]    = useState<number | null>(null);
     const [teamA,      setTeamA]      = useState<TeamInfo | undefined>();
     const [teamB,      setTeamB]      = useState<TeamInfo | undefined>();
-    const [selections, setSelections] = useState<SelectionForm[]>([
-        { category: "WinningTeam", predictedValue: "", fichasWagered: 50, winTeam: undefined },
-    ]);
+    const [selections, setSelections] = useState<SelectionForm[]>(DEFAULT_SELECTIONS);
 
-    async function load() {
-        setLoading(true);
+    /** Carrega o contexto de aposta para uma partida específica. */
+    async function loadContextFor(matchId: string) {
+        setCtxLoading(true);
+        setTeamA(undefined);
+        setTeamB(undefined);
 
-        const [balResult, ctxResult] = await Promise.allSettled([
-            BetApi.getMyBalance(groupId),
-            BetApi.getCurrentContext(groupId),
-        ]);
-
-        if (balResult.status === "fulfilled") {
-            setBalance((balResult.value.data as any).balance ?? 0);
-        }
-
-        if (ctxResult.status === "fulfilled") {
-            const context = (ctxResult.value.data as any) as CurrentMatchBetContextDto;
+        try {
+            const ctxRes  = await BetApi.getContextForMatch(groupId, matchId);
+            const context = (ctxRes.data as any) as CurrentMatchBetContextDto;
             setCtx(context);
 
-            // Buscar cores/nomes dos times para a partida atual
+            // Buscar cores/nomes dos times
             try {
-                const detRes = await MatchesApi.details(groupId, context.matchId);
+                const detRes = await MatchesApi.details(groupId, matchId);
                 const det    = (detRes.data as any)?.data ?? detRes.data;
                 if (det?.teamAColor?.name) setTeamA({ name: det.teamAColor.name, hex: det.teamAColor.hexValue ?? "#0f172a" });
                 if (det?.teamBColor?.name) setTeamB({ name: det.teamBColor.name, hex: det.teamBColor.hexValue ?? "#0f172a" });
@@ -681,19 +682,62 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                     return base;
                 });
                 setSelections(sels);
+            } else {
+                setSelections(DEFAULT_SELECTIONS);
+            }
+        } catch (e: any) {
+            if (e?.response?.status !== 404) {
+                toast.error(getResponseMessage(e, "Falha ao carregar contexto de apostas."));
+            }
+            setCtx(null);
+        } finally {
+            setCtxLoading(false);
+        }
+    }
+
+    async function load() {
+        setLoading(true);
+
+        const [balResult, matchesResult] = await Promise.allSettled([
+            BetApi.getMyBalance(groupId),
+            BetApi.getBettableMatches(groupId),
+        ]);
+
+        if (balResult.status === "fulfilled") {
+            setBalance((balResult.value.data as any).balance ?? 0);
+        }
+
+        if (matchesResult.status === "fulfilled") {
+            const matches = (matchesResult.value.data as any) as BettableMatchDto[];
+            setBettableMatches(matches);
+
+            if (matches.length > 0) {
+                const firstId = matches[0].matchId;
+                setSelectedMatchId(firstId);
+                await loadContextFor(firstId);
+            } else {
+                setSelectedMatchId(null);
+                setCtx(null);
             }
         } else {
-            const err = (ctxResult as PromiseRejectedResult).reason;
-            if (err?.response?.status !== 404) {
-                toast.error(getResponseMessage(err, "Falha ao carregar contexto de apostas."));
-            }
+            setBettableMatches([]);
+            setSelectedMatchId(null);
             setCtx(null);
         }
 
         setLoading(false);
     }
 
-    useEffect(() => { load(); }, [groupId]);
+    /** Seleciona uma partida diferente no carrossel. */
+    async function selectMatch(matchId: string) {
+        if (matchId === selectedMatchId || ctxLoading) return;
+        setSelectedMatchId(matchId);
+        setConfirmDelete(false);
+        setShowBetStatus(false);
+        await loadContextFor(matchId);
+    }
+
+    useEffect(() => { load(); }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     function addCategory(cat: BetCategory) {
         if (selections.length >= 5) return;
@@ -778,18 +822,20 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
         );
     }
 
-    if (!ctx) {
+    if (bettableMatches.length === 0) {
         return (
             <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400">
                 <Target size={36} className="mx-auto mb-3 opacity-30" />
-                <p className="text-sm font-medium">Nenhuma partida em andamento</p>
-                <p className="text-xs mt-1 opacity-60">As apostas ficam disponíveis durante o matchmaking.</p>
+                <p className="text-sm font-medium">Nenhuma partida disponível para apostas</p>
+                <p className="text-xs mt-1 opacity-60">
+                    As apostas ficam disponíveis durante o matchmaking, após os times serem definidos.
+                </p>
             </div>
         );
     }
 
     const adminOfGroup  = isGroupAdmin(groupId);
-    const isLocked      = !ctx.betWindowOpen;
+    const isLocked      = !ctx?.betWindowOpen;
     const totalWager    = selections.reduce((s, sel) => s + sel.fichasWagered, 0);
     const overMax       = totalWager > MAX_WAGER;
     const canAddMore    = selections.length < 5;
@@ -803,6 +849,58 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
 
     return (
         <div className="space-y-5">
+            {/* Carrossel de partidas elegíveis */}
+            {bettableMatches.length > 0 && (
+                <div className="overflow-x-auto -mx-1 px-1 pb-0.5">
+                    <div className="flex gap-2 min-w-max">
+                        {bettableMatches.map((m) => {
+                            const isSelected = m.matchId === selectedMatchId;
+                            const dateLabel  = new Date(m.playedAt).toLocaleDateString("pt-BR", {
+                                day: "2-digit", month: "short",
+                            });
+                            return (
+                                <button
+                                    key={m.matchId}
+                                    type="button"
+                                    disabled={ctxLoading}
+                                    onClick={() => selectMatch(m.matchId)}
+                                    className={[
+                                        "flex flex-col items-start px-4 py-2.5 rounded-xl border text-left transition-all shrink-0",
+                                        isSelected
+                                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-sm"
+                                            : "border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
+                                        ctxLoading && !isSelected ? "opacity-50 cursor-not-allowed" : "",
+                                    ].join(" ")}>
+                                    <span className="text-xs font-black tracking-wide">{dateLabel}</span>
+                                    <span className={[
+                                        "text-[11px] mt-0.5 truncate max-w-[140px]",
+                                        isSelected ? "opacity-70" : "opacity-60",
+                                    ].join(" ")}>
+                                        {m.placeName}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Spinner durante troca de partida no carrossel */}
+            {ctxLoading && (
+                <div className="flex items-center justify-center py-12">
+                    <Loader2 size={24} className="animate-spin text-slate-400" />
+                </div>
+            )}
+
+            {/* Conteúdo principal — só renderiza quando o contexto estiver pronto */}
+            {!ctxLoading && !ctx && (
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-8 text-center text-slate-400">
+                    <Target size={28} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Contexto não encontrado para esta partida.</p>
+                </div>
+            )}
+
+            {!ctxLoading && ctx && <>
             {/* Toggle: status das apostas dos jogadores */}
             {(() => {
                 // Apenas mensalistas entram na contagem/lista de apostas pendentes
@@ -1058,6 +1156,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
 
                 </div>
             )}
+            </>}
         </div>
     );
 }
@@ -1540,6 +1639,26 @@ export default function BetPage() {
                         <Info size={17} />
                     </button>
                 </div>
+                {groupId && (
+                    <div className="relative mt-4 flex gap-1 flex-wrap">
+                        {tabs.map((t) => (
+                            <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => setTab(t.id)}
+                                className={[
+                                    "flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                    tab === t.id
+                                        ? "bg-white text-slate-900 border-white"
+                                        : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
+                                ].join(" ")}
+                            >
+                                {t.icon}
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {!groupId ? (
@@ -1549,25 +1668,6 @@ export default function BetPage() {
                 </div>
             ) : (
                 <>
-                    {/* Tab bar */}
-                    <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
-                        {tabs.map((t) => (
-                            <button
-                                key={t.id}
-                                type="button"
-                                onClick={() => setTab(t.id)}
-                                className={[
-                                    "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px",
-                                    tab === t.id
-                                        ? "border-slate-900 dark:border-white text-slate-900 dark:text-white"
-                                        : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
-                                ].join(" ")}>
-                                {t.icon}
-                                {t.label}
-                            </button>
-                        ))}
-                    </div>
-
                     {tab === "atual"     && <CurrentBetTab groupId={groupId} />}
                     {tab === "historico" && <HistoryTab    groupId={groupId} />}
                     {tab === "ranking"   && <RankingTab    groupId={groupId} />}
