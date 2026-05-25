@@ -23,11 +23,11 @@ function fileToBase64(file: File): Promise<string> {
 
 interface MonthlyModalProps {
     open: boolean;
-    groupId: string; row: PlayerRow; month: number; isAdmin: boolean;
+    groupId: string; row: PlayerRow; month: number; year: number; isAdmin: boolean;
     onClose(): void; onSaved(): void;
 }
 
-function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSaved }: MonthlyModalProps) {
+function MonthlyPaymentModal({ open, groupId, row, month, year, isAdmin, onClose, onSaved }: MonthlyModalProps) {
     useEffect(() => {
         if (!open) return;
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -39,7 +39,9 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
 
     const cell   = (row.months ?? []).find(c => c.month === month);
     const isPaid = cell?.status === 1;
-    const [discount, setDiscount]   = useState(String(cell?.discount ?? 0));
+    // Desconto sempre começa em 0 — representa valor ADICIONAL a aplicar.
+    // O desconto atual é exibido como informação read-only acima.
+    const [discount, setDiscount]   = useState('0');
     const [discReason, setDiscReason] = useState(cell?.discountReason ?? '');
     const [file, setFile]           = useState<File | null>(null);
     const [saving, setSaving]       = useState(false);
@@ -57,7 +59,7 @@ function MonthlyPaymentModal({ open, groupId, row, month, isAdmin, onClose, onSa
             }
             const res = await PaymentsApi.upsertMonthly(groupId, {
                 playerId: row.playerId,
-                year: new Date().getFullYear(),
+                year,
                 month,
                 status,
                 discount: isAdmin ? parseFloat(discount) || 0 : undefined,

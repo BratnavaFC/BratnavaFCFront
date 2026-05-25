@@ -117,6 +117,7 @@ function BulkExtraDiscountModal({ open, groupId, charge, onClose, onSaved }: Bul
                     <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
                         Aplicará <strong>R$ {parseFloat(discount).toFixed(2)}</strong> de desconto para{' '}
                         <strong>{selected.size} jogador{selected.size !== 1 ? 'es' : ''}</strong>.
+                        <span className="block mt-0.5">Pagamentos com desconto igual ao valor total serão marcados como <strong>pagos</strong> automaticamente e lançados no caixa.</span>
                     </div>
                 )}
 

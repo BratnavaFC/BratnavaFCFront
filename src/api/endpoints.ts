@@ -15,7 +15,7 @@ import type {
   MatchDetailsDto, TeamColorDto, TeamsResultDto, PlayerVisualStatsReport,
   GoalDto,
 } from './generated/types';
-import type { LikedReplayClipDto, ReplayClipDto } from '../domains/matches/matchTypes';
+import type { LikedReplayClipDto, ReplayClipDto, ClipLikerDto, MatchHeaderDto } from '../domains/matches/matchTypes';
 
 export const AuthApi = {
   login: (dto: LoginDto) => http.post<ApiResponse<unknown>>('/api/Authentication/login', dto),
@@ -121,12 +121,13 @@ export const MatchesApi = {
   goToPostGame: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/matches/group/${groupId}/${matchId}/postgame`),
   removeGoal: (groupId: string, matchId: string, goalId: string) => http.delete<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/goals/${goalId}`),
   getCurrent: (groupId: string) => http.get<ApiResponse<MatchDetailsDto>>(`/api/matches/group/${groupId}/current`),
+  upcoming:   (groupId: string) => http.get<ApiResponse<MatchHeaderDto[]>>(`/api/matches/group/${groupId}/upcoming`),
   rewind: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/matches/group/${groupId}/${matchId}/rewind`),
   header: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/header`),
   acceptation: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/acceptation`),
   matchmaking: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   postgame: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/postgame`),
-  history: (groupId: string, take: number, playerId?: string) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/history`, { params: { take, ...(playerId ? { playerId } : {}) } }),
+  history: (groupId: string, take: number, playerId?: string, skip?: number) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/history`, { params: { take, skip: skip ?? 0, ...(playerId ? { playerId } : {}) } }),
   playerRecent: (groupId: string, playerId: string, take = 3) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/player-recent`, { params: { playerId, take } }),
   playerHistory: (groupId: string, playerId: string, year?: number) => http.get<ApiResponse<unknown[]>>(`/api/Matches/group/${groupId}/player-history`, { params: { playerId, ...(year ? { year } : {}) } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
@@ -143,6 +144,8 @@ export const MatchesApi = {
     http.get(`/api/Matches/group/${groupId}/replays/${clipId}/download`, { responseType: "blob" }),
   toggleLike: (groupId: string, clipId: string) =>
     http.post<{ isLiked: boolean; likeCount: number }>(`/api/Matches/group/${groupId}/replays/${clipId}/like`),
+  clipLikers: (groupId: string, clipId: string) =>
+    http.get<ApiResponse<ClipLikerDto[]>>(`/api/Matches/group/${groupId}/replays/${clipId}/likers`),
   toggleFavorite: (groupId: string, clipId: string) =>
     http.post<{ isFavorited: boolean }>(`/api/Matches/group/${groupId}/replays/${clipId}/favorite`),
   allReplays: (groupId: string) =>
@@ -177,6 +180,10 @@ export const PublicApi = {
 };
 
 export const BetApi = {
+    getBettableMatches: (groupId: string) =>
+        http.get(`/api/Bet/group/${groupId}/bettable-matches`),
+    getContextForMatch: (groupId: string, matchId: string) =>
+        http.get(`/api/Bet/group/${groupId}/match/${matchId}/context`),
     getCurrentContext: (groupId: string) =>
         http.get(`/api/Bet/group/${groupId}/current`),
     placeOrUpdateBet: (groupId: string, matchId: string, dto: { selections: { category: string; predictedValue: string; fichasWagered: number }[] }) =>
@@ -193,6 +200,29 @@ export const BetApi = {
         http.delete(`/api/Bet/group/${groupId}/match/${matchId}`),
     getPreview: (groupId: string, matchId: string) =>
         http.get(`/api/Bet/group/${groupId}/match/${matchId}/preview`),
+};
+
+export const TransactionsApi = {
+    getByMonth: (groupId: string, year: number, month: number) =>
+        http.get(`/api/groups/${groupId}/transactions?year=${year}&month=${month}`),
+    getMonthlySummaries: (groupId: string) =>
+        http.get(`/api/groups/${groupId}/transactions/summary`),
+    getPendingTotals: (groupId: string) =>
+        http.get(`/api/groups/${groupId}/transactions/pending-totals`),
+    createTransaction: (groupId: string, dto: {
+        type: number;
+        amount: number;
+        description: string;
+        date: string;
+        category?: number | null;
+    }) =>
+        http.post(`/api/groups/${groupId}/transactions`, dto),
+    deleteTransaction: (groupId: string, transactionId: string) =>
+        http.delete(`/api/groups/${groupId}/transactions/${transactionId}`),
+    syncTransactions: (groupId: string) =>
+        http.post(`/api/groups/${groupId}/transactions/sync`, {}),
+    clearAllTransactions: (groupId: string) =>
+        http.delete(`/api/groups/${groupId}/transactions/all`),
 };
 
 export const GroupInvitesApi = {
@@ -338,6 +368,10 @@ export const PaymentsApi = {
                           http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/my-pending-items`),
   paySelected:          (groupId: string, dto: any) =>
                           http.post<ApiResponse<null>>(`/api/groups/${groupId}/payments/pay-selected`, dto),
+
+  // Diagnóstico / teste
+  clearAllPayments:     (groupId: string) =>
+                          http.delete<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/all`),
 };
 
 export type AppNotificationDto = {

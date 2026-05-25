@@ -41,7 +41,9 @@ function ExtraPaymentModal({ open, groupId, charge, payment, isAdmin, onClose, o
     if (!open) return null;
 
     const isPaid = payment.status === 1;
-    const [discount, setDiscount]     = useState(String(payment.discount ?? 0));
+    // Desconto sempre começa em 0 — representa valor ADICIONAL a aplicar.
+    // O desconto atual é exibido como informação read-only acima.
+    const [discount, setDiscount]     = useState('0');
     const [discReason, setDiscReason] = useState(payment.discountReason ?? '');
     const [file, setFile]             = useState<File | null>(null);
     const [saving, setSaving]         = useState(false);

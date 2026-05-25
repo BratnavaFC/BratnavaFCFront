@@ -5,9 +5,6 @@ const baseURL = (import.meta.env.VITE_API_URL as string | undefined)?.trim()?.re
 
 export const apiBaseUrl = baseURL ?? "";
 
-// ✅ debug: isso aparece no console do site publicado
-console.log("[CONFIG] VITE_API_URL =", baseURL);
-
 if (!baseURL) {
     throw new Error(
         "VITE_API_URL está vazio no build publicado. Configure GitHub Actions repo variable VITE_API_URL e faça novo deploy."
