@@ -58,18 +58,24 @@ function resultClass(r: "W" | "D" | "L" | "?") {
     return "bg-slate-300 dark:bg-slate-700 text-white";
 }
 
+/** Normaliza strings UTC sem sufixo Z antes de parsear. */
+function toUtcDate(iso: string): Date {
+    const s = iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z';
+    return new Date(s);
+}
+
 function fmtDate(iso: string) {
-    const d = new Date(iso);
+    const d = toUtcDate(iso);
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function fmtShortDate(iso: string) {
-    const d = new Date(iso);
+    const d = toUtcDate(iso);
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
 function getYear(iso: string) {
-    return new Date(iso).getFullYear();
+    return toUtcDate(iso).getFullYear();
 }
 
 function TeamColorDot({ hex, name }: { hex?: string | null; name?: string | null }) {
@@ -366,7 +372,7 @@ export default function PlayerHistoryPage() {
     const groupedByMonth = useMemo(() => {
         const map = new Map<string, MatchItem[]>();
         for (const m of filtered) {
-            const d = new Date(m.playedAt);
+            const d = toUtcDate(m.playedAt);
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
             if (!map.has(key)) map.set(key, []);
             map.get(key)!.push(m);

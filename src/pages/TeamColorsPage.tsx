@@ -120,16 +120,17 @@ export default function TeamColorsPage() {
         setSaving(true);
         try {
             if (editMode === "create") {
-                await TeamColorApi.create(groupId, { name, hexValue } as any);
+                const res = await TeamColorApi.create(groupId, { name, hexValue } as any);
+                await load();
+                // Auto-seleciona o item recém-criado
+                const newId = (res.data?.data as any)?.id ?? null;
+                if (newId) setSelectedId(newId);
             } else {
                 if (!selectedColor) return;
-                const api: any = TeamColorApi as any;
-                if (!api.update)
-                    throw new Error("TeamColorApi.update não existe. Crie o endpoint/método.");
-                await api.update(groupId, selectedColor.id, { name, hexValue });
+                await TeamColorApi.update(groupId, selectedColor.id, { name, hexValue } as any);
+                await load();
             }
 
-            await load();
             setEditOpen(false);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao salvar cor."));

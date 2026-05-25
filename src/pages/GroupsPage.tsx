@@ -1,5 +1,7 @@
 // src/pages/GroupsPage.tsx
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { getResponseMessage } from "../api/apiResponse";
 import { Section } from "../components/Section";
 import { AddGuestModal } from "../components/modals/AddGuestModal";
 import { InviteModal } from "../components/modals/InviteModal";
@@ -152,7 +154,7 @@ export default function GroupsPage() {
         setMineLoading(true);
         return PlayersApi.mine()
             .then(res => setMyPlayers((res.data.data as MyPlayerItem[]) ?? []))
-            .catch(() => setMyPlayers([]))
+            .catch((e) => { setMyPlayers([]); toast.error(getResponseMessage(e, 'Erro ao carregar patotas.')); })
             .finally(() => setMineLoading(false));
     }
 
@@ -256,8 +258,8 @@ export default function GroupsPage() {
             setLeaveConfirmOpen(false);
             await loadMine();
             loadGroup();
-        } catch {
-            // silencioso
+        } catch (e) {
+            toast.error(getResponseMessage(e, 'Erro ao sair da patota.'));
         }
     }
 
@@ -686,16 +688,20 @@ export default function GroupsPage() {
                 onClose={() => setAddGuestOpen(false)}
                 submitLabel="Adicionar à patota"
                 onSubmit={async (name, isGoalkeeper, starRating) => {
-                    await PlayersApi.create({
-                        name,
-                        groupId: expandedGroupId,
-                        skillPoints: 0,
-                        isGoalkeeper,
-                        isGuest: true,
-                        status: 1,
-                        guestStarRating: starRating ?? undefined,
-                    } as any);
-                    loadGroup();
+                    try {
+                        await PlayersApi.create({
+                            name,
+                            groupId: expandedGroupId,
+                            skillPoints: 0,
+                            isGoalkeeper,
+                            isGuest: true,
+                            status: 1,
+                            guestStarRating: starRating ?? undefined,
+                        } as any);
+                        loadGroup();
+                    } catch (e) {
+                        toast.error(getResponseMessage(e, 'Erro ao adicionar convidado.'));
+                    }
                 }}
             />
 

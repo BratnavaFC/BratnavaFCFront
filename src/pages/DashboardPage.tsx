@@ -69,7 +69,9 @@ const normalizeHex = (hex?: string | null) => {
 
 function formatDate(playedAt?: string) {
   if (!playedAt) return null;
-  const d = new Date(playedAt);
+  // Garante que strings UTC sem sufixo 'Z' sejam corretamente interpretadas
+  const utcStr = playedAt.endsWith('Z') || playedAt.includes('+') ? playedAt : playedAt + 'Z';
+  const d = new Date(utcStr);
   if (isNaN(d.getTime())) return null;
   return {
     day:   d.toLocaleDateString('pt-BR', { day: '2-digit' }),

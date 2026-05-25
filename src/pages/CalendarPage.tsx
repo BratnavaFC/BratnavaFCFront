@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     ChevronLeft, ChevronRight, Plus, Settings2, CalendarCheck, Loader2,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
-import { CalendarApi } from "../api/endpoints";
+import { CalendarApi, MatchesApi } from "../api/endpoints";
 import { getResponseMessage } from "../api/apiResponse";
 import { toast } from "sonner";
+import type { MatchHeaderDto } from "../domains/matches/matchTypes";
 import EventDetailModal from "../components/modals/EventDetailModal";
 import CreateEditEventModal from "../components/modals/CreateEditEventModal";
 import CategoryManagerModal from "../components/modals/CategoryManagerModal";
@@ -416,12 +418,17 @@ export default function CalendarPage() {
     const groupId    = active?.activeGroupId;
     const isGod      = active?.roles?.includes("GodMode") || active?.roles?.includes("Admin");
     const isGroupAdm = !!groupId && (!!isGod || (active?.groupAdminIds?.includes(groupId) ?? false));
+    const navigate   = useNavigate();
 
     const [view,   setView]   = useState<ViewMode>("month");
     const [cursor, setCursor] = useState(() => new Date());
-    const [events,     setEvents]     = useState<CalendarEvent[]>([]);
-    const [categories, setCategories] = useState<CalendarCategory[]>([]);
-    const [loading, setLoading]       = useState(false);
+    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+    const [matchEvents,    setMatchEvents]    = useState<CalendarEvent[]>([]);
+    const [categories,     setCategories]     = useState<CalendarCategory[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Merge calendar events with upcoming-match chips (match chips take priority on ordering)
+    const events: CalendarEvent[] = [...matchEvents, ...calendarEvents];
 
     // Modals
     const [selectedEvent, setSelectedEvent]   = useState<CalendarEvent | null>(null);
@@ -431,15 +438,72 @@ export default function CalendarPage() {
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [dayModal, setDayModal] = useState<{ day: Date; events: CalendarEvent[] } | null>(null);
 
+    /** Converts an upcoming MatchHeaderDto into a CalendarEvent chip. */
+    function matchToCalendarEvent(m: MatchHeaderDto): CalendarEvent {
+        const stepLabels: Record<string, string> = {
+            create: "Criada", accept: "Aceitação", teams: "Times",
+            playing: "Em jogo", ended: "Encerrada", post: "Pós-jogo", done: "Finalizada",
+        };
+
+        // PlayedAt is stored as UTC on the backend. Convert to Brazil timezone so the
+        // chip lands on the correct calendar day (e.g. Tue 21:00 BRT = Wed 00:00 UTC).
+        const d = new Date(m.playedAt);
+        const tz = "America/Sao_Paulo";
+        const parts = new Intl.DateTimeFormat("pt-BR", {
+            timeZone: tz,
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit",
+        }).formatToParts(d);
+        const get = (type: string) => parts.find(p => p.type === type)!.value;
+        const dateStr = `${get("year")}-${get("month")}-${get("day")}`;
+        const timeStr = `${get("hour")}:${get("minute")}`;
+
+        return {
+            id:          m.matchId,
+            type:        "match",
+            title:       m.placeName || "Partida",
+            date:        dateStr,
+            time:        timeStr,
+            timeTBD:     false,
+            sourceId:    m.matchId,
+            description: stepLabels[m.stepKey] ?? m.statusName,
+        };
+    }
+
     const fetchEvents = useCallback(async () => {
         if (!groupId) return;
         const { start, end } = getRangeForView(view, cursor);
         setLoading(true);
         try {
-            const res = await CalendarApi.events(groupId, toDateStr(start), toDateStr(end));
-            setEvents((res.data.data! as CalendarEvent[]) ?? []);
-        } catch (e) {
-            toast.error(getResponseMessage(e, "Erro ao carregar calendário."));
+            // Fetch calendar events and upcoming matches in parallel
+            const [calRes, upcomingRes] = await Promise.allSettled([
+                CalendarApi.events(groupId, toDateStr(start), toDateStr(end)),
+                MatchesApi.upcoming(groupId),
+            ]);
+
+            // Build upcoming match chips first so we can deduplicate calendar events
+            const upcomingList: MatchHeaderDto[] = upcomingRes.status === "fulfilled"
+                ? (upcomingRes.value.data.data ?? []) as MatchHeaderDto[]
+                : [];
+            const newMatchEvents = upcomingList.map(matchToCalendarEvent);
+
+            // The calendar API already returns ALL matches (including non-finalized).
+            // Remove any calendar match event whose sourceId is already covered by
+            // an upcoming-match chip to avoid showing the same match twice.
+            const upcomingIds = new Set(newMatchEvents.map(e => e.sourceId).filter(Boolean));
+
+            if (calRes.status === "fulfilled") {
+                const allCalEvs = (calRes.value.data.data as CalendarEvent[]) ?? [];
+                const deduped   = allCalEvs.filter(
+                    e => !(e.type === "match" && e.sourceId && upcomingIds.has(e.sourceId))
+                );
+                setCalendarEvents(deduped);
+            } else {
+                toast.error(getResponseMessage(calRes.reason, "Erro ao carregar calendário."));
+            }
+
+            setMatchEvents(newMatchEvents);
+            // Upcoming fetch failure is silent — calendar still works without it
         } finally {
             setLoading(false);
         }
@@ -465,7 +529,14 @@ export default function CalendarPage() {
         );
     }
 
-    function openEvent(ev: CalendarEvent) { setSelectedEvent(ev); }
+    function openEvent(ev: CalendarEvent) {
+        // Upcoming match chips (sourceId set) navigate to the MatchesPage instead of opening a modal
+        if (ev.type === "match" && ev.sourceId) {
+            navigate(`/app/matches?match=${ev.sourceId}`);
+            return;
+        }
+        setSelectedEvent(ev);
+    }
     function openEdit(ev: CalendarEvent) { setEditingEvent(ev); setSelectedEvent(null); }
     function openNewEvent(date?: string) { setCreateInitialDate(date); setShowCreateModal(true); }
     function openDayModal(day: Date, dayEvs: CalendarEvent[]) { setDayModal({ day, events: dayEvs }); }
@@ -491,7 +562,7 @@ export default function CalendarPage() {
     return (
         <div className="flex flex-col h-full overflow-hidden">
             {/* ── Header ── */}
-            <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-4 sm:px-6 py-4 sm:py-5 overflow-hidden shrink-0 shadow-lg">
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-4 sm:px-6 py-4 sm:py-5 overflow-hidden shrink-0 shadow-lg">
                 <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
@@ -543,18 +614,18 @@ export default function CalendarPage() {
                     </button>
 
                     {/* View toggle */}
-                    <div className="inline-flex rounded-xl overflow-hidden border border-white/20 ml-auto">
+                    <div className="flex gap-1 ml-auto">
                         {(["month", "week", "day"] as ViewMode[]).map(v => (
                             <button key={v} type="button"
                                 onClick={() => setView(v)}
                                 className={cls(
-                                    "px-3 py-1.5 text-xs font-semibold transition-colors",
-                                    view === v ? "bg-white text-slate-900" : "bg-white/10 text-white/80 hover:bg-white/20",
+                                    "px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                    view === v ? "bg-white text-slate-900 border-white" : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
                                 )}
                             >
-                                {v === "month" ? "Mês" : v === "week" ? <span className="sm:hidden">Sem</span> : null}
-                                {v === "month" ? null : v === "week" ? <span className="hidden sm:inline">Semana</span> : null}
-                                {v === "day" ? "Dia" : null}
+                                {v === "month" ? "Mês" : v === "week" ? (
+                                    <><span className="sm:hidden">Sem</span><span className="hidden sm:inline">Semana</span></>
+                                ) : "Dia"}
                             </button>
                         ))}
                     </div>

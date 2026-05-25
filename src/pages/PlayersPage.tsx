@@ -15,10 +15,12 @@ export default function PlayersPage(){
   const [isGuest, setIsGuest] = useState(false);
   const [skillPoints, setSkillPoints] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function create(){
     if (!active?.userId || !groupId) return;
     setMsg(null);
+    setSaving(true);
     try {
       const res = await PlayersApi.create({
         name,
@@ -38,6 +40,8 @@ export default function PlayersPage(){
       }
     } catch (e) {
       toast.error(getResponseMessage(e, "Falha ao criar perfil."));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -62,7 +66,7 @@ export default function PlayersPage(){
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Convidado</span>
               </label>
 
-              <button className="btn btn-primary" onClick={create}>Criar perfil neste grupo</button>
+              <button className="btn btn-primary" onClick={create} disabled={saving}>Criar perfil neste grupo</button>
               {msg ? <div className="text-sm text-emerald-700">{msg}</div> : null}
             </div>
 
