@@ -584,10 +584,10 @@ export default function GodModeAdminPage() {
                         key={t.key}
                         onClick={() => switchSubTab(groupId, t.key)}
                         className={[
-                            "flex items-center gap-1.5 px-3 py-2.5 text-xs border-b-2 whitespace-nowrap transition shrink-0",
+                            "flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 whitespace-nowrap transition -mb-px shrink-0",
                             cur === t.key
-                                ? "border-slate-900 text-slate-900 font-semibold dark:border-white dark:text-white"
-                                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400",
+                                ? "border-slate-900 text-slate-900 dark:border-white dark:text-white"
+                                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
                         ].join(" ")}
                     >
                         {t.icon} {t.label}
@@ -600,53 +600,55 @@ export default function GodModeAdminPage() {
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-full bg-slate-50 dark:bg-slate-950 space-y-4 p-4 md:p-6">
 
-            {/* Banner */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-black dark:to-slate-900 px-6 py-5">
-                <div className="max-w-6xl mx-auto flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
-                        <Zap size={20} className="text-amber-400" />
+            {/* Banner + tabs */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden shadow-lg">
+                <div className="px-6 py-5">
+                    <div className="max-w-6xl mx-auto flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+                            <Zap size={20} className="text-amber-400" />
+                        </div>
+                        <div>
+                            <div className="text-white font-bold text-lg leading-tight">Painel God Mode</div>
+                            <div className="text-slate-400 text-xs mt-0.5">Controle total sobre todos os dados do sistema</div>
+                        </div>
+                        <span className="ml-auto pill bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold shrink-0">
+                            ⚡ ACESSO IRRESTRITO
+                        </span>
                     </div>
-                    <div>
-                        <div className="text-white font-bold text-lg leading-tight">Painel God Mode</div>
-                        <div className="text-slate-400 text-xs mt-0.5">Controle total sobre todos os dados do sistema</div>
+                </div>
+                <div className="px-6 pb-4">
+                    <div className="max-w-6xl mx-auto flex gap-1">
+                        {([
+                            { key: "overview", label: "Visão Geral", icon: <BarChart3 size={14} /> },
+                            { key: "users",    label: "Usuários",    icon: <Users    size={14} />, count: usersLoaded ? users.length : undefined },
+                            { key: "groups",   label: "Patotas",     icon: <Shield   size={14} />, count: groups.length || undefined },
+                        ] as { key: MainTab; label: string; icon: React.ReactNode; count?: number }[]).map(t => (
+                            <button
+                                key={t.key}
+                                onClick={() => setMainTab(t.key)}
+                                className={[
+                                    "flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                    mainTab === t.key
+                                        ? "bg-white text-slate-900 border-white"
+                                        : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
+                                ].join(" ")}
+                            >
+                                {t.icon}
+                                {t.label}
+                                {t.count !== undefined && (
+                                    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${mainTab === t.key ? "bg-slate-900 text-white" : "bg-white/20 text-white"}`}>
+                                        {t.count}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
                     </div>
-                    <span className="ml-auto pill bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold shrink-0">
-                        ⚡ ACESSO IRRESTRITO
-                    </span>
                 </div>
             </div>
 
-            {/* Main tab bar */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-6">
-                <div className="max-w-6xl mx-auto flex">
-                    {([
-                        { key: "overview", label: "Visão Geral", icon: <BarChart3 size={14} /> },
-                        { key: "users",    label: "Usuários",    icon: <Users    size={14} />, count: usersLoaded ? users.length : undefined },
-                        { key: "groups",   label: "Patotas",     icon: <Shield   size={14} />, count: groups.length || undefined },
-                    ] as { key: MainTab; label: string; icon: React.ReactNode; count?: number }[]).map(t => (
-                        <button
-                            key={t.key}
-                            onClick={() => setMainTab(t.key)}
-                            className={[
-                                "flex items-center gap-2 px-4 py-3.5 text-sm border-b-2 transition font-medium",
-                                mainTab === t.key
-                                    ? "border-slate-900 text-slate-900 dark:border-white dark:text-white"
-                                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400",
-                            ].join(" ")}
-                        >
-                            {t.icon}
-                            {t.label}
-                            {t.count !== undefined && (
-                                <span className="pill bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-xs">{t.count}</span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-4">
+            <div className="max-w-6xl mx-auto space-y-4">
 
                 {globalError && (
                     <div className="rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 px-4 py-3 text-sm text-rose-700 dark:text-rose-400 flex items-center gap-2">

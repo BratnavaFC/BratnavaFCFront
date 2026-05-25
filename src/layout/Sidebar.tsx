@@ -60,7 +60,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 setPendingPollsCount(count);
             })
             .catch(() => { /* silencioso */ });
-    }, [userId, activeGrpId, pathname, setPendingPollsCount]);
+    }, [userId, activeGrpId, setPendingPollsCount]);
 
     useEffect(() => {
         if (!activeGrpId) { setPendingPaymentsCount(0); return; }

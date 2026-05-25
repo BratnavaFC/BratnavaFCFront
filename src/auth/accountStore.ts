@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type Account = {
     userId: string;                 // GUID do usuário (vem do JWT sub)
@@ -143,6 +143,20 @@ export const useAccountStore = create<AccountState>()(
             },
 
             logoutActive: () => {
+                // Revoga o refresh token no backend antes de limpar o estado local.
+                // Fire-and-forget: erros de rede não impedem o logout local.
+                const active = get().getActive();
+                if (active?.refreshToken) {
+                    const baseUrl = (import.meta.env.VITE_API_URL as string | undefined)
+                        ?.trim()
+                        ?.replace(/\/+$/, '') ?? '';
+                    fetch(`${baseUrl}/api/Authentication/revoke`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refreshToken: active.refreshToken }),
+                    }).catch(() => { /* fire-and-forget */ });
+                }
+
                 set((state) => {
                     const id = state.activeAccountId;
                     if (!id) return state;
@@ -159,7 +173,10 @@ export const useAccountStore = create<AccountState>()(
             logout: () => get().logoutActive(),
         }),
         {
-            name: "bratnava.accounts.v2", // 👈 mudei versão pois mudou estrutura
+            name: "bratnava.accounts.v3",
+            // sessionStorage: tokens ficam apenas na aba atual e são
+            // descartados ao fechar o browser, reduzindo exposição via XSS.
+            storage: createJSONStorage(() => sessionStorage),
         }
     )
 );

@@ -204,8 +204,10 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
 
     const active = getActive();
     const admin  = isAdmin();
+    const isGod  = active?.roles?.includes("GodMode") ?? false;
 
     const [myPlayers, setMyPlayers]         = useState<MyPlayerDto[]>([]);
+    const [godGroups,  setGodGroups]         = useState<{ groupId: string; groupName: string }[]>([]);
     const [createGroupOpen, setCreateGroupOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen]   = useState(false);
     const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
@@ -258,8 +260,10 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
     }, [updateActive]);
 
     useEffect(() => {
-        if (!active?.userId) { setMyPlayers([]); return; }
+        if (!active?.userId) { setMyPlayers([]); setGodGroups([]); return; }
         const userId = active.userId;
+        const currentRoles = useAccountStore.getState().getActive()?.roles ?? [];
+        const god = currentRoles.includes("GodMode");
 
         PlayersApi.mine()
             .then((res) => {
@@ -274,6 +278,23 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                 }
             })
             .catch(() => setMyPlayers([]));
+
+        // GodMode: carregar todas as patotas para o seletor
+        if (god) {
+            GroupsApi.listAll()
+                .then((res) => {
+                    const all = ((res.data?.data ?? []) as any[])
+                        .map((g) => ({ groupId: g.id ?? g.groupId ?? '', groupName: g.name ?? g.groupName ?? 'Patota' }))
+                        .filter((g) => g.groupId);
+                    setGodGroups(all);
+                    // Auto-seleciona a primeira patota se nenhuma estiver ativa
+                    if (all.length > 0 && !useAccountStore.getState().getActive()?.activeGroupId) {
+                        updateActive({ activeGroupId: all[0].groupId });
+                        fetchGroupRoles(all[0].groupId);
+                    }
+                })
+                .catch(() => setGodGroups([]));
+        }
 
         fetchAdminIds(userId);
 
@@ -359,15 +380,18 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
 
     /* ── derived ── */
     const activePlayer = useMemo(
-        () => myPlayers.find((p) => p.playerId === active?.activePlayerId) ?? myPlayers[0],
-        [myPlayers, active?.activePlayerId],
+        () => myPlayers.find((p) => p.playerId === active?.activePlayerId) ?? (isGod ? undefined : myPlayers[0]),
+        [myPlayers, active?.activePlayerId, isGod],
+    );
+
+    const godActiveGroup = useMemo(
+        () => isGod ? (godGroups.find((g) => g.groupId === active?.activeGroupId) ?? godGroups[0]) : undefined,
+        [isGod, godGroups, active?.activeGroupId],
     );
 
     const displayName = activePlayer?.playerName || active?.name || active?.email || "—";
 
-    const subtitle = activePlayer
-        ? activePlayer.groupName
-        : null;
+    const subtitle = activePlayer?.groupName ?? godActiveGroup?.groupName ?? null;
 
     function handlePlayerChange(playerId: string) {
         const player = myPlayers.find((p) => p.playerId === playerId);
@@ -379,6 +403,19 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
             activeGroupIsFinanceiro: false,
         });
         fetchGroupRoles(player.groupId);
+        setPlayerMenuOpen(false);
+        nav("/app");
+    }
+
+    // GodMode: troca de patota sem precisar de perfil de jogador
+    function handleGroupSelect(groupId: string) {
+        updateActive({
+            activeGroupId:           groupId,
+            activePlayerId:          null,
+            activeGroupIsAdmin:      true,
+            activeGroupIsFinanceiro: true,
+        });
+        fetchGroupRoles(groupId);
         setPlayerMenuOpen(false);
         nav("/app");
     }
@@ -428,15 +465,19 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                         </div>
                     </div>
 
-                    {/* Player switcher — only when multiple players, desktop */}
-                    {!isMobile && myPlayers.length > 1 && (
+                    {/* Seletor de patota — múltiplos jogadores (usuário normal) OU GodMode */}
+                    {!isMobile && (myPlayers.length > 1 || (isGod && godGroups.length > 0)) && (
                         <div ref={playerMenuRef} className="relative ml-1">
                             <button
                                 type="button"
                                 onClick={() => setPlayerMenuOpen((v) => !v)}
                                 className="flex items-center gap-1.5 h-8 pl-3 pr-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
                             >
-                                <span className="max-w-[120px] truncate">{activePlayer?.groupName ?? "Grupo"}</span>
+                                <span className="max-w-[120px] truncate">
+                                    {isGod
+                                        ? (godActiveGroup?.groupName ?? "Patota")
+                                        : (activePlayer?.groupName ?? "Patota")}
+                                </span>
                                 <ChevronDown size={13} className={`transition-transform ${playerMenuOpen ? "rotate-180" : ""}`} />
                             </button>
 
@@ -445,7 +486,27 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                                     <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                                         <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Patota ativa</span>
                                     </div>
-                                    {myPlayers.map((p) => (
+
+                                    {/* GodMode: lista todas as patotas */}
+                                    {isGod && godGroups.map((g) => (
+                                        <button
+                                            key={g.groupId}
+                                            type="button"
+                                            onClick={() => handleGroupSelect(g.groupId)}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left"
+                                        >
+                                            <Avatar name={g.groupName} size="sm" />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-medium text-slate-800 dark:text-slate-200 truncate">{g.groupName}</div>
+                                            </div>
+                                            {g.groupId === active?.activeGroupId && (
+                                                <Check size={14} className="text-emerald-500 shrink-0" />
+                                            )}
+                                        </button>
+                                    ))}
+
+                                    {/* Usuário normal: lista perfis de jogador */}
+                                    {!isGod && myPlayers.map((p) => (
                                         <button
                                             key={p.playerId}
                                             type="button"
