@@ -9,6 +9,7 @@ import { PollsApi } from '../../api/endpoints';
 import { extractApiError } from '../../lib/apiError';
 import ModalBackdrop from './ModalBackdrop';
 import PollClosePollModal from './PollClosePollModal';
+import { isDeadlinePassed, formatDeadline } from '../../utils/pollUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,20 +77,6 @@ function formatEventDate(dateStr?: string | null): string {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
     return `${d}/${m}/${y}`;
-}
-
-function isDeadlinePassed(deadlineDate?: string | null, deadlineTime?: string | null): boolean {
-    if (!deadlineDate) return false;
-    const timeStr = deadlineTime ?? '23:59';
-    const deadline = new Date(`${deadlineDate}T${timeStr}:00`);
-    return Date.now() > deadline.getTime();
-}
-
-function formatDeadline(deadlineDate?: string | null, deadlineTime?: string | null): string | null {
-    if (!deadlineDate) return null;
-    const [y, m, d] = deadlineDate.split('-');
-    const dateStr = `${d}/${m}/${y}`;
-    return deadlineTime ? `${dateStr} às ${deadlineTime}` : dateStr;
 }
 
 function getRsvpOption(options: PollOption[], myVotedOptionIds: string[]): string | null {

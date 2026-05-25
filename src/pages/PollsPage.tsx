@@ -16,6 +16,7 @@ import PollEventDetailModal from '../components/modals/PollEventDetailModal';
 import PollCreateEventModal from '../components/modals/PollCreateEventModal';
 import PollDetailModal from '../components/modals/PollDetailModal';
 import PollCreatePollModal from '../components/modals/PollCreatePollModal';
+import { isDeadlinePassed, formatDeadline } from '../utils/pollUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,20 +93,6 @@ function formatEventDate(dateStr?: string | null): string {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
     return `${d}/${m}/${y}`;
-}
-
-function isDeadlinePassed(deadlineDate?: string | null, deadlineTime?: string | null): boolean {
-    if (!deadlineDate) return false;
-    const timeStr = deadlineTime ?? '23:59';
-    const deadline = new Date(`${deadlineDate}T${timeStr}:00`);
-    return Date.now() > deadline.getTime();
-}
-
-function formatDeadline(deadlineDate?: string | null, deadlineTime?: string | null): string | null {
-    if (!deadlineDate) return null;
-    const [y, m, d] = deadlineDate.split('-');
-    const dateStr = `${d}/${m}/${y}`;
-    return deadlineTime ? `${dateStr} às ${deadlineTime}` : dateStr;
 }
 
 function formatCost(costType?: string | null, costAmount?: number | null): string | null {
@@ -302,7 +289,7 @@ export default function PollsPage() {
     const [polls, setPolls] = useState<PollSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
-    const [loadingDetail, setLoadingDetail] = useState(false);
+    const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateEvent, setShowCreateEvent] = useState(false);
     const [activeTab, setActiveTab] = useState<'events' | 'polls'>('events');
@@ -353,13 +340,13 @@ export default function PollsPage() {
 
     async function openPollDetail(summary: PollSummary) {
         if (!groupId) return;
-        setLoadingDetail(true);
+        setLoadingDetailId(summary.id);
         try {
             const res = await PollsApi.getPoll(groupId, summary.id);
             setSelectedPoll(res.data.data);
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao abrir.'));
-        } finally { setLoadingDetail(false); }
+        } finally { setLoadingDetailId(null); }
     }
 
     function handlePollUpdated(updated: Poll) {
@@ -424,7 +411,7 @@ export default function PollsPage() {
                         <button
                             type="button"
                             onClick={() => setActiveTab('events')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border ${
                                 activeTab === 'events'
                                     ? 'bg-white text-slate-900 border-white'
                                     : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
@@ -440,7 +427,7 @@ export default function PollsPage() {
                         <button
                             type="button"
                             onClick={() => setActiveTab('polls')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border ${
                                 activeTab === 'polls'
                                     ? 'bg-white text-slate-900 border-white'
                                     : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
@@ -509,8 +496,8 @@ export default function PollsPage() {
                             <div className="divide-y divide-slate-100">
                                 {tabPolls.filter(p => p.status === 'open').map(poll =>
                                     activeTab === 'events'
-                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetail ? poll.id : null} />
-                                        : <PollCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetail ? poll.id : null} />
+                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
+                                        : <PollCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
                                 )}
                             </div>
                         </div>
@@ -531,8 +518,8 @@ export default function PollsPage() {
                             <div className="divide-y divide-slate-100">
                                 {tabPolls.filter(p => p.status === 'closed').map(poll =>
                                     activeTab === 'events'
-                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetail ? poll.id : null} />
-                                        : <PollCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetail ? poll.id : null} />
+                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
+                                        : <PollCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
                                 )}
                             </div>
                         </div>
