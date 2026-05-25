@@ -1,4 +1,5 @@
 import { CSSProperties, useEffect, useMemo, useState } from "react";
+import { toUtcDate } from "../utils/dateUtils";
 import { toast } from "sonner";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Section } from "../components/Section";
@@ -30,7 +31,7 @@ import MaskedName from "../components/MaskedName";
 /* ===================== helpers ===================== */
 
 function formatMatchDate(date: string) {
-    const d = new Date(date);
+    const d = toUtcDate(date);
     if (Number.isNaN(d.getTime())) return date;
     return d.toLocaleString("pt-BR", {
         weekday: "short",
@@ -282,6 +283,34 @@ type SimulationProps = {
     autoPlay?: boolean;
 };
 
+function SimBtn({
+    children,
+    title,
+    onClick,
+    disabled,
+}: {
+    children: React.ReactNode;
+    title?: string;
+    onClick: () => void;
+    disabled?: boolean;
+}) {
+    return (
+        <button
+            type="button"
+            title={title}
+            onClick={onClick}
+            disabled={disabled}
+            className={cls(
+                "inline-flex items-center justify-center h-8 w-8 rounded-lg border text-sm transition",
+                disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-50 dark:hover:bg-slate-800",
+                "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+            )}
+        >
+            {children}
+        </button>
+    );
+}
+
 export function MatchTimeSimulationTimeline({
     goals,
     teamByPlayerId,
@@ -352,32 +381,6 @@ export function MatchTimeSimulationTimeline({
     }
 
     const progressPct = SIM_DURATION_MS ? Math.min(100, (elapsedMs / SIM_DURATION_MS) * 100) : 0;
-
-    const SimBtn = ({
-        children,
-        title,
-        onClick,
-        disabled,
-    }: {
-        children: React.ReactNode;
-        title?: string;
-        onClick: () => void;
-        disabled?: boolean;
-    }) => (
-        <button
-            type="button"
-            title={title}
-            onClick={onClick}
-            disabled={disabled}
-            className={cls(
-                "inline-flex items-center justify-center h-8 w-8 rounded-lg border text-sm transition",
-                disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-50 dark:hover:bg-slate-800",
-                "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
-            )}
-        >
-            {children}
-        </button>
-    );
 
     const renderBar = (teamLabel: string, team: 1 | 2, colorHex: string) => {
         const teamGoals = timeline.filter((g) => g.team === team);
@@ -566,8 +569,12 @@ export default function MatchDetailsPage() {
 
     async function reloadMatch() {
         if (!groupId || !matchId) return;
-        const res = await MatchesApi.details(groupId, matchId);
-        setData(res.data.data as any);
+        try {
+            const res = await MatchesApi.details(groupId, matchId);
+            setData(res.data.data as any);
+        } catch (e) {
+            toast.error(getResponseMessage(e, 'Falha ao recarregar partida.'));
+        }
     }
 
     async function handleAddGoal(

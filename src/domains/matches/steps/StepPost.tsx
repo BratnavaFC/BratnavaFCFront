@@ -211,7 +211,7 @@ function BetResultsSection({
                                         ))}
                                         <div className="flex items-center justify-between px-5 py-2 bg-white/50 dark:bg-slate-900/20">
                                             <span className="text-xs text-slate-400">Base por participação</span>
-                                            <span className="text-xs font-bold text-emerald-500">+200</span>
+                                            <span className="text-xs font-bold text-emerald-500">+{preview!.participationBonus}</span>
                                         </div>
                                     </div>
                                 )}
@@ -246,7 +246,8 @@ function PaymentSection({
 
     useEffect(() => {
         if (paymentMode !== 0 || !groupId || !matchDate) return;
-        const d = new Date(matchDate);
+        const utcDate = matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z';
+        const d = new Date(utcDate);
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         PaymentsApi.isMonthInitiated(groupId, year, month)
@@ -267,7 +268,8 @@ function PaymentSection({
                 return;
             }
             const dateLabel = matchDate
-                ? new Date(matchDate).toLocaleDateString("pt-BR")
+                ? new Date(matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z')
+                      .toLocaleDateString("pt-BR")
                 : "—";
             setCreatingCharge(true);
             try {
@@ -329,7 +331,8 @@ function PaymentSection({
     // Monthly mode
     const handleInitiateMonthly = async () => {
         if (!matchDate || !groupId) return;
-        const d = new Date(matchDate);
+        const utcStr = matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z';
+        const d = new Date(utcStr);
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         setInitiating(true);
@@ -345,7 +348,8 @@ function PaymentSection({
     };
 
     const dateLabel = matchDate
-        ? new Date(matchDate).toLocaleString("pt-BR", { month: "long", year: "numeric" })
+        ? new Date(matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z')
+              .toLocaleString("pt-BR", { month: "long", year: "numeric" })
         : "—";
 
     return (

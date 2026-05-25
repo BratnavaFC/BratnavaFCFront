@@ -4,9 +4,9 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Play, Trash2, X } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Loader2, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import type { ReplayClipDto } from "../matchTypes";
+import type { ReplayClipDto, ClipLikerDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 
 // ── Stream URL helper ──────────────────────────────────────────────────────────
@@ -22,9 +22,73 @@ function useStreamUrl(_groupId: string, _clipId: string, videoUrl: string): stri
 
 export type ClipState    = { likeCount: number; isLikedByMe: boolean; isFavoritedByMe: boolean };
 export type ClipStateMap = Record<string, ClipState>;
+export type LikersData   = ClipLikerDto[] | "loading";
 
 export const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 export type Speed   = (typeof SPEEDS)[number];
+
+// ── Likers popover ────────────────────────────────────────────────────────────
+
+export function LikersPopover({ anchorRect, data, onClose }: {
+    anchorRect: { top: number; right: number; bottom: number; left: number };
+    data:       LikersData | undefined;
+    onClose:    () => void;
+}) {
+    const PANEL_W = 210;
+    const MARGIN  = 8;
+    const viewW   = typeof window !== "undefined" ? window.innerWidth : 1200;
+    let left = anchorRect.left;
+    if (left + PANEL_W + MARGIN > viewW) left = anchorRect.right - PANEL_W;
+    if (left < MARGIN) left = MARGIN;
+    const top = anchorRect.bottom + 6;
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [onClose]);
+
+    return (
+        <>
+            <div className="fixed inset-0" style={{ zIndex: 200 }} onClick={onClose} />
+            <div className="fixed rounded-xl shadow-2xl overflow-hidden"
+                style={{ zIndex: 201, top, left, width: PANEL_W, background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <div className="flex items-center justify-between px-3 py-2"
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.8)" }}>
+                        <Heart size={11} style={{ fill: "#f43f5e", color: "#f43f5e" }} />
+                        Quem curtiu
+                    </span>
+                    <button type="button" onClick={onClose} style={{ color: "rgba(255,255,255,0.4)" }}
+                        className="hover:text-white/80 transition-colors">
+                        <X size={13} />
+                    </button>
+                </div>
+                <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
+                    {(data === "loading" || data === undefined) ? (
+                        <div className="flex items-center justify-center py-5">
+                            <Loader2 size={16} className="animate-spin" style={{ color: "rgba(255,255,255,0.35)" }} />
+                        </div>
+                    ) : data.length === 0 ? (
+                        <p className="text-center py-5 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            Nenhuma curtida ainda
+                        </p>
+                    ) : data.map((l) => (
+                        <div key={l.userId} className="flex items-center gap-2 px-3 py-1.5">
+                            <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                                style={{ background: "rgba(244,63,94,0.18)", color: "#fda4af" }}>
+                                {l.userName[0]?.toUpperCase() ?? "?"}
+                            </div>
+                            <span className="text-xs truncate" style={{ color: "rgba(255,255,255,0.8)" }}>
+                                {l.userName}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -112,6 +176,7 @@ export function VideoCard({
     onFavorite,
     onDelete,
     onShare,
+    onShowLikers,
 }: {
     clip: ReplayClipDto;
     globalIndex: number;
@@ -123,6 +188,7 @@ export function VideoCard({
     onFavorite: () => void;
     onDelete?: () => void;
     onShare?: () => void;
+    onShowLikers?: (rect: DOMRect) => void;
 }) {
     const isGol    = clip.eventType === "Gol";
     const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
@@ -226,10 +292,19 @@ export function VideoCard({
                         <button type="button" onClick={(e) => { e.stopPropagation(); onLike(); }}
                             className="flex items-center gap-1 transition-transform active:scale-90" title="Like">
                             <Heart size={14} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "rgba(255,255,255,0.7)", filter: state.isLikedByMe ? "drop-shadow(0 0 4px rgba(244,63,94,0.6))" : "none", transition: "all 0.15s" }} />
-                            {state.likeCount > 0 && (
-                                <span style={{ fontSize: 10, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
-                            )}
                         </button>
+                        {state.likeCount > 0 && (
+                            onShowLikers ? (
+                                <button type="button"
+                                    onClick={(e) => { e.stopPropagation(); onShowLikers(e.currentTarget.getBoundingClientRect()); }}
+                                    title="Ver quem curtiu"
+                                    className="transition-transform active:scale-90">
+                                    <span style={{ fontSize: 10, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
+                                </button>
+                            ) : (
+                                <span style={{ fontSize: 10, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
+                            )
+                        )}
                         <button type="button" onClick={(e) => { e.stopPropagation(); onFavorite(); }}
                             className="transition-transform active:scale-90" title="Favoritar">
                             <Bookmark size={14} style={{ fill: state.isFavoritedByMe ? "#f59e0b" : "none", color: state.isFavoritedByMe ? "#f59e0b" : "rgba(255,255,255,0.7)", filter: state.isFavoritedByMe ? "drop-shadow(0 0 4px rgba(245,158,11,0.6))" : "none", transition: "all 0.15s" }} />
@@ -277,6 +352,7 @@ export function Lightbox({
     onFavorite,
     onDelete,
     onShare,
+    onShowLikers,
 }: {
     clips: ReplayClipDto[];
     index: number;
@@ -290,6 +366,7 @@ export function Lightbox({
     onFavorite: (clipId: string) => void;
     onDelete?: (clipId: string) => void;
     onShare?: (clipId: string) => void;
+    onShowLikers?: (clipId: string, rect: DOMRect) => void;
 }) {
     const clip      = clips[index];
     const isGol     = clip.eventType === "Gol";
@@ -353,10 +430,11 @@ export function Lightbox({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4"
+            className="fixed inset-0 z-50 overflow-y-auto"
             style={{ background: "rgba(0,0,0,0.93)", backdropFilter: "blur(10px)" }}
             onClick={onClose}
         >
+            <div className="flex min-h-full items-center justify-center p-4">
             <div
                 className="relative w-full max-w-5xl"
                 onClick={(e) => e.stopPropagation()}
@@ -392,6 +470,7 @@ export function Lightbox({
                     ref={videoRef}
                     src={streamUrl}
                     className="w-full rounded-2xl bg-black shadow-2xl"
+                    style={{ maxHeight: "min(calc(100svh - 260px), calc(100vh - 260px))" }}
                     controls
                     autoPlay
                     playsInline
@@ -400,9 +479,9 @@ export function Lightbox({
                 />
 
                 {/* Speed controls + ações desktop */}
-                <div className="flex items-center justify-between mt-3 px-1 gap-2">
+                <div className="flex items-center justify-between flex-wrap mt-3 px-1 gap-x-2 gap-y-2">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>Velocidade</span>
+                        <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>×</span>
                         <select
                             value={speed}
                             onChange={(e) => applySpeed(Number(e.target.value) as Speed)}
@@ -413,12 +492,30 @@ export function Lightbox({
                             ))}
                         </select>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        <button type="button" onClick={() => onLike(clip.id)} title="Curtir"
-                            className="flex items-center justify-center rounded-xl transition-all active:scale-95"
-                            style={{ width: 32, height: 30, background: state.isLikedByMe ? "rgba(244,63,94,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.14)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
-                            <Heart size={13} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "inherit", transition: "all 0.15s" }} />
-                        </button>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Like button — heart toggles, count opens likers */}
+                        <div className="flex items-center rounded-xl"
+                            style={{ background: state.isLikedByMe ? "rgba(244,63,94,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.14)"}` }}>
+                            <button type="button" onClick={() => onLike(clip.id)} title="Curtir"
+                                className="flex items-center justify-center rounded-l-xl transition-all active:scale-95"
+                                style={{ width: 32, height: 30, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
+                                <Heart size={13} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "inherit", transition: "all 0.15s" }} />
+                            </button>
+                            {onShowLikers ? (
+                                <button type="button"
+                                    onClick={(e) => onShowLikers(clip.id, e.currentTarget.getBoundingClientRect())}
+                                    className="flex items-center justify-center text-xs font-bold rounded-r-xl transition-all active:scale-95"
+                                    title="Ver quem curtiu"
+                                    style={{ height: 30, minWidth: 28, padding: "0 8px", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.1)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
+                                    {state.likeCount}
+                                </button>
+                            ) : (
+                                <span className="text-xs font-bold"
+                                    style={{ height: 30, minWidth: 28, padding: "0 8px", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.1)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
+                                    {state.likeCount}
+                                </span>
+                            )}
+                        </div>
                         <button type="button" onClick={() => onFavorite(clip.id)} title={state.isFavoritedByMe ? "Remover favorito" : "Favoritar"}
                             className="flex items-center justify-center rounded-xl transition-all active:scale-95"
                             style={{ width: 32, height: 30, background: state.isFavoritedByMe ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${state.isFavoritedByMe ? "rgba(245,158,11,0.5)" : "rgba(255,255,255,0.14)"}`, color: state.isFavoritedByMe ? "#fcd34d" : "rgba(255,255,255,0.5)" }}>
@@ -509,6 +606,7 @@ export function Lightbox({
                     <ChevronRight size={20} />
                 </button>
             )}
+        </div>
         </div>
     );
 }

@@ -114,7 +114,11 @@ export function MatchWizard({
                                 {current?.playedAt && (
                                     <span className="flex items-center gap-1">
                                         <Clock size={13} className="text-slate-400 shrink-0" />
-                                        {new Date(current.playedAt).toLocaleString("pt-BR", {
+                                        {new Date(
+                                            current.playedAt.endsWith('Z') || current.playedAt.includes('+')
+                                                ? current.playedAt
+                                                : current.playedAt + 'Z'
+                                        ).toLocaleString("pt-BR", {
                                             dateStyle: "short",
                                             timeStyle: "short",
                                         })}

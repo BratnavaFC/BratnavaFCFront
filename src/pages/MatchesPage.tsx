@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarDays, Loader2, RotateCcw, UserPlus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, RotateCcw, UserPlus } from "lucide-react";
 import { AddGuestModal } from "../components/modals/AddGuestModal";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
@@ -12,6 +13,7 @@ import type {
     ColorMode,
     GroupSettingsDto,
     MatchDetailsDto,
+    MatchHeaderDto,
     PlayerInMatchDto,
     StrategyId,
     TeamColorDto,
@@ -20,7 +22,7 @@ import type {
     PlayerWeightDto,
     StepKey,
 } from "../domains/matches/matchTypes";
-import { InviteResponse } from "../domains/matches/matchTypes";
+import { InviteResponse, MATCH_CONSTANTS } from "../domains/matches/matchTypes";
 import {
     buildAllPlayers,
     getMaxPlayers,
@@ -30,6 +32,9 @@ import {
     toUtcIso,
     uniqById,
 } from "../domains/matches/matchUtils";
+
+/** How often non-admin users poll for match status updates (ms). */
+const NON_ADMIN_POLL_INTERVAL_MS = 15_000;
 
 function mergeCurrent(prev: MatchDetailsDto | null, patch: Partial<MatchDetailsDto>): MatchDetailsDto {
     const base: any = prev ? { ...prev } : {};
@@ -44,15 +49,24 @@ function getIdFromDto(dto: any): string {
 }
 
 export default function MatchesPage() {
-    const store = useAccountStore();
-    const active = store.getActive();
-    const groupId = active?.activeGroupId;
+    const store    = useAccountStore();
+    const active   = store.getActive();
+    const groupId  = active?.activeGroupId;
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const activePlayerId: string | null = (active as any)?.activePlayerId ?? null;
-    const admin = isGodMode() || !!(groupId && active?.groupAdminIds?.includes(groupId));
+    const admin       = isGodMode() || !!(groupId && active?.groupAdminIds?.includes(groupId));
     const readOnlyUser = !admin;
 
-    const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
+    // ── Multi-match state ─────────────────────────────────────────────────────
+    const [upcomingMatches, setUpcomingMatches] = useState<MatchHeaderDto[]>([]);
+    const [selectedIdx,     setSelectedIdx]     = useState(0);
+    const [creatingNew,     setCreatingNew]     = useState(false);
+
+    // Derived — used throughout all handlers (same variable name kept for minimal churn)
+    const selectedMatch  = upcomingMatches[selectedIdx] ?? null;
+    const currentMatchId = creatingNew ? null : (selectedMatch?.matchId ?? null);
+
     const [current, setCurrent] = useState<MatchDetailsDto | null>(null);
     const [godPreview, setGodPreview] = useState<StepKey | null>(null);
     const [addGuestOpen, setAddGuestOpen] = useState(false);
@@ -107,10 +121,13 @@ export default function MatchesPage() {
     const placeNameOk = placeName.trim().length > 0;
     const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(playedAtDate);
     const timeOk = isValidHHmm(playedAtTime);
-    const canCreateMatch = admin && !!groupId && placeNameOk && dateOk && timeOk && !creating;
+    const canCreateMatch = admin && !!groupId && placeNameOk && dateOk && timeOk && !creating
+        && upcomingMatches.length < MATCH_CONSTANTS.maxSimultaneous;
 
     // ============ STEP ============
-    const stepKey: StepKey = ((current as any)?.stepKey as StepKey) ?? "create";
+    const stepKey: StepKey = creatingNew
+        ? "create"
+        : (((current as any)?.stepKey as StepKey) ?? (selectedMatch?.stepKey as StepKey) ?? "create");
 
     function stepsOrderDone(k: StepKey, activeK: StepKey) {
         const order: StepKey[] = ["create", "accept", "teams", "playing", "ended", "post", "done"];
@@ -134,89 +151,101 @@ export default function MatchesPage() {
     // ============ LOADERS (LEVE) ============
     async function loadHeader(matchId: string) {
         if (!groupId || !matchId) return;
+        try {
+            const res = await MatchesApi.header(groupId, matchId);
+            const dto = res.data.data as any;
 
-        const res = await MatchesApi.header(groupId, matchId);
-        const dto = res.data.data as any;
+            // normaliza para o shape do MatchDetailsDto que você já usa
+            const patch: Partial<MatchDetailsDto> = {
+                matchId: getIdFromDto(dto) || matchId,
+                groupId: String(dto?.groupId ?? groupId) as any,
+                playedAt: dto?.playedAt ?? dto?.PlayedAt ?? undefined,
+                placeName: dto?.placeName ?? dto?.PlaceName ?? "",
+                status: Number(dto?.status ?? dto?.Status ?? 0) as any,
+                stepKey: dto?.stepKey ?? dto?.StepKey ?? "create",
+                canRewind: dto?.canRewind ?? dto?.CanRewind ?? false,
+                teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
+                teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
+            } as any;
 
-        // normaliza para o shape do MatchDetailsDto que você já usa
-        const patch: Partial<MatchDetailsDto> = {
-            matchId: getIdFromDto(dto) || matchId,
-            groupId: String(dto?.groupId ?? groupId) as any,
-            playedAt: dto?.playedAt ?? dto?.PlayedAt ?? undefined,
-            placeName: dto?.placeName ?? dto?.PlaceName ?? "",
-            status: Number(dto?.status ?? dto?.Status ?? 0) as any,
-            stepKey: dto?.stepKey ?? dto?.StepKey ?? "create",
-            canRewind: dto?.canRewind ?? dto?.CanRewind ?? false,
-            teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
-            teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
-        } as any;
-
-        setCurrent((prev) => mergeCurrent(prev, patch));
+            setCurrent((prev) => mergeCurrent(prev, patch));
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao carregar partida."));
+        }
     }
 
     async function loadAcceptation(matchId: string) {
         if (!groupId || !matchId) return;
+        try {
+            const res = await MatchesApi.acceptation(groupId, matchId);
+            const dto = res.data.data as any;
 
-        const res = await MatchesApi.acceptation(groupId, matchId);
-        const dto = res.data.data as any;
+            const patch: Partial<MatchDetailsDto> = {
+                matchId,
+                status: Number(dto?.status ?? dto?.Status ?? 1) as any,
+                acceptedPlayers: dto?.acceptedPlayers ?? dto?.AcceptedPlayers ?? [],
+                rejectedPlayers: dto?.rejectedPlayers ?? dto?.RejectedPlayers ?? [],
+                pendingPlayers:  dto?.pendingPlayers  ?? dto?.PendingPlayers  ?? [],
+                maxPlayers:      dto?.maxPlayers      ?? dto?.MaxPlayers      ?? 0,
+                acceptedOverLimit: dto?.acceptedOverLimit ?? dto?.AcceptedOverLimit ?? false,
+                teamAPlayers: (current?.teamAPlayers ?? []) as any,
+                teamBPlayers: (current?.teamBPlayers ?? []) as any,
+            } as any;
 
-        const patch: Partial<MatchDetailsDto> = {
-            matchId,
-            status: Number(dto?.status ?? dto?.Status ?? 1) as any,
-            acceptedPlayers: dto?.acceptedPlayers ?? dto?.AcceptedPlayers ?? [],
-            rejectedPlayers: dto?.rejectedPlayers ?? dto?.RejectedPlayers ?? [],
-            pendingPlayers:  dto?.pendingPlayers  ?? dto?.PendingPlayers  ?? [],
-            maxPlayers:      dto?.maxPlayers      ?? dto?.MaxPlayers      ?? 0,
-            acceptedOverLimit: dto?.acceptedOverLimit ?? dto?.AcceptedOverLimit ?? false,
-            teamAPlayers: (current?.teamAPlayers ?? []) as any,
-            teamBPlayers: (current?.teamBPlayers ?? []) as any,
-        } as any;
-
-        setCurrent((prev) => mergeCurrent(prev, patch));
+            setCurrent((prev) => mergeCurrent(prev, patch));
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao carregar confirmações."));
+        }
     }
 
     async function loadMatchMaking(matchId: string) {
         if (!groupId || !matchId) return;
+        try {
+            const res = await MatchesApi.matchmaking(groupId, matchId);
+            const dto = res.data.data as any;
 
-        const res = await MatchesApi.matchmaking(groupId, matchId);
-        const dto = res.data.data as any;
+            const patch: Partial<MatchDetailsDto> = {
+                matchId,
+                status: Number(dto?.status ?? dto?.Status ?? 2) as any,
+                teamAColor: dto?.teamAColor ?? dto?.TeamAColor ?? null,
+                teamBColor: dto?.teamBColor ?? dto?.TeamBColor ?? null,
+                teamAPlayers: (dto?.teamAPlayers ?? dto?.TeamAPlayers ?? []) as any,
+                teamBPlayers: (dto?.teamBPlayers ?? dto?.TeamBPlayers ?? []) as any,
+                unassignedPlayers: (dto?.unassignedPlayers ?? dto?.UnassignedPlayers ?? []) as any,
+                participants: (dto?.participants ?? dto?.Participants ?? []) as any,
+                colorsLocked: dto?.colorsLocked ?? dto?.ColorsLocked ?? false,
+            } as any;
 
-        const patch: Partial<MatchDetailsDto> = {
-            matchId,
-            status: Number(dto?.status ?? dto?.Status ?? 2) as any,
-            teamAColor: dto?.teamAColor ?? dto?.TeamAColor ?? null,
-            teamBColor: dto?.teamBColor ?? dto?.TeamBColor ?? null,
-            teamAPlayers: (dto?.teamAPlayers ?? dto?.TeamAPlayers ?? []) as any,
-            teamBPlayers: (dto?.teamBPlayers ?? dto?.TeamBPlayers ?? []) as any,
-            unassignedPlayers: (dto?.unassignedPlayers ?? dto?.UnassignedPlayers ?? []) as any,
-            participants: (dto?.participants ?? dto?.Participants ?? []) as any,
-            colorsLocked: dto?.colorsLocked ?? dto?.ColorsLocked ?? false,
-        } as any;
-
-        setCurrent((prev) => mergeCurrent(prev, patch));
+            setCurrent((prev) => mergeCurrent(prev, patch));
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao carregar times."));
+        }
     }
 
     async function loadPostGame(matchId: string) {
         if (!groupId || !matchId) return;
+        try {
+            const res = await MatchesApi.postgame(groupId, matchId);
+            const dto = res.data.data as any;
 
-        const res = await MatchesApi.postgame(groupId, matchId);
-        const dto = res.data.data as any;
+            const patch: Partial<MatchDetailsDto> = {
+                matchId,
+                status: Number(dto?.status ?? dto?.Status ?? 5) as any,
+                teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
+                teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
+                computedMvps: (dto?.computedMvps ?? dto?.ComputedMvps ?? []) as any,
+                votes: (dto?.votes ?? dto?.Votes ?? []) as any,
+                voteCounts: dto?.voteCounts ?? dto?.VoteCounts ?? [],
+                goals: dto?.goals ?? dto?.Goals ?? [],
+                allVoted: dto?.allVoted ?? dto?.AllVoted ?? false,
+                eligibleVoters: dto?.eligibleVoters ?? dto?.EligibleVoters ?? [],
+                participants: (dto?.participants ?? dto?.Participants ?? []) as any,
+            } as any;
 
-        const patch: Partial<MatchDetailsDto> = {
-            matchId,
-            status: Number(dto?.status ?? dto?.Status ?? 5) as any,
-            teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
-            teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
-            computedMvps: (dto?.computedMvps ?? dto?.ComputedMvps ?? []) as any,
-            votes: (dto?.votes ?? dto?.Votes ?? []) as any,
-            voteCounts: dto?.voteCounts ?? dto?.VoteCounts ?? [],
-            goals: dto?.goals ?? dto?.Goals ?? [],
-            allVoted: dto?.allVoted ?? dto?.AllVoted ?? false,
-            eligibleVoters: dto?.eligibleVoters ?? dto?.EligibleVoters ?? [],
-            participants: (dto?.participants ?? dto?.Participants ?? []) as any,
-        } as any;
-
-        setCurrent((prev) => mergeCurrent(prev, patch));
+            setCurrent((prev) => mergeCurrent(prev, patch));
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao carregar pós-jogo."));
+        }
     }
 
     async function loadStepPayload(matchId: string, step: StepKey) {
@@ -257,81 +286,64 @@ export default function MatchesPage() {
         // ended: header basta
     }
 
-    async function loadCurrent() {
+    /**
+     * Loads all upcoming (non-finalized) matches and the full step payload for the
+     * selected one. Pass `selectMatchId` to force-select a specific match after the
+     * list refreshes (e.g. right after creating a new match).
+     */
+    async function loadUpcoming(selectMatchId?: string) {
         if (!groupId) return;
 
         setLoading(true);
         try {
-            // Load colors — critical
+            // ── 1. Colors (critical) ──────────────────────────────────────────
             const colorsRes = await TeamColorApi.list(groupId, true).catch(() => ({ data: { data: [] } }));
-            const colors = (colorsRes.data.data ?? []) as TeamColorDto[];
-            setTeamColors(colors);
+            setTeamColors((colorsRes.data.data ?? []) as TeamColorDto[]);
 
-            // Load group settings — non-critical, never breaks the rest of the flow
+            // ── 2. Group settings (non-critical) ─────────────────────────────
             try {
                 const settingsRes = await GroupSettingsApi.get(groupId);
                 const gs = (settingsRes.data.data ?? null) as GroupSettingsDto | null;
                 setGroupSettings(gs);
-
                 if (gs) {
-                    const suggestedPlace = gs.defaultPlaceName ?? gs.placeName;
-                    // backend returns TimeSpan as "HH:mm:ss" — take the first 5 chars → "HH:mm"
-                    const suggestedTime = gs.defaultKickoffTime?.slice(0, 5);
-                    setPlaceName((prev) => (prev.trim().length ? prev : suggestedPlace ?? ""));
-                    setPlayedAtTime((prev) => (prev.trim().length ? prev : suggestedTime ?? ""));
+                    // TimeSpan comes as "HH:mm:ss" — keep first 5 chars → "HH:mm"
+                    setPlaceName((prev) => prev.trim().length ? prev : gs.defaultPlaceName ?? gs.placeName ?? "");
+                    setPlayedAtTime((prev) => prev.trim().length ? prev : gs.defaultKickoffTime?.slice(0, 5) ?? "");
                 }
             } catch {
-                // GroupSettings not configured — form fields remain editable, user fills manually
+                // GroupSettings not configured — form fields stay editable
             }
 
-            // ✅ pega a partida em andamento
-            try {
-                const cur = await MatchesApi.getCurrent(groupId);
-                const dto = cur.data.data as any;
+            // ── 3. Upcoming matches ───────────────────────────────────────────
+            const upcomingRes = await MatchesApi.upcoming(groupId);
+            const list = (upcomingRes.data.data ?? []) as MatchHeaderDto[];
+            setUpcomingMatches(list);
+            setCreatingNew(false);
 
-                const id = getIdFromDto(dto);
-                if (!id) {
-                    setCurrentMatchId(null);
-                    setCurrent(null);
-                    return;
-                }
-
-                setCurrentMatchId(id);
-
-                // inicializa um "current" mínimo logo (pra stepper renderizar rápido)
-                setCurrent((prev) =>
-                    mergeCurrent(prev, {
-                        matchId: id,
-                        groupId: groupId as any,
-                        status: Number(dto?.status ?? dto?.Status ?? 0) as any,
-                        placeName: dto?.placeName ?? dto?.PlaceName ?? prev?.placeName ?? "",
-                        playedAt: dto?.playedAt ?? dto?.PlayedAt ?? prev?.playedAt,
-                    } as any)
-                );
-
-                // carrega payload do step atual (ou create se ainda não tiver status)
-                const st = Number(dto?.status ?? dto?.Status ?? 0);
-                const sk: StepKey =
-                    st === 1 ? "accept" :
-                        st === 2 ? "teams" :
-                            st === 5 ? "post" :
-                                st === 6 ? "done" :
-                                    st === 0 ? "create" :
-                                        st === 3 ? "playing" :
-                                            st === 4 ? "ended" : "create";
-
-                await loadStepPayload(id, sk);
-            } catch (e: any) {
-                if (e?.response?.status === 404) {
-                    // 404 => sem partida em andamento (esperado)
-                    setCurrentMatchId(null);
-                    setCurrent(null);
-                } else {
-                    toast.error(getResponseMessage(e, "Falha ao carregar partida atual."));
-                }
+            if (list.length === 0) {
+                setSelectedIdx(0);
+                setCurrent(null);
+                return;
             }
+
+            // ── 4. Determine which match to show ──────────────────────────────
+            // Priority: explicit selectMatchId arg → URL param → keep current idx
+            const matchIdToSelect = selectMatchId ?? searchParams.get("match") ?? null;
+            const idxFromArg = matchIdToSelect
+                ? list.findIndex((m) => m.matchId === matchIdToSelect)
+                : -1;
+
+            const targetIdx = idxFromArg >= 0
+                ? idxFromArg
+                : Math.min(selectedIdx, list.length - 1);
+
+            setSelectedIdx(targetIdx);
+            lastSelectedMatchRef.current = list[targetIdx].matchId;
+
+            // ── 5. Load step payload for selected match ───────────────────────
+            await loadStepPayload(list[targetIdx].matchId, list[targetIdx].stepKey as StepKey);
         } catch (e) {
-            toast.error(getResponseMessage(e, "Falha ao carregar dados da página."));
+            toast.error(getResponseMessage(e, "Falha ao carregar partidas."));
         } finally {
             setLoading(false);
         }
@@ -339,8 +351,22 @@ export default function MatchesPage() {
 
     async function refreshCurrent() {
         if (!currentMatchId) return;
-        // só recarrega o step atual (não puxa tudo)
+        // Only reloads the payload for the current step (lightweight)
         await loadStepPayload(currentMatchId, stepKey);
+    }
+
+    /** Switches to a different match by list index, loading its step payload. */
+    async function selectMatch(idx: number) {
+        const match = upcomingMatches[idx];
+        if (!match) return;
+        if (match.matchId === currentMatchId) return; // already selected
+
+        setSelectedIdx(idx);
+        setCurrent(null);
+        lastLoadedStepRef.current   = null;
+        lastSelectedMatchRef.current = match.matchId;
+        setSearchParams(match.matchId ? { match: match.matchId } : {}, { replace: true });
+        await loadStepPayload(match.matchId, match.stepKey as StepKey);
     }
 
     async function createMatch() {
@@ -348,8 +374,10 @@ export default function MatchesPage() {
         setCreating(true);
         try {
             const playedAt = toUtcIso(playedAtDate, playedAtTime);
-            await MatchesApi.create(groupId!, { placeName: placeName.trim(), playedAt } as any);
-            await loadCurrent();
+            const res = await MatchesApi.create(groupId!, { placeName: placeName.trim(), playedAt } as any);
+            // Auto-select the newly created match by ID
+            const newMatchId = getIdFromDto((res.data as any)?.data ?? (res as any)?.data);
+            await loadUpcoming(newMatchId || undefined);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao criar partida."));
         } finally {
@@ -369,15 +397,20 @@ export default function MatchesPage() {
         }
     }
 
-    // ✅ quando o step muda, carregue apenas o payload daquele step
-    const lastLoadedStepRef = useRef<StepKey | null>(null);
+    // Tracks the last loaded step and match to avoid redundant fetches
+    const lastLoadedStepRef    = useRef<StepKey | null>(null);
+    const lastSelectedMatchRef = useRef<string | null>(null);
+
+    // When the step or the selected match changes, load the new step payload once
     useEffect(() => {
-        if (!currentMatchId) return;
-        if (stepKey === "create") return;
+        if (!currentMatchId || stepKey === "create") return;
 
-        if (lastLoadedStepRef.current === stepKey) return;
-        lastLoadedStepRef.current = stepKey;
+        const matchChanged = lastSelectedMatchRef.current !== currentMatchId;
+        const stepChanged  = lastLoadedStepRef.current   !== stepKey;
+        if (!matchChanged && !stepChanged) return;
 
+        lastSelectedMatchRef.current = currentMatchId;
+        lastLoadedStepRef.current    = stepKey;
         loadStepPayload(currentMatchId, stepKey);
         // eslint-disable-next-line
     }, [currentMatchId, stepKey]);
@@ -391,24 +424,31 @@ export default function MatchesPage() {
         if (currentMatchId) await loadStepPayload(currentMatchId, k);
     }
 
-    const displayStepKey: StepKey = (isGodMode() && godPreview) ? godPreview : stepKey;
+    const displayStepKey: StepKey = creatingNew
+        ? "create"
+        : ((isGodMode() && godPreview) ? godPreview : stepKey);
 
-    // auto load
+    // Initial load
     useEffect(() => {
-        loadCurrent();
+        loadUpcoming();
         // eslint-disable-next-line
     }, [groupId]);
 
-    // user auto-refresh
+    // Sync URL param when selected match changes (skip on first render when URL may already be set)
     useEffect(() => {
-        if (!readOnlyUser) return;
-        if (!groupId) return;
+        if (!currentMatchId) {
+            setSearchParams({}, { replace: true });
+        } else {
+            setSearchParams({ match: currentMatchId }, { replace: true });
+        }
+        // eslint-disable-next-line
+    }, [currentMatchId]);
 
-        const t = window.setInterval(() => {
-            loadCurrent();
-        }, 15000);
-
-        return () => window.clearInterval(t);
+    // Non-admin auto-refresh: poll the full upcoming list so users see status advances
+    useEffect(() => {
+        if (!readOnlyUser || !groupId) return;
+        const intervalId = window.setInterval(() => { loadUpcoming(); }, NON_ADMIN_POLL_INTERVAL_MS);
+        return () => window.clearInterval(intervalId);
         // eslint-disable-next-line
     }, [readOnlyUser, groupId]);
 
@@ -566,7 +606,8 @@ export default function MatchesPage() {
         setFinalizing(true);
         try {
             await MatchesApi.finalize(groupId, currentMatchId);
-            await loadCurrent();
+            // Finalized match leaves the upcoming list — refresh to pick the next one
+            await loadUpcoming();
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao finalizar partida."));
         } finally {
@@ -838,7 +879,7 @@ export default function MatchesPage() {
         if (!groupId || !currentMatchId) return;
         try {
             await MatchesApi.remove(groupId, currentMatchId);
-            await loadCurrent();
+            await loadUpcoming();
             toast.success("Partida excluída.");
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao excluir a partida."));
@@ -849,7 +890,7 @@ export default function MatchesPage() {
         if (!admin || !groupId || !currentMatchId) return;
         try {
             await MatchesApi.reapplyMvp(groupId, currentMatchId);
-            await loadCurrent();
+            await refreshCurrent();
             toast.success("MVP recalculado com sucesso.");
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao recalcular MVP."));
@@ -1132,11 +1173,26 @@ export default function MatchesPage() {
         currentMatchId,
     ]);
 
-    const currentExistsInCreate = !!current && stepKey === "create";
+    // When creatingNew, show the create form by nulling out the current match context
+    const wizardCurrent          = creatingNew ? null : current;
+    const currentExistsInCreate  = !creatingNew && !!current && stepKey === "create";
 
-    const canRewind = admin && !!current && ((current as any)?.canRewind ?? false);
+    const canRewind  = !creatingNew && admin && !!current && ((current as any)?.canRewind ?? false);
+    const stepLabel  = steps.find((s) => s.key === stepKey)?.title ?? "Em andamento";
 
-    const stepLabel = steps.find((s) => s.key === stepKey)?.title ?? "Em andamento";
+    const hasUpcoming    = upcomingMatches.length > 0;
+    const canAddMore     = admin && upcomingMatches.length < MATCH_CONSTANTS.maxSimultaneous;
+    const canNavPrev     = !creatingNew && selectedIdx > 0;
+    const canNavNext     = !creatingNew && selectedIdx < upcomingMatches.length - 1;
+
+    // Visual indicator for overdue / today matches
+    function matchTimeLabel(iso: string): { label: string; cls: string } | null {
+        const matchDay = iso.slice(0, 10);
+        const today    = new Date().toISOString().slice(0, 10);
+        if (matchDay === today) return { label: "HOJE",      cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" };
+        if (matchDay <  today) return { label: "ATRASADA",  cls: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
+        return null;
+    }
 
     return (
         <div className="space-y-5">
@@ -1150,7 +1206,7 @@ export default function MatchesPage() {
                 }}
             />
 
-            {/* ── Header ── */}
+            {/* ── Page header ── */}
             <div className="page-header">
                 <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
@@ -1160,51 +1216,156 @@ export default function MatchesPage() {
                             <CalendarDays size={18} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-black leading-tight">Partida</h1>
+                            <h1 className="text-xl font-black leading-tight">Partidas</h1>
                             <p className="text-xs text-white/60 mt-0.5">
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
                                     : !groupId
                                         ? "Selecione um grupo no Dashboard"
-                                        : !current
-                                            ? "Nenhuma partida em andamento"
-                                            : stepLabel}
+                                        : creatingNew
+                                            ? "Nova partida"
+                                            : !hasUpcoming
+                                                ? "Nenhuma partida em andamento"
+                                                : stepLabel}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                    {admin && currentMatchId && displayStepKey === "accept" && (
-                        <button
-                            type="button"
-                            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors bg-white/10 border-white/20 text-white hover:bg-white/20"
-                            onClick={() => setAddGuestOpen(true)}
-                        >
-                            <UserPlus size={15} />
-                            <span className="hidden sm:inline">Convidado</span>
-                        </button>
-                    )}
-                    {admin && currentMatchId && (
-                        <button
-                            type="button"
-                            className={[
-                                "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors shrink-0",
-                                canRewind
-                                    ? "bg-amber-500/20 border-amber-400/30 text-amber-300 hover:bg-amber-500/30"
-                                    : "bg-white/5 border-white/10 text-white/30 cursor-not-allowed",
-                            ].join(" ")}
-                            onClick={() => { if (!canRewind) return; rewindOneStep(); }}
-                            disabled={!canRewind}
-                            title={canRewind ? "Voltar uma etapa" : "Não é possível voltar neste status"}
-                        >
-                            <RotateCcw size={14} />
-                            Voltar etapa
-                        </button>
-                    )}
+                        {admin && currentMatchId && displayStepKey === "accept" && (
+                            <button
+                                type="button"
+                                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors bg-white/10 border-white/20 text-white hover:bg-white/20"
+                                onClick={() => setAddGuestOpen(true)}
+                            >
+                                <UserPlus size={15} />
+                                <span className="hidden sm:inline">Convidado</span>
+                            </button>
+                        )}
+                        {admin && currentMatchId && !creatingNew && (
+                            <button
+                                type="button"
+                                className={[
+                                    "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors shrink-0",
+                                    canRewind
+                                        ? "bg-amber-500/20 border-amber-400/30 text-amber-300 hover:bg-amber-500/30"
+                                        : "bg-white/5 border-white/10 text-white/30 cursor-not-allowed",
+                                ].join(" ")}
+                                onClick={() => { if (!canRewind) return; rewindOneStep(); }}
+                                disabled={!canRewind}
+                                title={canRewind ? "Voltar uma etapa" : "Não é possível voltar neste status"}
+                            >
+                                <RotateCcw size={14} />
+                                Voltar etapa
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* ── Conteúdo ── */}
+            {/* ── Multi-match navigator ── */}
+            {groupId && (hasUpcoming || creatingNew) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    {/* Prev arrow */}
+                    <button
+                        type="button"
+                        onClick={() => selectMatch(selectedIdx - 1)}
+                        disabled={!canNavPrev}
+                        title="Partida anterior"
+                        className={[
+                            "inline-flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-xl border transition-all",
+                            canNavPrev
+                                ? "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                : "bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed",
+                        ].join(" ")}
+                    >
+                        <ChevronLeft size={15} />
+                        <span className="hidden sm:inline">Anterior</span>
+                    </button>
+
+                    {/* Center label */}
+                    <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+                        {creatingNew ? (
+                            <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                Nova partida
+                            </span>
+                        ) : selectedMatch ? (() => {
+                            const timeTag = matchTimeLabel(selectedMatch.playedAt);
+                            const matchDate = new Date(selectedMatch.playedAt).toLocaleDateString("pt-BR", {
+                                weekday: "short", day: "2-digit", month: "2-digit",
+                            });
+                            return (
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 tabular-nums">
+                                        {selectedIdx + 1}&thinsp;/&thinsp;{upcomingMatches.length}
+                                    </span>
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
+                                        {matchDate}
+                                        <span className="text-slate-400 dark:text-slate-500 font-normal mx-1">·</span>
+                                        {selectedMatch.placeName}
+                                    </span>
+                                    <span className={[
+                                        "hidden sm:inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0",
+                                        "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700",
+                                    ].join(" ")}>
+                                        {stepLabel}
+                                    </span>
+                                    {timeTag && (
+                                        <span className={`hidden sm:inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${timeTag.cls}`}>
+                                            {timeTag.label}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })() : null}
+                    </div>
+
+                    {/* Next arrow */}
+                    <button
+                        type="button"
+                        onClick={() => selectMatch(selectedIdx + 1)}
+                        disabled={!canNavNext}
+                        title="Próxima partida"
+                        className={[
+                            "inline-flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-xl border transition-all",
+                            canNavNext
+                                ? "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                : "bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed",
+                        ].join(" ")}
+                    >
+                        <span className="hidden sm:inline">Próxima</span>
+                        <ChevronRight size={15} />
+                    </button>
+
+                    {/* + Nova Partida */}
+                    {canAddMore && !creatingNew && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setCreatingNew(true);
+                                // Clear date/time so the user picks a fresh date for the new match
+                                setPlayedAtDate(toDateInputValue(new Date()));
+                                setPlayedAtTime("");
+                            }}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-100 shrink-0"
+                        >
+                            <Plus size={14} />
+                            <span className="hidden sm:inline">Nova Partida</span>
+                        </button>
+                    )}
+                    {/* Cancel creating new (back to selected match) */}
+                    {creatingNew && hasUpcoming && (
+                        <button
+                            type="button"
+                            onClick={() => setCreatingNew(false)}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0"
+                        >
+                            Cancelar
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* ── Content card ── */}
             {!groupId ? (
                 <div className="card p-10 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                     <CalendarDays size={36} className="opacity-30" />
@@ -1219,7 +1380,7 @@ export default function MatchesPage() {
                         onStepClick={isGodMode() && currentMatchId ? handleGodStepClick : undefined}
                         onExitPreview={() => setGodPreview(null)}
                         steps={steps}
-                        current={current}
+                        current={wizardCurrent}
                         loading={loading}
                         maxPlayers={maxPlayers}
                         acceptedCount={accepted.length}
@@ -1251,7 +1412,7 @@ export default function MatchesPage() {
                         postProps={postProps}
                         playingGoalProps={playingGoalProps}
                         onFinalize={finalizeMatch}
-                        onReloadDone={loadCurrent}
+                        onReloadDone={loadUpcoming}
                         finalizing={finalizing as any}
                     />
                 </div>

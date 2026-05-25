@@ -307,17 +307,17 @@ export default function PublicMatchReplaysPage() {
                     <>
                         {/* Filter tabs */}
                         {totalGoals > 0 && totalJogadas > 0 && (
-                            <div className="flex items-center gap-1 p-1 bg-slate-800/60 rounded-2xl w-fit mb-5">
+                            <div className="flex items-center gap-1 mb-5">
                                 {(["all", "Gol", "Jogada"] as const).map((f) => (
                                     <button
                                         key={f}
                                         type="button"
                                         onClick={() => setFilter(f)}
                                         className={[
-                                            "px-4 py-1.5 rounded-xl text-xs font-medium transition",
+                                            "px-4 py-1.5 rounded-full text-sm font-semibold transition border",
                                             filter === f
-                                                ? "bg-white text-slate-900 shadow-sm"
-                                                : "text-slate-400 hover:text-white",
+                                                ? "bg-white text-slate-900 border-white"
+                                                : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
                                         ].join(" ")}
                                     >
                                         {f === "all" ? `Todos (${data.clips.length})` : f === "Gol" ? `Gols (${totalGoals})` : `Jogadas (${totalJogadas})`}

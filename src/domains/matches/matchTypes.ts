@@ -148,6 +148,28 @@ export type ColorMode = "random" | "manual";
 
 export type StepKey = "create" | "accept" | "teams" | "playing" | "ended" | "post" | "done";
 
+// ── Multi-match constants (mirrors MatchConstants.cs) ──────────────────────────
+
+export const MATCH_CONSTANTS = {
+    /** Maximum non-finalized matches allowed simultaneously per group. */
+    maxSimultaneous: 5,
+} as const;
+
+// ── Match header DTO (returned by /upcoming and /header) ──────────────────────
+
+export type MatchHeaderDto = {
+    matchId:    string;
+    groupId:    string;
+    playedAt:   string;   // ISO string
+    placeName:  string;
+    status:     number;
+    statusName: string;
+    stepKey:    StepKey;
+    canRewind:  boolean;
+    teamAGoals: number | null;
+    teamBGoals: number | null;
+};
+
 export type ReplayClipDto = {
     id: string;
     objectKey: string;
@@ -161,6 +183,12 @@ export type ReplayClipDto = {
 
 export type LikedReplayClipDto = ReplayClipDto & {
     matchId: string;
+};
+
+export type ClipLikerDto = {
+    userId:   string;
+    userName: string;
+    likedAt:  string;
 };
 
 export type PublicClipDto = {

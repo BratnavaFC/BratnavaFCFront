@@ -8,18 +8,20 @@ import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { getResponseMessage } from "../api/apiResponse";
 import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
-import { type ClipStateMap, VideoCard, Lightbox } from "../domains/matches/ui/ReplayClipComponents";
+import { type ClipStateMap, type LikersData, VideoCard, Lightbox, LikersPopover } from "../domains/matches/ui/ReplayClipComponents";
 
 // ── Tab: Curtidos (admin = all, user = own likes) ─────────────────────────────
 
 type SortMode = "likes" | "match";
 
 function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
-    const [clips,   setClips]   = useState<LikedReplayClipDto[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [mode,    setMode]    = useState<SortMode>("match");
-    const [lbIdx,   setLbIdx]   = useState<number | null>(null);
-    const [states,  setStates]  = useState<ClipStateMap>({});
+    const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [loading,     setLoading]     = useState(false);
+    const [mode,        setMode]        = useState<SortMode>("match");
+    const [lbIdx,       setLbIdx]       = useState<number | null>(null);
+    const [states,      setStates]      = useState<ClipStateMap>({});
+    const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
+    const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
     async function load() {
         setLoading(true);
@@ -77,6 +79,19 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
         }
     }
 
+    async function openLikers(clipId: string, rect: DOMRect) {
+        setLikersPanel({ clipId, rect });
+        if (likersCache[clipId] !== undefined) return;
+        setLikersCache((p) => ({ ...p, [clipId]: "loading" }));
+        try {
+            const r    = await MatchesApi.clipLikers(groupId, clipId);
+            const list = Array.isArray(r.data.data) ? r.data.data : [];
+            setLikersCache((p) => ({ ...p, [clipId]: list }));
+        } catch {
+            setLikersCache((p) => ({ ...p, [clipId]: [] }));
+        }
+    }
+
     const byLikes = [...clips].sort((a, b) => (states[b.id]?.likeCount ?? 0) - (states[a.id]?.likeCount ?? 0));
     const byMatch = (() => {
         const map = new Map<string, LikedReplayClipDto[]>();
@@ -102,13 +117,17 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                         : `${clips.length} vídeo${clips.length !== 1 ? "s" : ""} com curtida${clips.length !== 1 ? "s" : ""}`}
                 </p>
                 <div className="flex items-center gap-2">
-                    <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <div className="flex gap-1">
                         <button type="button" onClick={() => setMode("match")}
-                            {...(mode === "match" ? { className: "flex items-center gap-1.5 text-xs font-medium px-3 py-2 transition-colors bg-slate-900 dark:bg-white text-white dark:text-slate-900" } : { className: "flex items-center gap-1.5 text-xs font-medium px-3 py-2 transition-colors text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" })}>
+                            className={["flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition border",
+                                mode === "match" ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                            ].join(" ")}>
                             <LayoutGrid size={13} /> Por partida
                         </button>
                         <button type="button" onClick={() => setMode("likes")}
-                            {...(mode === "likes" ? { className: "flex items-center gap-1.5 text-xs font-medium px-3 py-2 transition-colors bg-slate-900 dark:bg-white text-white dark:text-slate-900" } : { className: "flex items-center gap-1.5 text-xs font-medium px-3 py-2 transition-colors text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" })}>
+                            className={["flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition border",
+                                mode === "likes" ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                            ].join(" ")}>
                             <ListOrdered size={13} /> Por curtidas
                         </button>
                     </div>
@@ -165,7 +184,8 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                                             onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
                                             onLike={() => toggleLike(clip.id)}
                                             onFavorite={() => toggleFavorite(clip.id)}
-                                            onDelete={() => handleDelete(clip.id)} />
+                                            onDelete={() => handleDelete(clip.id)}
+                                            onShowLikers={(rect) => openLikers(clip.id, rect)} />
                                     );
                                 })}
                             </div>
@@ -185,7 +205,8 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                             onPlay={() => setLbIdx(i)}
                             onLike={() => toggleLike(clip.id)}
                             onFavorite={() => toggleFavorite(clip.id)}
-                            onDelete={() => handleDelete(clip.id)} />
+                            onDelete={() => handleDelete(clip.id)}
+                            onShowLikers={(rect) => openLikers(clip.id, rect)} />
                     ))}
                 </div>
             )}
@@ -197,7 +218,16 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                     onClose={() => setLbIdx(null)}
                     onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
                     onNext={() => setLbIdx((i) => Math.min(flatForLb.length - 1, (i ?? 0) + 1))}
-                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete} />
+                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete}
+                    onShowLikers={(clipId, rect) => openLikers(clipId, rect)} />
+            )}
+
+            {likersPanel && (
+                <LikersPopover
+                    anchorRect={likersPanel.rect}
+                    data={likersCache[likersPanel.clipId]}
+                    onClose={() => setLikersPanel(null)}
+                />
             )}
         </div>
     );
@@ -206,10 +236,12 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
 // ── Tab: Favoritos (all users) ─────────────────────────────────────────────────
 
 function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
-    const [clips,   setClips]   = useState<LikedReplayClipDto[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [lbIdx,   setLbIdx]   = useState<number | null>(null);
-    const [states,  setStates]  = useState<ClipStateMap>({});
+    const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [loading,     setLoading]     = useState(false);
+    const [lbIdx,       setLbIdx]       = useState<number | null>(null);
+    const [states,      setStates]      = useState<ClipStateMap>({});
+    const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
+    const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
     async function load() {
         setLoading(true);
@@ -264,6 +296,19 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
             toast.success("Vídeo excluído.");
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao excluir o vídeo."));
+        }
+    }
+
+    async function openLikers(clipId: string, rect: DOMRect) {
+        setLikersPanel({ clipId, rect });
+        if (likersCache[clipId] !== undefined) return;
+        setLikersCache((p) => ({ ...p, [clipId]: "loading" }));
+        try {
+            const r    = await MatchesApi.clipLikers(groupId, clipId);
+            const list = Array.isArray(r.data.data) ? r.data.data : [];
+            setLikersCache((p) => ({ ...p, [clipId]: list }));
+        } catch {
+            setLikersCache((p) => ({ ...p, [clipId]: [] }));
         }
     }
 
@@ -336,7 +381,8 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
                                             onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
                                             onLike={() => toggleLike(clip.id)}
                                             onFavorite={() => toggleFavorite(clip.id)}
-                                            onDelete={() => handleDelete(clip.id)} />
+                                            onDelete={() => handleDelete(clip.id)}
+                                            onShowLikers={(rect) => openLikers(clip.id, rect)} />
                                     );
                                 })}
                             </div>
@@ -352,7 +398,16 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
                     onClose={() => setLbIdx(null)}
                     onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
                     onNext={() => setLbIdx((i) => Math.min(flat.length - 1, (i ?? 0) + 1))}
-                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete} />
+                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete}
+                    onShowLikers={(clipId, rect) => openLikers(clipId, rect)} />
+            )}
+
+            {likersPanel && (
+                <LikersPopover
+                    anchorRect={likersPanel.rect}
+                    data={likersCache[likersPanel.clipId]}
+                    onClose={() => setLikersPanel(null)}
+                />
             )}
         </div>
     );
@@ -363,11 +418,13 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
 type EventFilter = "all" | "Gol" | "Jogada";
 
 function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
-    const [clips,   setClips]   = useState<LikedReplayClipDto[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [lbIdx,   setLbIdx]   = useState<number | null>(null);
-    const [states,  setStates]  = useState<ClipStateMap>({});
-    const [filter,  setFilter]  = useState<EventFilter>("all");
+    const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [loading,     setLoading]     = useState(false);
+    const [lbIdx,       setLbIdx]       = useState<number | null>(null);
+    const [states,      setStates]      = useState<ClipStateMap>({});
+    const [filter,      setFilter]      = useState<EventFilter>("all");
+    const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
+    const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
     async function load() {
         setLoading(true);
@@ -422,6 +479,19 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
         }
     }
 
+    async function openLikers(clipId: string, rect: DOMRect) {
+        setLikersPanel({ clipId, rect });
+        if (likersCache[clipId] !== undefined) return;
+        setLikersCache((p) => ({ ...p, [clipId]: "loading" }));
+        try {
+            const r    = await MatchesApi.clipLikers(groupId, clipId);
+            const list = Array.isArray(r.data.data) ? r.data.data : [];
+            setLikersCache((p) => ({ ...p, [clipId]: list }));
+        } catch {
+            setLikersCache((p) => ({ ...p, [clipId]: [] }));
+        }
+    }
+
     const filtered = filter === "all" ? clips : clips.filter((c) => c.eventType === filter);
 
     const byMatch = (() => {
@@ -451,14 +521,14 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                 </p>
                 <div className="flex items-center gap-2">
                     {/* Event filter */}
-                    <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <div className="flex gap-1">
                         {(["all", "Gol", "Jogada"] as EventFilter[]).map((f) => (
                             <button key={f} type="button" onClick={() => setFilter(f)}
                                 className={[
-                                    "text-xs font-medium px-3 py-2 transition-colors",
+                                    "px-4 py-1.5 rounded-lg text-xs font-semibold transition border",
                                     filter === f
-                                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900"
-                                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
+                                        ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white"
+                                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-800/50",
                                 ].join(" ")}>
                                 {f === "all" ? "Tudo" : f === "Gol" ? "⚽ Gols" : "✨ Jogadas"}
                             </button>
@@ -524,7 +594,8 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                                             onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
                                             onLike={() => toggleLike(clip.id)}
                                             onFavorite={() => toggleFavorite(clip.id)}
-                                            onDelete={() => handleDelete(clip.id)} />
+                                            onDelete={() => handleDelete(clip.id)}
+                                            onShowLikers={(rect) => openLikers(clip.id, rect)} />
                                     );
                                 })}
                             </div>
@@ -540,7 +611,16 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                     onClose={() => setLbIdx(null)}
                     onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
                     onNext={() => setLbIdx((i) => Math.min(flat.length - 1, (i ?? 0) + 1))}
-                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete} />
+                    onLike={toggleLike} onFavorite={toggleFavorite} onDelete={handleDelete}
+                    onShowLikers={(clipId, rect) => openLikers(clipId, rect)} />
+            )}
+
+            {likersPanel && (
+                <LikersPopover
+                    anchorRect={likersPanel.rect}
+                    data={likersCache[likersPanel.clipId]}
+                    onClose={() => setLikersPanel(null)}
+                />
             )}
         </div>
     );
@@ -574,6 +654,51 @@ export default function ReplayVaultPage() {
                         </p>
                     </div>
                 </div>
+                {groupId && (
+                    <div className="relative mt-4 flex gap-1 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={() => setTab("liked")}
+                            className={[
+                                "flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                tab === "liked"
+                                    ? "bg-white text-slate-900 border-white"
+                                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
+                            ].join(" ")}
+                        >
+                            <Heart size={15} />
+                            {isAdminOrGod ? "Curtidos" : "Meus Curtidos"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setTab("favorites")}
+                            className={[
+                                "flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                tab === "favorites"
+                                    ? "bg-white text-slate-900 border-white"
+                                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
+                            ].join(" ")}
+                        >
+                            <Star size={15} />
+                            Meus Favoritos
+                        </button>
+                        {isAdminOrGod && (
+                            <button
+                                type="button"
+                                onClick={() => setTab("matches")}
+                                className={[
+                                    "flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                    tab === "matches"
+                                        ? "bg-white text-slate-900 border-white"
+                                        : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
+                                ].join(" ")}
+                            >
+                                <Gamepad2 size={15} />
+                                Jogos
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* No group selected */}
@@ -586,51 +711,6 @@ export default function ReplayVaultPage() {
 
             {groupId && (
                 <>
-                    {/* Tab bar */}
-                    <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
-                        <button
-                            type="button"
-                            onClick={() => setTab("liked")}
-                            className={[
-                                "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px",
-                                tab === "liked"
-                                    ? "border-rose-500 text-rose-500"
-                                    : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
-                            ].join(" ")}
-                        >
-                            <Heart size={15} style={{ fill: tab === "liked" ? "#f43f5e" : "none", color: tab === "liked" ? "#f43f5e" : "currentColor" }} />
-                            {isAdminOrGod ? "Curtidos" : "Meus Curtidos"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setTab("favorites")}
-                            className={[
-                                "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px",
-                                tab === "favorites"
-                                    ? "border-amber-500 text-amber-500"
-                                    : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
-                            ].join(" ")}
-                        >
-                            <Star size={15} style={{ fill: tab === "favorites" ? "#f59e0b" : "none", color: tab === "favorites" ? "#f59e0b" : "currentColor" }} />
-                            Meus Favoritos
-                        </button>
-                        {isAdminOrGod && (
-                            <button
-                                type="button"
-                                onClick={() => setTab("matches")}
-                                className={[
-                                    "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px",
-                                    tab === "matches"
-                                        ? "border-indigo-500 text-indigo-500"
-                                        : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
-                                ].join(" ")}
-                            >
-                                <Gamepad2 size={15} />
-                                Jogos
-                            </button>
-                        )}
-                    </div>
-
                     {/* Tab content */}
                     {tab === "liked" && <LikedTab groupId={groupId} isAdmin={isAdminOrGod} />}
                     {tab === "favorites" && <FavoritesTab groupId={groupId} isAdmin={isAdminOrGod} />}

@@ -4,7 +4,7 @@ import { Film, Heart, Loader2, RefreshCw, LayoutGrid, ListOrdered, Play, Downloa
 import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { getResponseMessage } from "../api/apiResponse";
-import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
+import type { LikedReplayClipDto, ClipLikerDto } from "../domains/matches/matchTypes";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,7 +26,76 @@ function formatDuration(s: number) {
     return `${m}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 }
 
-type ClipState = { likeCount: number; isLikedByMe: boolean; isFavoritedByMe: boolean };
+type ClipState  = { likeCount: number; isLikedByMe: boolean; isFavoritedByMe: boolean };
+type LikersData = ClipLikerDto[] | "loading";
+
+// ── Likers popover ────────────────────────────────────────────────────────────
+
+function LikersPopover({ clipId, anchorRect, data, onClose }: {
+    clipId:     string;
+    anchorRect: { top: number; right: number; bottom: number; left: number };
+    data:       LikersData | undefined;
+    onClose:    () => void;
+}) {
+    const PANEL_W = 210;
+    const MARGIN  = 8;
+    const viewW   = typeof window !== "undefined" ? window.innerWidth : 1200;
+    let left = anchorRect.left;
+    if (left + PANEL_W + MARGIN > viewW) left = anchorRect.right - PANEL_W;
+    if (left < MARGIN) left = MARGIN;
+    const top = anchorRect.bottom + 6;
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [onClose]);
+
+    return (
+        <>
+            {/* click-away backdrop */}
+            <div className="fixed inset-0" style={{ zIndex: 200 }} onClick={onClose} />
+            {/* panel */}
+            <div className="fixed rounded-xl shadow-2xl overflow-hidden"
+                style={{ zIndex: 201, top, left, width: PANEL_W, background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)" }}>
+                {/* header */}
+                <div className="flex items-center justify-between px-3 py-2"
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.8)" }}>
+                        <Heart size={11} style={{ fill: "#f43f5e", color: "#f43f5e" }} />
+                        Quem curtiu
+                    </span>
+                    <button type="button" onClick={onClose} style={{ color: "rgba(255,255,255,0.4)" }}
+                        className="hover:text-white/80 transition-colors">
+                        <X size={13} />
+                    </button>
+                </div>
+                {/* body */}
+                <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
+                    {(data === "loading" || data === undefined) ? (
+                        <div className="flex items-center justify-center py-5">
+                            <Loader2 size={16} className="animate-spin" style={{ color: "rgba(255,255,255,0.35)" }} />
+                        </div>
+                    ) : data.length === 0 ? (
+                        <p className="text-center py-5 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            Nenhuma curtida ainda
+                        </p>
+                    ) : data.map((l) => (
+                        <div key={l.userId} className="flex items-center gap-2 px-3 py-1.5">
+                            <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                                style={{ background: "rgba(244,63,94,0.18)", color: "#fda4af" }}>
+                                {l.userName[0]?.toUpperCase() ?? "?"}
+                            </div>
+                            <span className="text-xs truncate" style={{ color: "rgba(255,255,255,0.8)" }}>
+                                {l.userName}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+}
 
 // ── Lazy video thumbnail ──────────────────────────────────────────────────────
 
@@ -50,11 +119,12 @@ function LazyThumb({ src, onDuration }: { src: string; onDuration: (s: number) =
 
 function VideoCard({
     clip, groupId, state,
-    onPlay, onLike, onFavorite,
+    onPlay, onLike, onFavorite, onShowLikers,
 }: {
     clip: LikedReplayClipDto; groupId: string;
     state: ClipState;
     onPlay: () => void; onLike: () => void; onFavorite: () => void;
+    onShowLikers: (rect: DOMRect) => void;
 }) {
     const [dur, setDur] = useState<number | null>(null);
     const isGol = clip.eventType === "Gol";
@@ -65,12 +135,17 @@ function VideoCard({
             style={{ aspectRatio: "16/9", background: "#0f172a" }}
             onClick={onPlay}
         >
-            {/* Like badge — top-left */}
-            <div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full px-2 py-0.5"
-                style={{ background: "rgba(244,63,94,0.85)", backdropFilter: "blur(4px)" }}>
+            {/* Like badge — top-left (click to see who liked) */}
+            <button
+                type="button"
+                title="Ver quem curtiu"
+                className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full px-2 py-0.5 transition-opacity hover:opacity-80"
+                style={{ background: "rgba(244,63,94,0.85)", backdropFilter: "blur(4px)" }}
+                onClick={(e) => { e.stopPropagation(); onShowLikers(e.currentTarget.getBoundingClientRect()); }}
+            >
                 <Heart size={10} style={{ fill: "#fff", color: "#fff" }} />
                 <span className="text-[10px] font-bold text-white">{state.likeCount}</span>
-            </div>
+            </button>
 
             {/* Event type */}
             <div className="absolute top-2 right-2 z-10 rounded-full px-2 py-0.5 text-[10px] font-bold"
@@ -121,10 +196,11 @@ function VideoCard({
 type Speed = 0.25 | 0.5 | 0.75 | 1 | 1.25 | 1.5 | 1.75 | 2;
 const SPEEDS: Speed[] = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLike, onFavorite }:
+function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLike, onFavorite, onShowLikers }:
     { clips: LikedReplayClipDto[]; index: number; groupId: string; states: Record<string, ClipState>;
       onClose: () => void; onPrev: () => void; onNext: () => void;
-      onLike: (id: string) => void; onFavorite: (id: string) => void; }) {
+      onLike: (id: string) => void; onFavorite: (id: string) => void;
+      onShowLikers: (clipId: string, rect: DOMRect) => void; }) {
     const clip    = clips[index];
     const state   = states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false };
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -163,12 +239,25 @@ function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLi
                     <span className="text-xs text-white/30">{index + 1} / {clips.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => onLike(clip.id)}
-                        className="flex items-center gap-1.5 text-sm font-semibold rounded-xl transition-all active:scale-95"
-                        style={{ padding: "5px 12px", background: state.isLikedByMe ? "rgba(244,63,94,0.2)" : "rgba(255,255,255,0.08)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.18)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)" }}>
-                        <Heart size={14} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "inherit", transition: "all 0.15s" }} />
-                        {state.likeCount > 0 ? state.likeCount : "Like"}
-                    </button>
+                    {/* Like — heart toggles, count opens likers */}
+                    <div className="flex items-center rounded-xl text-sm font-semibold"
+                        style={{ background: state.isLikedByMe ? "rgba(244,63,94,0.2)" : "rgba(255,255,255,0.08)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.18)"}` }}>
+                        <button type="button" onClick={() => onLike(clip.id)}
+                            className="flex items-center gap-1.5 transition-all active:scale-95"
+                            style={{ padding: "5px 12px", color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)" }}>
+                            <Heart size={14} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "inherit", transition: "all 0.15s" }} />
+                            {state.likeCount === 0 && "Like"}
+                        </button>
+                        {state.likeCount > 0 && (
+                            <button type="button"
+                                onClick={(e) => onShowLikers(clip.id, e.currentTarget.getBoundingClientRect())}
+                                className="transition-colors hover:text-white/90"
+                                title="Ver quem curtiu"
+                                style={{ padding: "5px 10px 5px 4px", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.12)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)" }}>
+                                {state.likeCount}
+                            </button>
+                        )}
+                    </div>
                     <button type="button" onClick={() => onFavorite(clip.id)}
                         className="flex items-center gap-1.5 text-sm font-semibold rounded-xl transition-all active:scale-95"
                         style={{ padding: "5px 12px", background: state.isFavoritedByMe ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.08)", border: `1px solid ${state.isFavoritedByMe ? "rgba(245,158,11,0.5)" : "rgba(255,255,255,0.18)"}`, color: state.isFavoritedByMe ? "#fcd34d" : "rgba(255,255,255,0.6)" }}>
@@ -224,11 +313,13 @@ type SortMode = "likes" | "match";
 
 export default function ReplayLikesPage() {
     const groupId = useAccountStore((s) => s.getActive()?.activeGroupId);
-    const [clips,    setClips]    = useState<LikedReplayClipDto[]>([]);
-    const [loading,  setLoading]  = useState(false);
-    const [mode,     setMode]     = useState<SortMode>("match");
-    const [lbIdx,    setLbIdx]    = useState<number | null>(null);
-    const [states,   setStates]   = useState<Record<string, ClipState>>({});
+    const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [loading,     setLoading]     = useState(false);
+    const [mode,        setMode]        = useState<SortMode>("match");
+    const [lbIdx,       setLbIdx]       = useState<number | null>(null);
+    const [states,      setStates]      = useState<Record<string, ClipState>>({});
+    const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
+    const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
     async function load() {
         if (!groupId) return;
@@ -274,6 +365,22 @@ export default function ReplayLikesPage() {
             setStates((p) => { const c = p[clipId]; if (!c) return p; return { ...p, [clipId]: { ...c, isFavoritedByMe: !c.isFavoritedByMe } }; });
         }
     }
+
+    async function openLikers(clipId: string, rect: DOMRect) {
+        setLikersPanel({ clipId, rect });
+        if (likersCache[clipId] !== undefined) return; // already cached or loading
+        if (!groupId) return;
+        setLikersCache((p) => ({ ...p, [clipId]: "loading" }));
+        try {
+            const r    = await MatchesApi.clipLikers(groupId, clipId);
+            const list = Array.isArray(r.data.data) ? r.data.data : [];
+            setLikersCache((p) => ({ ...p, [clipId]: list }));
+        } catch {
+            setLikersCache((p) => ({ ...p, [clipId]: [] }));
+        }
+    }
+
+    function closeLikers() { setLikersPanel(null); }
 
     // Sorted flat list (for "by likes" mode)
     const byLikes = [...clips].sort((a, b) => (states[b.id]?.likeCount ?? 0) - (states[a.id]?.likeCount ?? 0));
@@ -321,15 +428,17 @@ export default function ReplayLikesPage() {
                     </div>
                     <div className="flex items-center gap-2">
                         {/* Mode toggle */}
-                        <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.15)" }}>
+                        <div className="flex gap-1">
                             <button type="button" onClick={() => setMode("match")}
-                                className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 transition-colors"
-                                style={{ background: mode === "match" ? "rgba(255,255,255,0.18)" : "transparent", color: mode === "match" ? "#fff" : "rgba(255,255,255,0.45)" }}>
+                                className={["flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                    mode === "match" ? "bg-white text-slate-900 border-white" : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                                ].join(" ")}>
                                 <LayoutGrid size={13} /> Por partida
                             </button>
                             <button type="button" onClick={() => setMode("likes")}
-                                className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 transition-colors"
-                                style={{ background: mode === "likes" ? "rgba(255,255,255,0.18)" : "transparent", color: mode === "likes" ? "#fff" : "rgba(255,255,255,0.45)" }}>
+                                className={["flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition border",
+                                    mode === "likes" ? "bg-white text-slate-900 border-white" : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                                ].join(" ")}>
                                 <ListOrdered size={13} /> Por curtidas
                             </button>
                         </div>
@@ -395,7 +504,8 @@ export default function ReplayLikesPage() {
                                         <VideoCard key={clip.id} clip={clip} groupId={groupId!} state={states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false }}
                                             onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
                                             onLike={() => toggleLike(clip.id)}
-                                            onFavorite={() => toggleFavorite(clip.id)} />
+                                            onFavorite={() => toggleFavorite(clip.id)}
+                                            onShowLikers={(rect) => openLikers(clip.id, rect)} />
                                     );
                                 })}
                             </div>
@@ -411,7 +521,8 @@ export default function ReplayLikesPage() {
                         <VideoCard key={clip.id} clip={clip} groupId={groupId!} state={states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false }}
                             onPlay={() => setLbIdx(i)}
                             onLike={() => toggleLike(clip.id)}
-                            onFavorite={() => toggleFavorite(clip.id)} />
+                            onFavorite={() => toggleFavorite(clip.id)}
+                            onShowLikers={(rect) => openLikers(clip.id, rect)} />
                     ))}
                 </div>
             )}
@@ -423,7 +534,18 @@ export default function ReplayLikesPage() {
                     onClose={() => setLbIdx(null)}
                     onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
                     onNext={() => setLbIdx((i) => Math.min(flatForLb.length - 1, (i ?? 0) + 1))}
-                    onLike={toggleLike} onFavorite={toggleFavorite} />
+                    onLike={toggleLike} onFavorite={toggleFavorite}
+                    onShowLikers={(clipId, rect) => openLikers(clipId, rect)} />
+            )}
+
+            {/* Likers popover */}
+            {likersPanel && (
+                <LikersPopover
+                    clipId={likersPanel.clipId}
+                    anchorRect={likersPanel.rect}
+                    data={likersCache[likersPanel.clipId]}
+                    onClose={closeLikers}
+                />
             )}
         </div>
     );

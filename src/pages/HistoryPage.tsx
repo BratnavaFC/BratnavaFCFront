@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
@@ -23,9 +23,11 @@ function normalizeHex(input?: string | null) {
     return v.startsWith("#") ? v : `#${v}`;
 }
 
+import { toUtcDate } from "../utils/dateUtils";
+
 function formatDate(playedAt?: string) {
     if (!playedAt) return null;
-    const d = new Date(playedAt);
+    const d = toUtcDate(playedAt);
     if (Number.isNaN(d.getTime())) return null;
     return {
         day: d.toLocaleDateString("pt-BR", { day: "2-digit" }),
@@ -102,27 +104,27 @@ const PAGE_SIZE = 20;
 
 export default function HistoryPage() {
     const nav = useNavigate();
-    const groupId      = useAccountStore((s) => s.getActive()?.activeGroupId);
+    const groupId        = useAccountStore((s) => s.getActive()?.activeGroupId);
     const activePlayerId = useAccountStore((s) => s.getActive()?.activePlayerId);
 
-    const [items, setItems] = useState<any[]>([]);
+    const [items, setItems]     = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(1);
+    const [page, setPage]       = useState(1);
+    const [hasMore, setHasMore] = useState(false);
     const [onlyMine, setOnlyMine] = useState(false);
 
     const topRef = useRef<HTMLDivElement | null>(null);
 
-    async function loadHistory() {
+    async function loadHistory(pageNum: number = 1) {
         if (!groupId) return;
         setLoading(true);
         try {
             const playerId = onlyMine && activePlayerId ? activePlayerId : undefined;
-            const histRes = await MatchesApi.history(groupId, 400, playerId);
-
+            const skip     = (pageNum - 1) * PAGE_SIZE;
+            const histRes  = await MatchesApi.history(groupId, PAGE_SIZE, playerId, skip);
             const list: any[] = Array.isArray(histRes.data.data) ? histRes.data.data : [];
-
             setItems(list);
-            setPage(1);
+            setHasMore(list.length === PAGE_SIZE);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar histórico."));
         } finally {
@@ -131,33 +133,17 @@ export default function HistoryPage() {
     }
 
     useEffect(() => {
-        loadHistory();
+        setPage(1);
+        loadHistory(1);
         // eslint-disable-next-line
     }, [groupId, onlyMine]);
 
-    const sorted = useMemo(() => {
-        return [...(Array.isArray(items) ? items : [])].sort((a, b) => {
-            const da = a?.playedAt ? new Date(a.playedAt).getTime() : 0;
-            const db = b?.playedAt ? new Date(b.playedAt).getTime() : 0;
-            return db - da;
-        });
-    }, [items]);
-
-    const total = sorted.length;
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-    useEffect(() => {
-        setPage((p) => clamp(p, 1, totalPages));
-    }, [totalPages]);
-
-    const paged = useMemo(() => {
-        const start = (page - 1) * PAGE_SIZE;
-        return sorted.slice(start, start + PAGE_SIZE);
-    }, [sorted, page]);
+    const paged = items;
 
     function goPage(next: number) {
-        const p = clamp(next, 1, totalPages);
+        const p = Math.max(1, next);
         setPage(p);
+        loadHistory(p);
         requestAnimationFrame(() =>
             topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
         );
@@ -181,7 +167,7 @@ export default function HistoryPage() {
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
                                     : !groupId ? 'Selecione um grupo'
-                                    : `${total} partida${total !== 1 ? 's' : ''} registrada${total !== 1 ? 's' : ''}`}
+                                    : `Página ${page}${!hasMore && paged.length === 0 ? ' · sem partidas' : !hasMore ? ' · última' : ''}`}
                             </p>
                         </div>
                     </div>
@@ -203,7 +189,7 @@ export default function HistoryPage() {
                             )}
                             <button
                                 type="button"
-                                onClick={loadHistory}
+                                onClick={() => loadHistory(page)}
                                 disabled={loading}
                                 className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors disabled:opacity-50"
                             >
@@ -236,7 +222,7 @@ export default function HistoryPage() {
                         )}
 
                         {/* ── Empty state ──────────────────────────── */}
-                        {!loading && total === 0 && (
+                        {!loading && paged.length === 0 && (
                             <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-12 text-center">
                                 <Calendar size={36} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
                                 <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -378,7 +364,7 @@ export default function HistoryPage() {
                         )}
 
                         {/* ── Pagination ───────────────────────────── */}
-                        {total > PAGE_SIZE && (
+                        {(page > 1 || hasMore) && (
                             <div className="flex items-center justify-between gap-3 pt-1">
                                 <button
                                     type="button"
@@ -393,14 +379,12 @@ export default function HistoryPage() {
                                 <div className="text-xs text-slate-500 dark:text-slate-400">
                                     Página{" "}
                                     <span className="font-semibold text-slate-800 dark:text-slate-100">{page}</span>
-                                    {" "}de{" "}
-                                    <span className="font-semibold text-slate-800 dark:text-slate-100">{totalPages}</span>
                                 </div>
 
                                 <button
                                     type="button"
                                     onClick={() => goPage(page + 1)}
-                                    disabled={page >= totalPages || loading}
+                                    disabled={!hasMore || loading}
                                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     Próxima

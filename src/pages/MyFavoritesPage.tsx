@@ -5,6 +5,7 @@ import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { getResponseMessage } from "../api/apiResponse";
 import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
+import { type LikersData, LikersPopover } from "../domains/matches/ui/ReplayClipComponents";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,9 +48,10 @@ function LazyThumb({ src, onDuration }: { src: string; onDuration: (s: number) =
 
 // ── VideoCard ─────────────────────────────────────────────────────────────────
 
-function VideoCard({ clip, groupId, state, onPlay, onLike, onUnfavorite }:
+function VideoCard({ clip, groupId, state, onPlay, onLike, onUnfavorite, onShowLikers }:
     { clip: LikedReplayClipDto; groupId: string; state: ClipState;
-      onPlay: () => void; onLike: () => void; onUnfavorite: () => void; }) {
+      onPlay: () => void; onLike: () => void; onUnfavorite: () => void;
+      onShowLikers?: (rect: DOMRect) => void; }) {
     const [dur, setDur] = useState<number | null>(null);
     const isGol = clip.eventType === "Gol";
 
@@ -86,8 +88,16 @@ function VideoCard({ clip, groupId, state, onPlay, onLike, onUnfavorite }:
                 <div className="flex items-center gap-1">
                     <button type="button" onClick={(e) => { e.stopPropagation(); onLike(); }} className="flex items-center gap-0.5 transition-transform active:scale-90">
                         <Heart size={12} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "rgba(255,255,255,0.7)", transition: "all 0.15s" }} />
-                        {state.likeCount > 0 && <span style={{ fontSize: 9, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>}
                     </button>
+                    {state.likeCount > 0 && (
+                        onShowLikers ? (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); onShowLikers(e.currentTarget.getBoundingClientRect()); }} title="Ver quem curtiu" className="transition-transform active:scale-90">
+                                <span style={{ fontSize: 9, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
+                            </button>
+                        ) : (
+                            <span style={{ fontSize: 9, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
+                        )
+                    )}
                     <button type="button" onClick={(e) => { e.stopPropagation(); onUnfavorite(); }} title="Remover favorito" className="transition-transform active:scale-90">
                         <Bookmark size={12} style={{ fill: "#f59e0b", color: "#f59e0b" }} />
                     </button>
@@ -114,10 +124,11 @@ function VideoCard({ clip, groupId, state, onPlay, onLike, onUnfavorite }:
 type Speed = 0.25 | 0.5 | 0.75 | 1 | 1.25 | 1.5 | 1.75 | 2;
 const SPEEDS: Speed[] = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLike, onFavorite }:
+function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLike, onFavorite, onShowLikers }:
     { clips: LikedReplayClipDto[]; index: number; groupId: string; states: Record<string, ClipState>;
       onClose: () => void; onPrev: () => void; onNext: () => void;
-      onLike: (id: string) => void; onFavorite: (id: string) => void; }) {
+      onLike: (id: string) => void; onFavorite: (id: string) => void;
+      onShowLikers?: (clipId: string, rect: DOMRect) => void; }) {
     const clip     = clips[index];
     const state    = states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: true };
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -154,12 +165,29 @@ function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLi
                     <span className="text-xs text-white/30">{index + 1} / {clips.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => onLike(clip.id)}
-                        className="flex items-center gap-1.5 text-sm font-semibold rounded-xl transition-all active:scale-95"
-                        style={{ padding: "5px 12px", background: state.isLikedByMe ? "rgba(244,63,94,0.2)" : "rgba(255,255,255,0.08)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.18)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)" }}>
-                        <Heart size={14} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "inherit", transition: "all 0.15s" }} />
-                        {state.likeCount > 0 ? state.likeCount : "Like"}
-                    </button>
+                    <div className="flex items-center rounded-xl text-sm font-semibold"
+                        style={{ background: state.isLikedByMe ? "rgba(244,63,94,0.2)" : "rgba(255,255,255,0.08)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.18)"}` }}>
+                        <button type="button" onClick={() => onLike(clip.id)}
+                            className="flex items-center gap-1.5 transition-all active:scale-95"
+                            style={{ padding: "5px 12px", color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)" }}>
+                            <Heart size={14} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "inherit", transition: "all 0.15s" }} />
+                            {state.likeCount === 0 && "Like"}
+                        </button>
+                        {state.likeCount > 0 && onShowLikers && (
+                            <button type="button"
+                                onClick={(e) => onShowLikers(clip.id, e.currentTarget.getBoundingClientRect())}
+                                className="transition-colors hover:text-white/90"
+                                title="Ver quem curtiu"
+                                style={{ padding: "5px 10px 5px 4px", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.12)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)" }}>
+                                {state.likeCount}
+                            </button>
+                        )}
+                        {state.likeCount > 0 && !onShowLikers && (
+                            <span style={{ padding: "5px 10px 5px 4px", color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)" }}>
+                                {state.likeCount}
+                            </span>
+                        )}
+                    </div>
                     <button type="button" onClick={() => onFavorite(clip.id)}
                         className="flex items-center gap-1.5 text-sm font-semibold rounded-xl transition-all active:scale-95"
                         style={{ padding: "5px 12px", background: state.isFavoritedByMe ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.08)", border: `1px solid ${state.isFavoritedByMe ? "rgba(245,158,11,0.5)" : "rgba(255,255,255,0.18)"}`, color: state.isFavoritedByMe ? "#fcd34d" : "rgba(255,255,255,0.6)" }}>
@@ -211,10 +239,12 @@ function Lightbox({ clips, index, groupId, states, onClose, onPrev, onNext, onLi
 
 export default function MyFavoritesPage() {
     const groupId = useAccountStore((s) => s.getActive()?.activeGroupId);
-    const [clips,   setClips]   = useState<LikedReplayClipDto[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [lbIdx,   setLbIdx]   = useState<number | null>(null);
-    const [states,  setStates]  = useState<Record<string, ClipState>>({});
+    const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [loading,     setLoading]     = useState(false);
+    const [lbIdx,       setLbIdx]       = useState<number | null>(null);
+    const [states,      setStates]      = useState<Record<string, ClipState>>({});
+    const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
+    const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
     async function load() {
         if (!groupId) return;
@@ -262,6 +292,20 @@ export default function MyFavoritesPage() {
             }
         } catch {
             setStates((p) => { const c = p[clipId]; if (!c) return p; return { ...p, [clipId]: { ...c, isFavoritedByMe: !c.isFavoritedByMe } }; });
+        }
+    }
+
+    async function openLikers(clipId: string, rect: DOMRect) {
+        setLikersPanel({ clipId, rect });
+        if (likersCache[clipId] !== undefined) return;
+        if (!groupId) return;
+        setLikersCache((p) => ({ ...p, [clipId]: "loading" }));
+        try {
+            const r    = await MatchesApi.clipLikers(groupId, clipId);
+            const list = Array.isArray(r.data.data) ? r.data.data : [];
+            setLikersCache((p) => ({ ...p, [clipId]: list }));
+        } catch {
+            setLikersCache((p) => ({ ...p, [clipId]: [] }));
         }
     }
 
@@ -355,7 +399,8 @@ export default function MyFavoritesPage() {
                                             state={states[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: true }}
                                             onPlay={() => setLbIdx(flatIdx >= 0 ? flatIdx : 0)}
                                             onLike={() => toggleLike(clip.id)}
-                                            onUnfavorite={() => toggleFavorite(clip.id)} />
+                                            onUnfavorite={() => toggleFavorite(clip.id)}
+                                            onShowLikers={(rect) => openLikers(clip.id, rect)} />
                                     );
                                 })}
                             </div>
@@ -370,7 +415,16 @@ export default function MyFavoritesPage() {
                     onClose={() => setLbIdx(null)}
                     onPrev={() => setLbIdx((i) => Math.max(0, (i ?? 0) - 1))}
                     onNext={() => setLbIdx((i) => Math.min(flat.length - 1, (i ?? 0) + 1))}
-                    onLike={toggleLike} onFavorite={toggleFavorite} />
+                    onLike={toggleLike} onFavorite={toggleFavorite}
+                    onShowLikers={(clipId, rect) => openLikers(clipId, rect)} />
+            )}
+
+            {likersPanel && (
+                <LikersPopover
+                    anchorRect={likersPanel.rect}
+                    data={likersCache[likersPanel.clipId]}
+                    onClose={() => setLikersPanel(null)}
+                />
             )}
         </div>
     );
