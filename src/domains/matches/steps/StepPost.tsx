@@ -404,7 +404,6 @@ export function StepPost({
     allVoted,
     eligibleVoters,
     onRefresh,
-    onFinalize,
     activeMatchPlayerId,
 
     // score
@@ -459,7 +458,6 @@ export function StepPost({
     /** Backend: não-convidados que ainda não votaram */
     eligibleVoters: PlayerInMatchDto[];
     onRefresh: () => void;
-    onFinalize: () => void;
     activeMatchPlayerId: string;
 
     scoreA: string;
@@ -709,9 +707,6 @@ export function StepPost({
                                 </button>
                             </div>
                         )}
-                        <button className="btn btn-primary" onClick={onFinalize}>
-                            Finalizar
-                        </button>
                     </div>
                 </div>
 

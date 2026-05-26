@@ -80,18 +80,6 @@ export function StepAccept({
                 />
             </div>
 
-            {admin && (
-                <div className="card p-4 flex justify-end">
-                    <button
-                        className={cls("btn btn-primary", (acceptedOverLimit || accepted.length < 2) && "opacity-50 pointer-events-none")}
-                        disabled={acceptedOverLimit || accepted.length < 2}
-                        onClick={onGoToMatchMaking}
-                        title="Avança para MatchMaking (times/cores/swap)"
-                    >
-                        Ir para MatchMaking
-                    </button>
-                </div>
-            )}
         </div>
     );
 }

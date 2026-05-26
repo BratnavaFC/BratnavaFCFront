@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Clock, Eye, MapPin, Users, X } from "lucide-react";
+import { ArrowRight, ChevronRight, Clock, Eye, Loader2, MapPin, Play, Plus, StopCircle, Users, X } from "lucide-react";
+import { cls } from "../matchUtils";
 import { Stepper, Step } from "../../../components/Stepper";
 import type { StepKey } from "../matchTypes";
 import { StepCreate } from "../steps/StepCreate";
@@ -9,6 +10,7 @@ import { StepPlaying } from "../steps/StepPlaying";
 import { StepEnded } from "../steps/StepEnded";
 import { StepPost } from "../steps/StepPost";
 import { StepDone } from "../steps/StepDone";
+import { LinkedPollWidget } from "../ui/LinkedPollWidget";
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
     create:  { label: "Criação",    color: "text-slate-600",   bg: "bg-slate-100"  },
@@ -78,6 +80,9 @@ export function MatchWizard({
     playingGoalProps,
     onFinalize,
     onReloadDone,
+    // linked poll
+    linkedPollId,
+    onPollIdChange,
     // god-mode preview
     realStepKey,
     onStepClick,
@@ -197,6 +202,17 @@ export function MatchWizard({
 
             <Stepper steps={steps as Step[]} activeKey={stepKey as StepKey} onStepClick={onStepClick} />
 
+            {/* Votação vinculada — visível em todas as etapas quando há partida ativa */}
+            {(current || admin) && stepKey !== "create" && (
+                <LinkedPollWidget
+                    groupId={current?.groupId ?? ""}
+                    matchId={current?.matchId ?? ""}
+                    linkedPollId={linkedPollId}
+                    admin={admin}
+                    onPollIdChange={onPollIdChange ?? (() => {})}
+                />
+            )}
+
             {/* Banner de pré-visualização (GodMode) */}
             {isPreview && (
                 <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
@@ -253,17 +269,16 @@ export function MatchWizard({
                 <StepPlaying
                     admin={admin}
                     onRefresh={onRefresh}
-                    onEnd={onEndMatch}
                     {...(playingGoalProps ?? {})}
                 />
             ) : null}
 
             {stepKey === "ended" ? (
-                <StepEnded admin={admin} onRefresh={onRefresh} onGoToPostGame={onGoToPostGame} />
+                <StepEnded admin={admin} onRefresh={onRefresh} />
             ) : null}
 
             {stepKey === "post" ? (
-                <StepPost {...postProps} admin={admin} onRefresh={onRefresh} onFinalize={onFinalize} />
+                <StepPost {...postProps} admin={admin} onRefresh={onRefresh} />
             ) : null}
 
             {stepKey === "done" ? (
@@ -275,6 +290,100 @@ export function MatchWizard({
                     onReload={onReloadDone}
                 />
             ) : null}
+
+            {/* ── Footer de ação padronizado ─────────────────────────────────
+                Todos os botões de "avançar para próxima etapa" ficam aqui,
+                sempre no mesmo lugar e com o mesmo estilo visual.
+            ─────────────────────────────────────────────────────────────────── */}
+            {admin && (
+                stepKey === "create"  ||
+                stepKey === "accept"  ||
+                stepKey === "teams"   ||
+                stepKey === "playing" ||
+                stepKey === "ended"   ||
+                stepKey === "post"
+            ) && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+
+                    {stepKey === "create" && (
+                        <button
+                            type="button"
+                            className={cls(
+                                "btn btn-primary flex items-center gap-2",
+                                !canCreateMatch && "opacity-50 cursor-not-allowed",
+                            )}
+                            disabled={!canCreateMatch}
+                            onClick={onCreateMatch}
+                        >
+                            {creating
+                                ? <><Loader2 size={15} className="animate-spin" /> Criando...</>
+                                : <><Plus size={15} /> Criar partida</>}
+                        </button>
+                    )}
+
+                    {stepKey === "accept" && (
+                        <button
+                            type="button"
+                            className={cls(
+                                "btn btn-primary flex items-center gap-2",
+                                (acceptedOverLimit || accepted.length < 2) && "opacity-50 cursor-not-allowed",
+                            )}
+                            disabled={acceptedOverLimit || accepted.length < 2}
+                            onClick={onGoToMatchMaking}
+                            title="Avança para MatchMaking (times/cores/swap)"
+                        >
+                            Ir para MatchMaking <ArrowRight size={15} />
+                        </button>
+                    )}
+
+                    {stepKey === "teams" && (
+                        <button
+                            type="button"
+                            className={cls(
+                                "btn btn-primary flex items-center gap-2",
+                                !teamsProps?.canStartNow && "opacity-50 cursor-not-allowed",
+                            )}
+                            disabled={!teamsProps?.canStartNow}
+                            onClick={teamsProps?.onStart}
+                            title={!teamsProps?.canStartNow ? "Defina os times antes de iniciar" : ""}
+                        >
+                            <Play size={15} /> Iniciar partida
+                        </button>
+                    )}
+
+                    {stepKey === "playing" && (
+                        <button
+                            type="button"
+                            className="btn flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white border-transparent"
+                            onClick={onEndMatch}
+                            title="Encerrar partida"
+                        >
+                            <StopCircle size={15} /> Encerrar partida
+                        </button>
+                    )}
+
+                    {stepKey === "ended" && (
+                        <button
+                            type="button"
+                            className="btn btn-primary flex items-center gap-2"
+                            onClick={onGoToPostGame}
+                        >
+                            Pós-jogo <ChevronRight size={15} />
+                        </button>
+                    )}
+
+                    {stepKey === "post" && (
+                        <button
+                            type="button"
+                            className="btn btn-primary flex items-center gap-2"
+                            onClick={onFinalize}
+                        >
+                            Finalizar <ChevronRight size={15} />
+                        </button>
+                    )}
+
+                </div>
+            )}
         </div>
     );
 }

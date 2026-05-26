@@ -25,6 +25,7 @@ import { MvpResultCard } from "../domains/matches/ui/MvpResultCard";
 import { ReplaySection } from "../domains/matches/ui/ReplaySection";
 import type { ReplayClipDto } from "../domains/matches/matchTypes";
 import { GoalTracker } from "../domains/matches/steps/GoalTracker";
+import { LinkedPollWidget } from "../domains/matches/ui/LinkedPollWidget";
 import CssText from "../components/CssText";
 import MaskedName from "../components/MaskedName";
 
@@ -552,6 +553,7 @@ export default function MatchDetailsPage() {
     const _icons = useGroupIcons(groupId);
 
     const [data, setData] = useState<any>(null);
+    const [linkedPollId, setLinkedPollId] = useState<string | null>(null);
     const [goalsTab, setGoalsTab] = useState<"gols" | "teamA" | "teamB" | "timeline">("gols");
     const [replays, setReplays] = useState<ReplayClipDto[]>([]);
 
@@ -571,7 +573,9 @@ export default function MatchDetailsPage() {
         if (!groupId || !matchId) return;
         try {
             const res = await MatchesApi.details(groupId, matchId);
-            setData(res.data.data as any);
+            const d = res.data.data as any;
+            setData(d);
+            setLinkedPollId(d?.linkedPollId ?? null);
         } catch (e) {
             toast.error(getResponseMessage(e, 'Falha ao recarregar partida.'));
         }
@@ -633,7 +637,9 @@ export default function MatchDetailsPage() {
             if (!groupId || !matchId) return;
             try {
                 const res = await MatchesApi.details(groupId, matchId);
-                setData(res.data.data as any);
+                const d = res.data.data as any;
+                setData(d);
+                setLinkedPollId(d?.linkedPollId ?? null);
             } catch (e) {
                 toast.error(getResponseMessage(e, "Falha ao carregar detalhes da partida."));
             }
@@ -932,6 +938,19 @@ export default function MatchDetailsPage() {
                     <div className="flex-1" style={{ backgroundColor: bColor }} />
                 </div>
             </div>
+
+            {/* ── Votação / Evento vinculado ────────────────────────── */}
+            {(linkedPollId || isAdmin) && groupId && matchId && (
+                <Section title="Votação vinculada">
+                    <LinkedPollWidget
+                        groupId={groupId}
+                        matchId={matchId}
+                        linkedPollId={linkedPollId}
+                        admin={isAdmin}
+                        onPollIdChange={setLinkedPollId}
+                    />
+                </Section>
+            )}
 
             {/* ── Simulação ─────────────────────────────────────────── */}
             <Section title="Simulação">

@@ -366,19 +366,6 @@ export function StepTeams({
                                 {">>"}
                             </button>
                         </div>
-                        <button
-                            disabled={!canStartNow}
-                            onClick={onStart}
-                            className={cls(
-                                "shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
-                                canStartNow
-                                    ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
-                                    : "bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
-                            )}
-                        >
-                            <Play size={12} />
-                            Iniciar
-                        </button>
                     </>
                 )}
             </div>

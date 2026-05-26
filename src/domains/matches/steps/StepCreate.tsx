@@ -111,18 +111,6 @@ export function StepCreate({
                 </div>
             </div>
 
-            <button
-                type="button"
-                className="btn btn-primary w-full flex items-center justify-center gap-2"
-                disabled={!canCreateMatch}
-                onClick={onCreate}
-            >
-                {creating
-                    ? <><Loader2 size={15} className="animate-spin" /> Criando...</>
-                    : <><Plus size={15} /> Criar partida</>
-                }
-            </button>
-
             {currentExistsInCreate && (
                 <div className="text-xs text-slate-400 dark:text-slate-500 text-center">
                     Existe uma partida em status <b>Created</b> (rascunho) carregada.

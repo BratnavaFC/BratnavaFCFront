@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw, StopCircle, Trophy, Zap } from "lucide-react";
+import { Loader2, RefreshCw, Trophy, Zap } from "lucide-react";
 import { useState } from "react";
 import type { GoalDto, PlayerInMatchDto } from "../matchTypes";
 import { GoalTracker } from "./GoalTracker";
@@ -6,7 +6,6 @@ import { GoalTracker } from "./GoalTracker";
 export function StepPlaying({
     admin,
     onRefresh,
-    onEnd,
     onPublishEvent,
     participants,
     goals,
@@ -21,7 +20,6 @@ export function StepPlaying({
 }: {
     admin: boolean;
     onRefresh: () => void;
-    onEnd: () => void;
     onPublishEvent?: (type: 'Gol' | 'Jogada') => Promise<void>;
     participants: PlayerInMatchDto[];
     goals: GoalDto[];
@@ -76,24 +74,13 @@ export function StepPlaying({
                         </div>
 
                         {admin ? (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={onRefresh}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
-                                >
-                                    <RefreshCw size={12} />
-                                    Recarregar
-                                </button>
-
-                                <button
-                                    className="btn flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-transparent"
-                                    onClick={onEnd}
-                                    title="Encerrar partida"
-                                >
-                                    <StopCircle size={14} />
-                                    Encerrar
-                                </button>
-                            </div>
+                            <button
+                                onClick={onRefresh}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+                            >
+                                <RefreshCw size={12} />
+                                Recarregar
+                            </button>
                         ) : null}
                     </div>
                 </div>

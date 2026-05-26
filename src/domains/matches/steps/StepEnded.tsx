@@ -1,13 +1,11 @@
-import { ChevronRight, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 export function StepEnded({
     admin,
     onRefresh,
-    onGoToPostGame,
 }: {
     admin: boolean;
     onRefresh: () => void;
-    onGoToPostGame: () => void;
 }) {
     return (
         <div className="card overflow-hidden p-0">
@@ -26,23 +24,13 @@ export function StepEnded({
                     </div>
 
                     {admin ? (
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={onRefresh}
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
-                            >
-                                <RefreshCw size={12} />
-                                Recarregar
-                            </button>
-
-                            <button
-                                className="btn btn-primary flex items-center gap-1.5"
-                                onClick={onGoToPostGame}
-                            >
-                                Pós-jogo
-                                <ChevronRight size={14} />
-                            </button>
-                        </div>
+                        <button
+                            onClick={onRefresh}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50"
+                        >
+                            <RefreshCw size={12} />
+                            Recarregar
+                        </button>
                     ) : null}
                 </div>
             </div>
