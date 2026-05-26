@@ -20,7 +20,7 @@ type Form = z.infer<typeof schema>;
 
 export default function RegisterPage(){
   const nav = useNavigate();
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm<Form>();
+  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<Form>();
   const [msg, setMsg] = useState<string | null>(null);
 
   const onSubmit = async (form: Form) => {
@@ -51,7 +51,15 @@ export default function RegisterPage(){
             <input className="input" {...register('lastName')} placeholder="Sobrenome" />
           </Field>
           <Field label="Email">
-            <input className="input" {...register('email')} placeholder="voce@email.com" />
+            <input
+              className="input"
+              placeholder="voce@email.com"
+              {...register('email', {
+                required: 'Email é obrigatório',
+                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email inválido' },
+              })}
+            />
+            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
           </Field>
           <Field label="Senha">
             <input className="input" type="password" {...register('password')} placeholder="••••••••" />

@@ -181,6 +181,12 @@ export default function LoginPage() {
                             Criar usuário
                         </Link>
                     </div>
+
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                        <Link className="underline" to="/recuperar-senha">
+                            Recuperar senha
+                        </Link>
+                    </div>
                 </form>
             </div>
         </div>

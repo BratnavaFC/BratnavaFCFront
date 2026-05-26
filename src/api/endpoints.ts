@@ -20,6 +20,10 @@ import type { LikedReplayClipDto, ReplayClipDto, ClipLikerDto, MatchHeaderDto } 
 export const AuthApi = {
   login: (dto: LoginDto) => http.post<ApiResponse<unknown>>('/api/Authentication/login', dto),
   refresh: (dto: RefreshTokenDto) => http.post<ApiResponse<unknown>>('/api/Authentication/refresh-token', dto),
+  forgotPassword: (dto: { email: string }) =>
+    http.post<ApiResponse<null>>('/api/Authentication/forgot-password', dto),
+  resetPassword: (dto: { email: string; code: string; newPassword: string }) =>
+    http.post<ApiResponse<null>>('/api/Authentication/reset-password', dto),
 };
 
 export const UsersApi = {

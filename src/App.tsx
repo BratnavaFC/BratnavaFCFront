@@ -8,6 +8,7 @@ import { useAccountStore } from './auth/accountStore';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import GroupsPage from './pages/GroupsPage';
 import GroupSettingsPage from './pages/GroupSettingsPage';
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/app" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
             <Route path="/public/clip/:clipId" element={<PublicClipPage />} />
             <Route path="/public/match/:matchId" element={<PublicMatchReplaysPage />} />
 
