@@ -166,6 +166,7 @@ export default function MatchesPage() {
                 canRewind: dto?.canRewind ?? dto?.CanRewind ?? false,
                 teamAGoals: dto?.teamAGoals ?? dto?.TeamAGoals ?? undefined,
                 teamBGoals: dto?.teamBGoals ?? dto?.TeamBGoals ?? undefined,
+                linkedPollId: dto?.linkedPollId ?? dto?.LinkedPollId ?? null,
             } as any;
 
             setCurrent((prev) => mergeCurrent(prev, patch));
@@ -274,12 +275,13 @@ export default function MatchesPage() {
         }
 
         if (step === "playing") {
-            // participants vêm do matchmaking; goals do details
+            // participants vêm do matchmaking; goals e linkedPollId do details
             await loadMatchMaking(matchId);
             const detailsRes = await MatchesApi.details(groupId!, matchId).catch(() => ({ data: null }));
             const dDto = (detailsRes as any)?.data?.data as any;
-            const goals = (dDto?.goals ?? dDto?.Goals ?? []) as any[];
-            setCurrent((prev) => mergeCurrent(prev, { goals } as any));
+            const goals        = (dDto?.goals ?? dDto?.Goals ?? []) as any[];
+            const linkedPollId = dDto?.linkedPollId ?? dDto?.LinkedPollId ?? null;
+            setCurrent((prev) => mergeCurrent(prev, { goals, linkedPollId } as any));
             return;
         }
 
@@ -1414,6 +1416,10 @@ export default function MatchesPage() {
                         onFinalize={finalizeMatch}
                         onReloadDone={loadUpcoming}
                         finalizing={finalizing as any}
+                        linkedPollId={current?.linkedPollId}
+                        onPollIdChange={(pollId: string | null) =>
+                            setCurrent((prev) => prev ? { ...prev, linkedPollId: pollId } : prev)
+                        }
                     />
                 </div>
             )}

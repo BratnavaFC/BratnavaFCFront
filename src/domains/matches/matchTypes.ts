@@ -90,6 +90,9 @@ export type MatchDetailsDto = {
     votes?: VoteDto[];
     voteCounts?: VoteCountDto[];
     goals?: GoalDto[];
+
+    /** Id da votação vinculada a esta partida. Null quando não há vínculo. */
+    linkedPollId?: string | null;
 };
 
 export type PlayerWeightDto = {
@@ -166,8 +169,9 @@ export type MatchHeaderDto = {
     statusName: string;
     stepKey:    StepKey;
     canRewind:  boolean;
-    teamAGoals: number | null;
-    teamBGoals: number | null;
+    teamAGoals:   number | null;
+    teamBGoals:   number | null;
+    linkedPollId: string | null;
 };
 
 export type ReplayClipDto = {

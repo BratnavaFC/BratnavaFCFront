@@ -158,6 +158,8 @@ export const MatchesApi = {
     http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-favorites`),
   deleteReplay: (groupId: string, clipId: string) =>
     http.delete(`/api/Matches/group/${groupId}/replays/${clipId}`),
+  setLinkedPoll: (groupId: string, matchId: string, pollId: string | null) =>
+    http.patch<ApiResponse<{ linkedPollId: string | null }>>(`/api/Matches/group/${groupId}/${matchId}/linked-poll`, { pollId }),
   uploadReplay: (groupId: string, matchId: string, file: File, eventType: "Gol" | "Jogada") => {
     const form = new FormData();
     form.append("file", file);
