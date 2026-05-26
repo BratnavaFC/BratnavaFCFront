@@ -6,10 +6,11 @@ import {
     CalendarPlus, Users, ChevronRight,
     Eye, EyeOff, RefreshCw,
     CheckSquare, Clock, DollarSign, CalendarDays,
-    MapPin, BarChart2, Link,
+    MapPin, BarChart2, Link, Link2, Calendar,
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
-import { PollsApi } from '../api/endpoints';
+import { PollsApi, MatchesApi } from '../api/endpoints';
+import type { MatchHeaderDto } from '../domains/matches/matchTypes';
 import { usePollStore } from '../stores/pollStore';
 import { extractApiError } from '../lib/apiError';
 import PollEventDetailModal from '../components/modals/PollEventDetailModal';
@@ -40,6 +41,7 @@ interface PollSummary {
     eventIcon?: string | null;
     costType?: string | null;
     costAmount?: number | null;
+    linkedMatchId?: string | null;
 }
 
 interface PollOption {
@@ -120,7 +122,7 @@ async function copyPollLink(pollId: string) {
 
 // ─── EventCard ────────────────────────────────────────────────────────────────
 
-function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: () => void; loadingId: string | null }) {
+function EventCard({ poll, onClick, loadingId, onLinkToMatch }: { poll: PollSummary; onClick: () => void; loadingId: string | null; onLinkToMatch?: () => void }) {
     const isOpen = poll.status === 'open';
     const isLoading = loadingId === poll.id;
     const isDisabled = !!loadingId;
@@ -160,6 +162,11 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                         {isOpen ? 'Aberto' : 'Encerrado'}
                     </span>
+                    {poll.linkedMatchId && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-700/50 flex items-center gap-0.5">
+                            <Link2 size={8} /> Vinculado à partida
+                        </span>
+                    )}
                 </div>
                 {poll.description && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{poll.description}</p>
@@ -183,7 +190,7 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
                 </div>
             </div>
 
-            {/* Right: responses + share + chevron */}
+            {/* Right: responses + share + link-to-match + unlink + chevron */}
             <div className="flex flex-col items-end justify-center gap-1 shrink-0">
                 <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                     <Users size={11} /> {poll.totalVoters} respostas
@@ -197,6 +204,18 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
                     >
                         <Link size={13} className="text-slate-400 dark:text-slate-500" />
                     </button>
+                    {onLinkToMatch && (
+                        <button
+                            type="button"
+                            title={poll.linkedMatchId ? "Alterar ou remover vínculo com partida" : "Vincular a uma partida"}
+                            onClick={(e) => { e.stopPropagation(); onLinkToMatch(); }}
+                            className={`opacity-0 group-hover:opacity-100 transition-opacity w-4 h-4 rounded-full shrink-0 ${
+                                poll.linkedMatchId
+                                    ? 'bg-indigo-500 hover:bg-indigo-600'
+                                    : 'border-2 border-slate-300 dark:border-slate-500 hover:border-indigo-400 dark:hover:border-indigo-400'
+                            }`}
+                        />
+                    )}
                     {isLoading
                         ? <Loader2 size={15} className="text-slate-400 animate-spin" />
                         : <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-400" />
@@ -209,7 +228,7 @@ function EventCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: (
 
 // ─── PollCard ─────────────────────────────────────────────────────────────────
 
-function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: () => void; loadingId: string | null }) {
+function PollCard({ poll, onClick, loadingId, onLinkToMatch }: { poll: PollSummary; onClick: () => void; loadingId: string | null; onLinkToMatch?: () => void }) {
     const isOpen = poll.status === 'open';
     const isLoading = loadingId === poll.id;
     const isDisabled = !!loadingId;
@@ -233,6 +252,11 @@ function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: ()
                             <Check size={8} strokeWidth={3} /> Votou
                         </span>
                     )}
+                    {poll.linkedMatchId && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-700/50 flex items-center gap-0.5">
+                            <Link2 size={8} /> Vinculada à partida
+                        </span>
+                    )}
                 </div>
                 {poll.description && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{poll.description}</p>
@@ -250,7 +274,7 @@ function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: ()
                 </div>
             </div>
 
-            {/* Share + chevron/loader */}
+            {/* Share + link-to-match + chevron/loader */}
             <div className="flex items-center gap-1 shrink-0">
                 <button
                     type="button"
@@ -260,10 +284,182 @@ function PollCard({ poll, onClick, loadingId }: { poll: PollSummary; onClick: ()
                 >
                     <Link size={13} className="text-slate-400 dark:text-slate-500" />
                 </button>
+                {onLinkToMatch && (
+                    <button
+                        type="button"
+                        title={poll.linkedMatchId ? "Alterar ou remover vínculo com partida" : "Vincular a uma partida"}
+                        onClick={(e) => { e.stopPropagation(); onLinkToMatch(); }}
+                        className={`opacity-0 group-hover:opacity-100 transition-opacity w-4 h-4 rounded-full shrink-0 ${
+                            poll.linkedMatchId
+                                ? 'bg-indigo-500 hover:bg-indigo-600'
+                                : 'border-2 border-slate-300 dark:border-slate-500 hover:border-indigo-400 dark:hover:border-indigo-400'
+                        }`}
+                    />
+                )}
                 {isLoading
                     ? <Loader2 size={15} className="text-slate-400 animate-spin" />
                     : <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-400" />
                 }
+            </div>
+        </div>
+    );
+}
+
+// ─── LinkMatchFromPollModal ───────────────────────────────────────────────────
+
+function LinkMatchFromPollModal({
+    groupId,
+    pollId,
+    currentMatchId,
+    onClose,
+    onLinked,
+}: {
+    groupId: string;
+    pollId: string;
+    currentMatchId?: string | null;
+    onClose: () => void;
+    onLinked: () => void;
+}) {
+    const [matches,  setMatches]  = useState<MatchHeaderDto[]>([]);
+    const [loading,  setLoading]  = useState(true);
+    const [acting,   setActing]   = useState<string | null>(null); // matchId being linked/unlinked
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [onClose]);
+
+    // stepKeys that mean "not yet started" — the only ones allowed for linking
+    const NOT_STARTED: string[] = ["create", "accept", "teams"];
+
+    const STATUS_LABEL: Record<string, string> = {
+        Created: 'Criação', Acceptation: 'Aceitação', MatchMaking: 'Times',
+        Started: 'Em Jogo', Ended: 'Encerrado', PostGame: 'Pós-jogo',
+    };
+
+    useEffect(() => {
+        MatchesApi.upcoming(groupId)
+            .then((res) => {
+                const all: MatchHeaderDto[] = (res.data as any)?.data ?? res.data ?? [];
+                // Only show matches that haven't started yet
+                setMatches(all.filter((m) => NOT_STARTED.includes(m.stepKey)));
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [groupId]);
+
+    async function handleLink(matchId: string) {
+        setActing(matchId);
+        try {
+            await MatchesApi.setLinkedPoll(groupId, matchId, pollId);
+            toast.success('Votação vinculada à partida!');
+            onLinked();
+        } catch {
+            toast.error('Erro ao vincular votação.');
+        } finally {
+            setActing(null);
+        }
+    }
+
+    async function handleUnlink(matchId: string) {
+        setActing(matchId);
+        try {
+            await MatchesApi.setLinkedPoll(groupId, matchId, null);
+            toast.success('Vínculo removido!');
+            onLinked();
+        } catch {
+            toast.error('Erro ao remover vínculo.');
+        } finally {
+            setActing(null);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+            <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                    <div className="flex items-center gap-2">
+                        <Link2 size={16} className="text-indigo-500" />
+                        <span className="font-semibold text-slate-900 dark:text-white">Vincular à partida</span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="overflow-y-auto flex-1 p-4">
+                    {loading ? (
+                        <div className="flex justify-center py-8">
+                            <Loader2 size={20} className="animate-spin text-slate-400" />
+                        </div>
+                    ) : matches.length === 0 ? (
+                        <div className="text-center py-8 text-sm text-slate-400">
+                            Nenhuma partida <strong>não iniciada</strong> no momento.<br />
+                            <span className="text-xs">Só é possível vincular a partidas em Criação, Aceitação ou Times.</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {matches.map((m) => {
+                                const isCurrent = m.matchId === currentMatchId;
+                                const isActing  = acting === m.matchId;
+                                const dateLabel = new Date(
+                                    m.playedAt.endsWith('Z') || m.playedAt.includes('+') ? m.playedAt : m.playedAt + 'Z'
+                                ).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+                                return (
+                                    <div
+                                        key={m.matchId}
+                                        className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition ${
+                                            isCurrent
+                                                ? 'border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'
+                                        }`}
+                                    >
+                                        <Calendar size={14} className={`shrink-0 ${isCurrent ? 'text-indigo-500' : 'text-slate-400'}`} />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{m.placeName}</p>
+                                            <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                                                <span>{dateLabel}</span>
+                                                <span>·</span>
+                                                <span className="font-medium text-indigo-500">
+                                                    {STATUS_LABEL[m.statusName] ?? m.statusName}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {isCurrent ? (
+                                            <button
+                                                onClick={() => handleUnlink(m.matchId)}
+                                                disabled={!!acting}
+                                                className="shrink-0 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 transition"
+                                            >
+                                                {isActing
+                                                    ? <Loader2 size={11} className="animate-spin" />
+                                                    : <X size={11} />}
+                                                Desvincular
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleLink(m.matchId)}
+                                                disabled={!!acting}
+                                                className="shrink-0 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 transition"
+                                            >
+                                                {isActing
+                                                    ? <Loader2 size={11} className="animate-spin" />
+                                                    : <Plus size={11} />}
+                                                Vincular
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -293,6 +489,7 @@ export default function PollsPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateEvent, setShowCreateEvent] = useState(false);
     const [activeTab, setActiveTab] = useState<'events' | 'polls'>('events');
+    const [linkingPollToMatch, setLinkingPollToMatch] = useState<PollSummary | null>(null);
 
     const eventPolls = polls.filter(p => p.type === 'event');
     const votePolls = polls.filter(p => p.type === 'poll' || !p.type);
@@ -496,8 +693,8 @@ export default function PollsPage() {
                             <div className="divide-y divide-slate-100">
                                 {tabPolls.filter(p => p.status === 'open').map(poll =>
                                     activeTab === 'events'
-                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
-                                        : <PollCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
+                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
+                                        : <PollCard  key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
                                 )}
                             </div>
                         </div>
@@ -518,13 +715,24 @@ export default function PollsPage() {
                             <div className="divide-y divide-slate-100">
                                 {tabPolls.filter(p => p.status === 'closed').map(poll =>
                                     activeTab === 'events'
-                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
-                                        : <PollCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} />
+                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
+                                        : <PollCard  key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
                                 )}
                             </div>
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* ── Link poll → match modal ── */}
+            {linkingPollToMatch && groupId && (
+                <LinkMatchFromPollModal
+                    groupId={groupId}
+                    pollId={linkingPollToMatch.id}
+                    currentMatchId={linkingPollToMatch.linkedMatchId}
+                    onClose={() => setLinkingPollToMatch(null)}
+                    onLinked={() => { setLinkingPollToMatch(null); load(); }}
+                />
             )}
 
             {/* ── Detail modals ── */}
