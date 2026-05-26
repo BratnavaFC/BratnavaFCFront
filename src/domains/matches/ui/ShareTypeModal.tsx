@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Globe, Lock, X } from "lucide-react";
 
 type Props = {
@@ -8,9 +9,15 @@ type Props = {
 };
 
 export function ShareTypeModal({ title = "Compartilhar link", onInternal, onExternal, onClose }: Props) {
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [onClose]);
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="relative w-full max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+            <div className="relative w-full max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6" onClick={(e) => e.stopPropagation()}>
                 <button
                     type="button"
                     onClick={onClose}

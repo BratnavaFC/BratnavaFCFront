@@ -31,6 +31,13 @@ export default function PaymentSelectModal({ open, groupId, onClose, onSaved }: 
     const [saving, setSaving]     = useState(false);
 
     useEffect(() => {
+        if (!open) return;
+        const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [open, onClose]);
+
+    useEffect(() => {
         if (!open || !groupId) return;
         setLoading(true);
         PaymentsApi.getMyPendingItems(groupId)
@@ -152,8 +159,8 @@ export default function PaymentSelectModal({ open, groupId, onClose, onSaved }: 
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60">
-            <div className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" onClick={onClose}>
+            <div className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">

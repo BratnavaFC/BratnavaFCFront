@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { MatchesApi } from "../../../api/endpoints";
@@ -165,6 +165,12 @@ export function UploadReplayModal({ groupId, matchId, onClose, onUploaded }: Pro
     const [entries,   setEntries]   = useState<FileEntry[]>([]);
     const [uploading, setUploading] = useState(false);
 
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [onClose]);
+
     const addFiles = useCallback((files: File[], eventType: EventType) => {
         const sorted = [...files].sort(naturalSort);
         setEntries((prev) => {
@@ -234,8 +240,8 @@ export function UploadReplayModal({ groupId, matchId, onClose, onUploaded }: Pro
     const allDone = entries.length > 0 && entries.every((e) => e.status === "done" || e.status === "error");
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+            <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
 
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">

@@ -1189,8 +1189,8 @@ export default function PaymentsPage() {
 
             {/* Modal: adicionar lançamento manual */}
             {addModal && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0" onClick={() => setAddModal(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <h2 className={cls('text-base font-black mb-4', addModal.type === 0 ? 'text-green-600' : 'text-red-500')}>
                             {addModal.type === 0 ? '+ Nova Entrada' : '- Nova Saída'}
                         </h2>

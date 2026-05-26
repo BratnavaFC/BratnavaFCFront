@@ -821,8 +821,8 @@ export default function GroupSettingsPage() {
 
             {/* ── Modal de confirmação ──────────────────────────── */}
             {confirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                    <div className="card p-6 w-full max-w-sm space-y-4 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]" onClick={() => setConfirm(null)}>
+                    <div className="card p-6 w-full max-w-sm space-y-4 shadow-2xl dark:shadow-none dark:ring-1 dark:ring-slate-700/50" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-3 text-rose-600">
                             <AlertTriangle size={22} />
                             <span className="font-semibold text-base">Confirmar remoção</span>

@@ -1191,8 +1191,8 @@ export default function GodModeAdminPage() {
 
             {/* ══ CONFIRM MODAL ══ */}
             {confirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm p-6 space-y-4 shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setConfirm(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm p-6 space-y-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-start gap-3">
                             <div className="h-9 w-9 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
                                 <AlertTriangle size={17} className="text-rose-600 dark:text-rose-400" />
@@ -1215,8 +1215,8 @@ export default function GodModeAdminPage() {
 
             {/* ══ NOTIFY MODAL ══ */}
             {notifyTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm shadow-2xl overflow-hidden">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setNotifyTarget(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700">
                             <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
                                 <Bell size={14} className="text-sky-500" />
@@ -1298,8 +1298,8 @@ function Modal({ title, children, loading, onSave, onClose }: {
     onSave: () => void; onClose: () => void;
 }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b dark:border-slate-700">
                     <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{title}</span>
                     <button onClick={onClose} className="h-8 w-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition">
