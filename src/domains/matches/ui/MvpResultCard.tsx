@@ -31,11 +31,13 @@ export function MvpResultCard({
     _icons: ReturnType<typeof useGroupIcons>;
 }) {
     const [reapplying, setReapplying] = useState(false);
-    const maxVotes   = voteCounts.length > 0 ? (voteCounts[0].count ?? 0) : 0;
-    const hasMvp     = !!mvpNames && mvpNames.length > 0;
-    const mvpIsTie   = hasMvp && mvpNames!.length > 1;          // múltiplos MVPs eleitos
-    const voteTie    = !hasMvp && voteCounts.length > 0 && maxVotes > 0; // empate → nenhum MVP
-    const tiedPlayers = voteTie ? voteCounts.filter(v => v.count === maxVotes) : [];
+    const maxVotes    = voteCounts.length > 0 ? (voteCounts[0].count ?? 0) : 0;
+    const topPlayers  = voteCounts.filter(v => v.count === maxVotes);
+    const hasMvp      = !!mvpNames && mvpNames.length > 0;
+    const mvpIsTie    = hasMvp && mvpNames!.length > 1;           // múltiplos MVPs eleitos
+    const voteTie     = !hasMvp && topPlayers.length > 1 && maxVotes > 0; // empate real → nenhum MVP
+    const voteLeading = !hasMvp && topPlayers.length === 1 && maxVotes > 0; // líder provisório
+    const tiedPlayers = voteTie ? topPlayers : [];
     const mvpNamesSet = new Set(mvpNames ?? []);
 
     return (
@@ -126,6 +128,28 @@ export function MvpResultCard({
                     </div>
                 </div>
 
+            ) : voteLeading ? (
+                /* Líder provisório — votação ainda em andamento */
+                <div className="rounded-xl border border-amber-200/60 dark:border-amber-700/30 bg-amber-50/60 dark:bg-amber-950/15 px-4 py-4">
+                    <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-amber-100/70 dark:bg-amber-900/30 border border-amber-200/70 dark:border-amber-700/40 shrink-0">
+                            <IconRenderer value={resolveIcon(_icons, "mvp")} size={18}
+                                lucideProps={{ className: "text-amber-400/70 dark:text-amber-500/70" }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-600/70 dark:text-amber-400/70 mb-1">
+                                Liderando a votação
+                            </div>
+                            <div className="font-bold text-slate-700 dark:text-slate-200 text-lg leading-snug">
+                                {topPlayers[0].votedForName}
+                            </div>
+                            <div className="text-xs text-amber-700/60 dark:text-amber-400/50 mt-0.5">
+                                MVP confirmado quando todos votarem
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             ) : (
                 /* Sem votos ainda */
                 <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-8 text-center">
@@ -143,22 +167,31 @@ export function MvpResultCard({
                     </div>
                     <div className="space-y-2.5">
                         {voteCounts.map((vc) => {
-                            const pct      = maxVotes > 0 ? (vc.count / maxVotes) * 100 : 0;
-                            const isWinner = hasMvp && mvpNamesSet.has(vc.votedForName);
-                            const isTied   = voteTie && tiedPlayers.some(t => t.votedForMatchPlayerId === vc.votedForMatchPlayerId);
+                            const pct       = maxVotes > 0 ? (vc.count / maxVotes) * 100 : 0;
+                            const isWinner  = hasMvp && mvpNamesSet.has(vc.votedForName);
+                            const isTied    = voteTie && tiedPlayers.some(t => t.votedForMatchPlayerId === vc.votedForMatchPlayerId);
+                            const isLeading = voteLeading && vc.votedForMatchPlayerId === topPlayers[0]?.votedForMatchPlayerId;
                             return (
                                 <div key={vc.votedForMatchPlayerId} className="flex items-center gap-3">
                                     <div className="w-28 sm:w-36 text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5 shrink-0">
-                                        {(isWinner || isTied) && (
+                                        {(isWinner || isTied || isLeading) && (
                                             <IconRenderer value={resolveIcon(_icons, "mvp")} size={11}
-                                                lucideProps={{ className: cls(isWinner ? "text-amber-400" : "text-orange-400", "shrink-0") }} />
+                                                lucideProps={{ className: cls(
+                                                    isWinner  ? "text-amber-400" :
+                                                    isLeading ? "text-amber-300 dark:text-amber-500" :
+                                                                "text-orange-400",
+                                                    "shrink-0"
+                                                )}} />
                                         )}
                                         {vc.votedForName}
                                     </div>
                                     <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                                         <div className={cls(
                                             "h-full rounded-full transition-all",
-                                            isWinner ? "bg-amber-400" : isTied ? "bg-orange-300 dark:bg-orange-500" : "bg-slate-300 dark:bg-slate-600"
+                                            isWinner  ? "bg-amber-400" :
+                                            isLeading ? "bg-amber-300 dark:bg-amber-500/70" :
+                                            isTied    ? "bg-orange-300 dark:bg-orange-500" :
+                                                        "bg-slate-300 dark:bg-slate-600"
                                         )} style={{ width: `${pct}%` }} />
                                     </div>
                                     <div className="text-sm font-bold text-slate-700 dark:text-slate-300 tabular-nums w-5 text-right shrink-0">

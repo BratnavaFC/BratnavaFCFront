@@ -918,14 +918,19 @@ export default function MatchDetailsPage() {
                             </div>
                         );
                     })() : voteCounts.length > 0 && (() => {
-                        const maxV   = voteCounts[0]?.count ?? 0;
-                        const tied   = voteCounts.filter((v: any) => v.count === maxV);
-                        const names  = tied.map((v: any) => v.votedForName).join(" & ");
+                        const maxV      = voteCounts[0]?.count ?? 0;
+                        const top       = voteCounts.filter((v: any) => v.count === maxV);
+                        const names     = top.map((v: any) => v.votedForName).join(" & ");
+                        const isRealTie = top.length > 1;
                         return (
-                            <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-orange-400/10 border border-orange-400/20 px-4 py-2.5">
-                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: "text-orange-400 shrink-0" }} />
-                                <span className="text-sm font-semibold text-orange-300">
-                                    Empate — sem MVP: {names}
+                            <div className={`mt-5 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 border ${
+                                isRealTie
+                                    ? "bg-orange-400/10 border-orange-400/20"
+                                    : "bg-amber-400/10 border-amber-400/20"
+                            }`}>
+                                <IconRenderer value={resolveIcon(_icons, 'mvp')} size={15} lucideProps={{ className: `shrink-0 ${isRealTie ? "text-orange-400" : "text-amber-400/70"}` }} />
+                                <span className={`text-sm font-semibold ${isRealTie ? "text-orange-300" : "text-amber-300/80"}`}>
+                                    {isRealTie ? `Empate — sem MVP: ${names}` : `Liderando: ${names}`}
                                 </span>
                             </div>
                         );
