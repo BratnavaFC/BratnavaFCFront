@@ -173,10 +173,10 @@ export const useAccountStore = create<AccountState>()(
             logout: () => get().logoutActive(),
         }),
         {
-            name: "bratnava.accounts.v3",
-            // sessionStorage: tokens ficam apenas na aba atual e são
-            // descartados ao fechar o browser, reduzindo exposição via XSS.
-            storage: createJSONStorage(() => sessionStorage),
+            name: "bratnava.accounts.v4",
+            // localStorage: persiste entre abas e sessões do browser.
+            // O refreshToken garante expiração controlada pelo backend.
+            storage: createJSONStorage(() => localStorage),
         }
     )
 );
