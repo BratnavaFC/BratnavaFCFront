@@ -1164,7 +1164,8 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
 // ── Tab: Histórico ────────────────────────────────────────────────────────────
 
 function HistoryTab({ groupId }: { groupId: string }) {
-    const _icons = useGroupIcons(groupId);
+    const _icons  = useGroupIcons(groupId);
+    const admin   = isGroupAdmin(groupId);
     const [history,       setHistory]       = useState<MatchBetHistoryDto[]>([]);
     const [leaderboard,   setLeaderboard]   = useState<BetLeaderboardEntryDto[]>([]);
     const [loading,       setLoading]       = useState(true);
@@ -1312,7 +1313,11 @@ function HistoryTab({ groupId }: { groupId: string }) {
 
                                                     {expandable && isUserOpen && (
                                                         <div className="bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-700/50 divide-y divide-slate-100 dark:divide-slate-700/30">
-                                                            {userBet.selections.map((sel) => (
+                                                            {userBet.selections.map((sel) => {
+                                                                // Admin vê nome do jogador nas seleções;
+                                                                // usuários comuns veem apenas o valor (gols, assistências)
+                                                                const selPlayerName = admin ? sel.playerName : null;
+                                                                return (
                                                                 <div key={sel.id} className="flex items-start gap-3 px-5 py-2.5">
                                                                     <div className="mt-0.5 w-4 flex justify-center shrink-0">
                                                                         {resultIcon(sel.isCorrect, sel.isPartialCredit)}
@@ -1324,13 +1329,13 @@ function HistoryTab({ groupId }: { groupId: string }) {
                                                                         <p className="text-xs text-slate-400 mt-0.5">
                                                                             Previsto:{" "}
                                                                             <span className="font-medium text-slate-600 dark:text-slate-300">
-                                                                                {formatValue(sel.category, sel.predictedValue, sel.playerName)}
+                                                                                {formatValue(sel.category, sel.predictedValue, selPlayerName)}
                                                                             </span>
                                                                             {sel.actualValue && (
                                                                                 <>
                                                                                     {" "}· Real:{" "}
                                                                                     <span className="font-medium text-slate-600 dark:text-slate-300">
-                                                                                        {formatValue(sel.category, sel.actualValue, sel.playerName)}
+                                                                                        {formatValue(sel.category, sel.actualValue, selPlayerName)}
                                                                                     </span>
                                                                                 </>
                                                                             )}
@@ -1345,7 +1350,8 @@ function HistoryTab({ groupId }: { groupId: string }) {
                                                                         </p>
                                                                     </div>
                                                                 </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                             {/* Bônus de participação */}
                                                             <div className="flex items-center justify-between px-5 py-2 bg-white/50 dark:bg-slate-900/20">
                                                                 <span className="text-xs text-slate-400">Bônus de participação</span>
