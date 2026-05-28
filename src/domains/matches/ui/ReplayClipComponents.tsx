@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Loader2, Play, Trash2, X } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Loader2, Maximize2, Minimize2, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { ReplayClipDto, ClipLikerDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
@@ -374,8 +374,15 @@ export function Lightbox({
     const canNext   = index < clips.length - 1;
     const state     = clipStates[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false };
     const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
-    const touchStartX = useRef<number>(0);
-    const videoRef    = useRef<HTMLVideoElement>(null);
+    const touchStartX    = useRef<number>(0);
+    const videoRef       = useRef<HTMLVideoElement>(null);
+    const containerRef   = useRef<HTMLDivElement>(null);
+    const videoWrapperRef= useRef<HTMLDivElement>(null);
+    // Pinch-to-zoom: use refs to avoid re-renders on every touchmove
+    const zoomRef        = useRef(1);
+    const panRef         = useRef({ x: 0, y: 0 });
+    const [zoom, setZoom]= useState(1); // drives conditional rendering
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -404,24 +411,130 @@ export function Lightbox({
         video.play().catch(() => {});
     }, [clip.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    function toggleFullscreen() {
+        const el    = containerRef.current;
+        const video = videoRef.current;
+        if (!el || !video) return;
+        // Exit fullscreen
+        if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
+            (document.exitFullscreen ?? (document as any).webkitExitFullscreen)?.call(document);
+            return;
+        }
+        // Enter fullscreen — try container first (works on Android/desktop),
+        // then fall back to video.webkitEnterFullscreen (iOS Safari)
+        if (el.requestFullscreen) {
+            el.requestFullscreen().catch(() => (video as any).webkitEnterFullscreen?.());
+        } else if ((el as any).webkitRequestFullscreen) {
+            (el as any).webkitRequestFullscreen();
+        } else {
+            (video as any).webkitEnterFullscreen?.();
+        }
+    }
+
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
             if (e.key === "ArrowLeft"  && canPrev) onPrev();
             if (e.key === "ArrowRight" && canNext) onNext();
-            if (e.key === "f" || e.key === "F") {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen().catch(() => {});
-                } else if (videoRef.current) {
-                    videoRef.current.requestFullscreen().catch(() => {});
-                }
-            }
+            if (e.key === "f" || e.key === "F") toggleFullscreen();
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [onClose, onPrev, onNext, canPrev, canNext]);
+    }, [onClose, onPrev, onNext, canPrev, canNext]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { setConfirmDelete(false); }, [clip.id]);
+
+    // Reset zoom when navigating to another clip
+    useEffect(() => {
+        zoomRef.current    = 1;
+        panRef.current     = { x: 0, y: 0 };
+        setZoom(1);
+        if (videoRef.current) videoRef.current.style.transform = "";
+    }, [clip.id]);
+
+    // Pinch-to-zoom with passive:false (required for preventDefault to work)
+    useEffect(() => {
+        const wrapper = videoWrapperRef.current;
+        if (!wrapper) return;
+        let pinchStartDist = 0;
+        let pinchStartZoom = 1;
+        let panStartX = 0, panStartY = 0;
+
+        function getDist(t: TouchList) {
+            return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+        }
+        function applyTransform() {
+            const v = videoRef.current;
+            if (!v) return;
+            const z = zoomRef.current;
+            const { x, y } = panRef.current;
+            v.style.transformOrigin = "center center";
+            v.style.transform = z === 1 ? "" : `scale(${z}) translate(${x / z}px, ${y / z}px)`;
+        }
+        function onStart(e: TouchEvent) {
+            if (e.touches.length === 2) {
+                pinchStartDist = getDist(e.touches);
+                pinchStartZoom = zoomRef.current;
+                e.preventDefault();
+            } else if (e.touches.length === 1 && zoomRef.current > 1) {
+                panStartX = e.touches[0].clientX - panRef.current.x;
+                panStartY = e.touches[0].clientY - panRef.current.y;
+                e.preventDefault();
+            }
+        }
+        function onMove(e: TouchEvent) {
+            if (e.touches.length === 2) {
+                const newZoom = Math.max(1, Math.min(4, pinchStartZoom * (getDist(e.touches) / pinchStartDist)));
+                zoomRef.current = newZoom;
+                applyTransform();
+                setZoom(newZoom);
+                e.preventDefault();
+            } else if (e.touches.length === 1 && zoomRef.current > 1) {
+                panRef.current = { x: e.touches[0].clientX - panStartX, y: e.touches[0].clientY - panStartY };
+                applyTransform();
+                e.preventDefault();
+            }
+        }
+        function onEnd() {
+            if (zoomRef.current < 1.05) {
+                zoomRef.current = 1;
+                panRef.current  = { x: 0, y: 0 };
+                setZoom(1);
+                if (videoRef.current) videoRef.current.style.transform = "";
+            }
+        }
+        wrapper.addEventListener("touchstart", onStart, { passive: false });
+        wrapper.addEventListener("touchmove",  onMove,  { passive: false });
+        wrapper.addEventListener("touchend",   onEnd);
+        return () => {
+            wrapper.removeEventListener("touchstart", onStart);
+            wrapper.removeEventListener("touchmove",  onMove);
+            wrapper.removeEventListener("touchend",   onEnd);
+        };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Track fullscreen changes (Android/desktop + iOS webkitEnterFullscreen)
+    useEffect(() => {
+        function onFsChange() {
+            setIsFullscreen(!!(
+                document.fullscreenElement ||
+                (document as any).webkitFullscreenElement
+            ));
+        }
+        function onVideoFsBegin() { setIsFullscreen(true); }
+        function onVideoFsEnd()   { setIsFullscreen(false); }
+
+        document.addEventListener("fullscreenchange",        onFsChange);
+        document.addEventListener("webkitfullscreenchange",  onFsChange);
+        videoRef.current?.addEventListener("webkitbeginsFullscreen", onVideoFsBegin);
+        videoRef.current?.addEventListener("webkitendsFullscreen",   onVideoFsEnd);
+        return () => {
+            document.removeEventListener("fullscreenchange",       onFsChange);
+            document.removeEventListener("webkitfullscreenchange", onFsChange);
+            videoRef.current?.removeEventListener("webkitbeginsFullscreen", onVideoFsBegin); // eslint-disable-line react-hooks/exhaustive-deps
+            videoRef.current?.removeEventListener("webkitendsFullscreen",   onVideoFsEnd);   // eslint-disable-line react-hooks/exhaustive-deps
+        };
+    }, []);
 
     useEffect(() => {
         document.body.style.overflow = "hidden";
@@ -430,6 +543,7 @@ export function Lightbox({
 
     return (
         <div
+            ref={containerRef}
             className="fixed inset-0 z-50 overflow-y-auto"
             style={{ background: "rgba(0,0,0,0.93)", backdropFilter: "blur(10px)" }}
             onClick={onClose}
@@ -438,9 +552,15 @@ export function Lightbox({
             <div
                 className="relative w-full max-w-5xl"
                 onClick={(e) => e.stopPropagation()}
-                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                onTouchStart={(e) => {
+                    // Ignore multi-touch (pinch) — handled by videoWrapperRef listener
+                    if (e.touches.length !== 1 || zoom > 1) return;
+                    touchStartX.current = e.touches[0].clientX;
+                }}
                 onTouchEnd={(e) => {
+                    if (e.changedTouches.length !== 1 || zoom > 1) return;
                     const dx = e.changedTouches[0].clientX - touchStartX.current;
+                    if (Math.abs(dx) < 10) return;
                     if (dx > 50 && canPrev) onPrev();
                     if (dx < -50 && canNext) onNext();
                 }}
@@ -458,25 +578,48 @@ export function Lightbox({
                         <span className="text-sm text-white/50 tabular-nums truncate">{formatTime(clip.recordedAt)}</span>
                         <span className="text-xs text-white/25 font-mono shrink-0">{index + 1}&thinsp;/&thinsp;{clips.length}</span>
                     </div>
-                    <button type="button" onClick={onClose} title="Fechar (ESC)"
-                        className="flex items-center justify-center rounded-lg text-white/40 hover:text-white active:scale-95 transition-all shrink-0"
-                        style={{ width: 32, height: 32, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                        <X size={15} />
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button type="button" onClick={toggleFullscreen}
+                            title={isFullscreen ? "Sair da tela cheia (F)" : "Tela cheia (F)"}
+                            className="flex items-center justify-center rounded-lg text-white/40 hover:text-white active:scale-95 transition-all"
+                            style={{ width: 32, height: 32, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                        </button>
+                        <button type="button" onClick={onClose} title="Fechar (ESC)"
+                            className="flex items-center justify-center rounded-lg text-white/40 hover:text-white active:scale-95 transition-all"
+                            style={{ width: 32, height: 32, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            <X size={15} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Video player — sem key para que o elemento persista entre clips e o fullscreen seja mantido */}
-                <video
-                    ref={videoRef}
-                    src={streamUrl}
-                    className="w-full rounded-2xl bg-black shadow-2xl"
-                    style={{ maxHeight: "min(calc(100svh - 260px), calc(100vh - 260px))" }}
-                    controls
-                    autoPlay
-                    playsInline
-                    onLoadedMetadata={() => { if (videoRef.current) videoRef.current.playbackRate = speed; }}
-                    onEnded={canNext ? onNext : undefined}
-                />
+                {/* videoWrapperRef: recebe os eventos de pinch-to-zoom com passive:false */}
+                <div ref={videoWrapperRef} className="relative overflow-hidden rounded-2xl shadow-2xl bg-black">
+                    <video
+                        ref={videoRef}
+                        src={streamUrl}
+                        className="w-full bg-black block"
+                        style={{
+                            maxHeight: isFullscreen
+                                ? "100dvh"
+                                : "min(calc(100svh - 260px), calc(100vh - 260px))",
+                            transformOrigin: "center center",
+                        }}
+                        controls
+                        autoPlay
+                        playsInline
+                        onLoadedMetadata={() => { if (videoRef.current) videoRef.current.playbackRate = speed; }}
+                        onEnded={canNext ? onNext : undefined}
+                    />
+                    {/* Zoom indicator */}
+                    {zoom > 1.05 && (
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 pointer-events-none"
+                            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999, letterSpacing: "0.03em" }}>
+                            {zoom.toFixed(1)}×
+                        </div>
+                    )}
+                </div>
 
                 {/* Speed controls + ações desktop */}
                 <div className="flex items-center justify-between flex-wrap mt-3 px-1 gap-x-2 gap-y-2">
