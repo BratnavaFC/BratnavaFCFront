@@ -578,16 +578,18 @@ export function Lightbox({
                         <span className="text-sm text-white/50 tabular-nums truncate">{formatTime(clip.recordedAt)}</span>
                         <span className="text-xs text-white/25 font-mono shrink-0">{index + 1}&thinsp;/&thinsp;{clips.length}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* Botão tela cheia — visível e com label no mobile */}
                         <button type="button" onClick={toggleFullscreen}
                             title={isFullscreen ? "Sair da tela cheia (F)" : "Tela cheia (F)"}
-                            className="flex items-center justify-center rounded-lg text-white/40 hover:text-white active:scale-95 transition-all"
-                            style={{ width: 32, height: 32, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            className="flex items-center gap-1.5 rounded-lg text-white font-medium active:scale-95 transition-all"
+                            style={{ padding: "6px 10px", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)" }}>
                             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                            <span className="text-xs hidden sm:inline">{isFullscreen ? "Minimizar" : "Tela cheia"}</span>
                         </button>
                         <button type="button" onClick={onClose} title="Fechar (ESC)"
-                            className="flex items-center justify-center rounded-lg text-white/40 hover:text-white active:scale-95 transition-all"
-                            style={{ width: 32, height: 32, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            className="flex items-center justify-center rounded-lg text-white/60 hover:text-white active:scale-95 transition-all"
+                            style={{ width: 32, height: 32, background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.20)" }}>
                             <X size={15} />
                         </button>
                     </div>
