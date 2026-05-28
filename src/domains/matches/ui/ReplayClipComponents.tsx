@@ -411,12 +411,24 @@ export function Lightbox({
         video.play().catch(() => {});
     }, [clip.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // "Fullscreen" CSS — expande o vídeo dentro do lightbox sem usar a API nativa.
-    // A API nativa (webkitEnterFullscreen no iOS) remove o vídeo do DOM e desativa
-    // nossos handlers de pinch-to-zoom. O lightbox já é fixed inset-0, então
-    // apenas alternamos isFullscreen para mudar o maxHeight do vídeo.
     function toggleFullscreen() {
-        setIsFullscreen(v => !v);
+        const el    = containerRef.current;
+        const video = videoRef.current;
+        if (!el || !video) return;
+        // Exit fullscreen
+        if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
+            (document.exitFullscreen ?? (document as any).webkitExitFullscreen)?.call(document);
+            return;
+        }
+        // Enter fullscreen — try container first (works on Android/desktop),
+        // then fall back to video.webkitEnterFullscreen (iOS Safari)
+        if (el.requestFullscreen) {
+            el.requestFullscreen().catch(() => (video as any).webkitEnterFullscreen?.());
+        } else if ((el as any).webkitRequestFullscreen) {
+            (el as any).webkitRequestFullscreen();
+        } else {
+            (video as any).webkitEnterFullscreen?.();
+        }
     }
 
     useEffect(() => {
@@ -444,28 +456,25 @@ export function Lightbox({
     useEffect(() => {
         const wrapper = videoWrapperRef.current;
         if (!wrapper) return;
-
-        let prevPinchDist = 0;
+        let pinchStartDist = 0;
+        let pinchStartZoom = 1;
         let panStartX = 0, panStartY = 0;
 
         function getDist(t: TouchList) {
             return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
         }
-
-        // transformOrigin: "0 0" + translate(tx,ty) scale(z)
-        // → screen pos of element point (lx,ly) from TL = (elLeft + z*lx + tx, elTop + z*ly + ty)
         function applyTransform() {
             const v = videoRef.current;
             if (!v) return;
             const z = zoomRef.current;
             const { x, y } = panRef.current;
-            v.style.transformOrigin = "0 0";
-            v.style.transform = z <= 1 ? "" : `translate(${x}px, ${y}px) scale(${z})`;
+            v.style.transformOrigin = "center center";
+            v.style.transform = z === 1 ? "" : `scale(${z}) translate(${x / z}px, ${y / z}px)`;
         }
-
         function onStart(e: TouchEvent) {
             if (e.touches.length === 2) {
-                prevPinchDist = getDist(e.touches);
+                pinchStartDist = getDist(e.touches);
+                pinchStartZoom = zoomRef.current;
                 e.preventDefault();
             } else if (e.touches.length === 1 && zoomRef.current > 1) {
                 panStartX = e.touches[0].clientX - panRef.current.x;
@@ -473,29 +482,9 @@ export function Lightbox({
                 e.preventDefault();
             }
         }
-
         function onMove(e: TouchEvent) {
             if (e.touches.length === 2) {
-                const currDist = getDist(e.touches);
-                if (prevPinchDist === 0) { prevPinchDist = currDist; }
-                const dz = currDist / prevPinchDist;
-                prevPinchDist = currDist;
-
-                // Ponto médio dos dedos na tela
-                const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                const rect = (wrapper as HTMLDivElement).getBoundingClientRect();
-
-                const newZoom = Math.max(1, Math.min(4, zoomRef.current * dz));
-                // fator real aplicado (pode diferir de dz por causa do clamp)
-                const actualDz = newZoom / zoomRef.current;
-
-                // Fórmula incremental: para o ponto sob os dedos (mx, my) ficar fixo:
-                //   tx_new = actualDz * tx_old + (1 - actualDz) * (mx - elLeft)
-                panRef.current = {
-                    x: actualDz * panRef.current.x + (1 - actualDz) * (mx - rect.left),
-                    y: actualDz * panRef.current.y + (1 - actualDz) * (my - rect.top),
-                };
+                const newZoom = Math.max(1, Math.min(4, pinchStartZoom * (getDist(e.touches) / pinchStartDist)));
                 zoomRef.current = newZoom;
                 applyTransform();
                 setZoom(newZoom);
@@ -506,9 +495,7 @@ export function Lightbox({
                 e.preventDefault();
             }
         }
-
         function onEnd() {
-            prevPinchDist = 0;
             if (zoomRef.current < 1.05) {
                 zoomRef.current = 1;
                 panRef.current  = { x: 0, y: 0 };
@@ -516,7 +503,6 @@ export function Lightbox({
                 if (videoRef.current) videoRef.current.style.transform = "";
             }
         }
-
         wrapper.addEventListener("touchstart", onStart, { passive: false });
         wrapper.addEventListener("touchmove",  onMove,  { passive: false });
         wrapper.addEventListener("touchend",   onEnd);
@@ -527,7 +513,28 @@ export function Lightbox({
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // isFullscreen agora é puramente CSS (toggle via botão) — sem API nativa.
+    // Track fullscreen changes (Android/desktop + iOS webkitEnterFullscreen)
+    useEffect(() => {
+        function onFsChange() {
+            setIsFullscreen(!!(
+                document.fullscreenElement ||
+                (document as any).webkitFullscreenElement
+            ));
+        }
+        function onVideoFsBegin() { setIsFullscreen(true); }
+        function onVideoFsEnd()   { setIsFullscreen(false); }
+
+        document.addEventListener("fullscreenchange",        onFsChange);
+        document.addEventListener("webkitfullscreenchange",  onFsChange);
+        videoRef.current?.addEventListener("webkitbeginsFullscreen", onVideoFsBegin);
+        videoRef.current?.addEventListener("webkitendsFullscreen",   onVideoFsEnd);
+        return () => {
+            document.removeEventListener("fullscreenchange",       onFsChange);
+            document.removeEventListener("webkitfullscreenchange", onFsChange);
+            videoRef.current?.removeEventListener("webkitbeginsFullscreen", onVideoFsBegin); // eslint-disable-line react-hooks/exhaustive-deps
+            videoRef.current?.removeEventListener("webkitendsFullscreen",   onVideoFsEnd);   // eslint-disable-line react-hooks/exhaustive-deps
+        };
+    }, []);
 
     useEffect(() => {
         document.body.style.overflow = "hidden";
@@ -536,6 +543,7 @@ export function Lightbox({
 
     return (
         <div
+            ref={containerRef}
             className="fixed inset-0 z-50 overflow-y-auto"
             style={{ background: "rgba(0,0,0,0.93)", backdropFilter: "blur(10px)" }}
             onClick={onClose}
@@ -598,9 +606,7 @@ export function Lightbox({
                             maxHeight: isFullscreen
                                 ? "100dvh"
                                 : "min(calc(100svh - 260px), calc(100vh - 260px))",
-                            // "0 0" aqui evita que o React limpe o valor para "" a cada re-render
-                            // (o handler de pinch também define "0 0" — valores consistentes)
-                            transformOrigin: "0 0",
+                            transformOrigin: "center center",
                         }}
                         controls
                         autoPlay
