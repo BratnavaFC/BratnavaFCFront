@@ -457,40 +457,27 @@ export function Lightbox({
         const wrapper = videoWrapperRef.current;
         if (!wrapper) return;
 
-        let pinchStartDist = 0;
-        let pinchStartZoom = 1;
-        let pinchStartPanX = 0, pinchStartPanY = 0;
-        // Centro do pinch e do wrapper no início do gesto (coordenadas de tela)
-        let pinchCx = 0, pinchCy = 0;
-        let wrapperCx = 0, wrapperCy = 0;
-        // Para o pan com 1 dedo
+        let prevPinchDist = 0;
         let panStartX = 0, panStartY = 0;
 
         function getDist(t: TouchList) {
             return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
         }
+
+        // transformOrigin: "0 0" + translate(tx,ty) scale(z)
+        // → screen pos of element point (lx,ly) from TL = (elLeft + z*lx + tx, elTop + z*ly + ty)
         function applyTransform() {
             const v = videoRef.current;
             if (!v) return;
             const z = zoomRef.current;
             const { x, y } = panRef.current;
-            // scale com transformOrigin center; translate compensa a origem
-            v.style.transformOrigin = "center center";
-            v.style.transform = z === 1 ? "" : `scale(${z}) translate(${x / z}px, ${y / z}px)`;
+            v.style.transformOrigin = "0 0";
+            v.style.transform = z <= 1 ? "" : `translate(${x}px, ${y}px) scale(${z})`;
         }
+
         function onStart(e: TouchEvent) {
             if (e.touches.length === 2) {
-                const rect = (wrapper as HTMLDivElement).getBoundingClientRect();
-                pinchStartDist = getDist(e.touches);
-                pinchStartZoom = zoomRef.current;
-                pinchStartPanX = panRef.current.x;
-                pinchStartPanY = panRef.current.y;
-                // Ponto médio entre os dois dedos (tela)
-                pinchCx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                pinchCy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                // Centro do wrapper na tela
-                wrapperCx = rect.left + rect.width  / 2;
-                wrapperCy = rect.top  + rect.height / 2;
+                prevPinchDist = getDist(e.touches);
                 e.preventDefault();
             } else if (e.touches.length === 1 && zoomRef.current > 1) {
                 panStartX = e.touches[0].clientX - panRef.current.x;
@@ -498,16 +485,28 @@ export function Lightbox({
                 e.preventDefault();
             }
         }
+
         function onMove(e: TouchEvent) {
             if (e.touches.length === 2) {
-                const newZoom = Math.max(1, Math.min(4, pinchStartZoom * (getDist(e.touches) / pinchStartDist)));
-                // Mantém o ponto do pinch fixo na tela ajustando o pan:
-                // ratio = newZoom / pinchStartZoom
-                // newPan = (pinchCenter - wrapperCenter) * (1 - ratio) + startPan * ratio
-                const ratio = newZoom / pinchStartZoom;
+                const currDist = getDist(e.touches);
+                if (prevPinchDist === 0) { prevPinchDist = currDist; }
+                const dz = currDist / prevPinchDist;
+                prevPinchDist = currDist;
+
+                // Ponto médio dos dedos na tela
+                const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const rect = (wrapper as HTMLDivElement).getBoundingClientRect();
+
+                const newZoom = Math.max(1, Math.min(4, zoomRef.current * dz));
+                // fator real aplicado (pode diferir de dz por causa do clamp)
+                const actualDz = newZoom / zoomRef.current;
+
+                // Fórmula incremental: para o ponto sob os dedos (mx, my) ficar fixo:
+                //   tx_new = actualDz * tx_old + (1 - actualDz) * (mx - elLeft)
                 panRef.current = {
-                    x: (pinchCx - wrapperCx) * (1 - ratio) + pinchStartPanX * ratio,
-                    y: (pinchCy - wrapperCy) * (1 - ratio) + pinchStartPanY * ratio,
+                    x: actualDz * panRef.current.x + (1 - actualDz) * (mx - rect.left),
+                    y: actualDz * panRef.current.y + (1 - actualDz) * (my - rect.top),
                 };
                 zoomRef.current = newZoom;
                 applyTransform();
@@ -519,7 +518,9 @@ export function Lightbox({
                 e.preventDefault();
             }
         }
+
         function onEnd() {
+            prevPinchDist = 0;
             if (zoomRef.current < 1.05) {
                 zoomRef.current = 1;
                 panRef.current  = { x: 0, y: 0 };
@@ -527,6 +528,7 @@ export function Lightbox({
                 if (videoRef.current) videoRef.current.style.transform = "";
             }
         }
+
         wrapper.addEventListener("touchstart", onStart, { passive: false });
         wrapper.addEventListener("touchmove",  onMove,  { passive: false });
         wrapper.addEventListener("touchend",   onEnd);
