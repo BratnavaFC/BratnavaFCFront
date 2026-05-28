@@ -632,7 +632,8 @@ export function Lightbox({
                             maxHeight: isFullscreen
                                 ? "100dvh"
                                 : "min(calc(100svh - 260px), calc(100vh - 260px))",
-                            transformOrigin: "center center",
+                            // transformOrigin é gerenciado diretamente pelo handler de pinch via DOM
+                            // (não colocar aqui — o React sobrescreveria a cada re-render)
                         }}
                         controls
                         autoPlay
