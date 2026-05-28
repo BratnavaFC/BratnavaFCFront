@@ -456,8 +456,14 @@ export function Lightbox({
     useEffect(() => {
         const wrapper = videoWrapperRef.current;
         if (!wrapper) return;
+
         let pinchStartDist = 0;
         let pinchStartZoom = 1;
+        let pinchStartPanX = 0, pinchStartPanY = 0;
+        // Centro do pinch e do wrapper no início do gesto (coordenadas de tela)
+        let pinchCx = 0, pinchCy = 0;
+        let wrapperCx = 0, wrapperCy = 0;
+        // Para o pan com 1 dedo
         let panStartX = 0, panStartY = 0;
 
         function getDist(t: TouchList) {
@@ -468,13 +474,23 @@ export function Lightbox({
             if (!v) return;
             const z = zoomRef.current;
             const { x, y } = panRef.current;
+            // scale com transformOrigin center; translate compensa a origem
             v.style.transformOrigin = "center center";
             v.style.transform = z === 1 ? "" : `scale(${z}) translate(${x / z}px, ${y / z}px)`;
         }
         function onStart(e: TouchEvent) {
             if (e.touches.length === 2) {
+                const rect = (wrapper as HTMLDivElement).getBoundingClientRect();
                 pinchStartDist = getDist(e.touches);
                 pinchStartZoom = zoomRef.current;
+                pinchStartPanX = panRef.current.x;
+                pinchStartPanY = panRef.current.y;
+                // Ponto médio entre os dois dedos (tela)
+                pinchCx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                pinchCy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                // Centro do wrapper na tela
+                wrapperCx = rect.left + rect.width  / 2;
+                wrapperCy = rect.top  + rect.height / 2;
                 e.preventDefault();
             } else if (e.touches.length === 1 && zoomRef.current > 1) {
                 panStartX = e.touches[0].clientX - panRef.current.x;
@@ -485,6 +501,14 @@ export function Lightbox({
         function onMove(e: TouchEvent) {
             if (e.touches.length === 2) {
                 const newZoom = Math.max(1, Math.min(4, pinchStartZoom * (getDist(e.touches) / pinchStartDist)));
+                // Mantém o ponto do pinch fixo na tela ajustando o pan:
+                // ratio = newZoom / pinchStartZoom
+                // newPan = (pinchCenter - wrapperCenter) * (1 - ratio) + startPan * ratio
+                const ratio = newZoom / pinchStartZoom;
+                panRef.current = {
+                    x: (pinchCx - wrapperCx) * (1 - ratio) + pinchStartPanX * ratio,
+                    y: (pinchCy - wrapperCy) * (1 - ratio) + pinchStartPanY * ratio,
+                };
                 zoomRef.current = newZoom;
                 applyTransform();
                 setZoom(newZoom);
