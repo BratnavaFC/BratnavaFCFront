@@ -395,7 +395,7 @@ function DayView({
                         <div className="flex-1 min-w-0">
                             <div className={`font-semibold text-sm ${s.text}`}>{ev.title}</div>
                             <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                {ev.timeTBD ? "Horário a confirmar" : (ev.time ?? "Sem horário")}
+                                {(!ev.timeTBD && ev.time) ? ev.time : null}
                                 {ev.categoryName && ` · ${ev.categoryName}`}
                             </div>
                             {ev.description && (

@@ -69,10 +69,12 @@ function EventDetailModal({
                         <CalendarCheck size={16} className="shrink-0 mt-0.5 text-slate-400 dark:text-slate-500" />
                         <span className="capitalize">{dateLabel}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-                        <Clock size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
-                        <span>{event.timeTBD ? "Horário a confirmar" : (event.time ?? "—")}</span>
-                    </div>
+                    {(!event.timeTBD && event.time) && (
+                        <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                            <Clock size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
+                            <span>{event.time}</span>
+                        </div>
+                    )}
                     {event.description && (
                         <p className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-2 border border-slate-100 dark:border-slate-700">
                             {event.description}

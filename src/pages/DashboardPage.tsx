@@ -391,7 +391,6 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
                   <Clock size={9} className="shrink-0" />{ev.time.slice(0, 5)}
                 </span>
               )}
-              {ev.timeTBD && <span className="text-xs text-slate-400">Horário a confirmar</span>}
               {ev.categoryName && (
                 <span
                   className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
