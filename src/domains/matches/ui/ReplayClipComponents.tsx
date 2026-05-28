@@ -411,24 +411,12 @@ export function Lightbox({
         video.play().catch(() => {});
     }, [clip.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // "Fullscreen" CSS — expande o vídeo dentro do lightbox sem usar a API nativa.
+    // A API nativa (webkitEnterFullscreen no iOS) remove o vídeo do DOM e desativa
+    // nossos handlers de pinch-to-zoom. O lightbox já é fixed inset-0, então
+    // apenas alternamos isFullscreen para mudar o maxHeight do vídeo.
     function toggleFullscreen() {
-        const el    = containerRef.current;
-        const video = videoRef.current;
-        if (!el || !video) return;
-        // Exit fullscreen
-        if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
-            (document.exitFullscreen ?? (document as any).webkitExitFullscreen)?.call(document);
-            return;
-        }
-        // Enter fullscreen — try container first (works on Android/desktop),
-        // then fall back to video.webkitEnterFullscreen (iOS Safari)
-        if (el.requestFullscreen) {
-            el.requestFullscreen().catch(() => (video as any).webkitEnterFullscreen?.());
-        } else if ((el as any).webkitRequestFullscreen) {
-            (el as any).webkitRequestFullscreen();
-        } else {
-            (video as any).webkitEnterFullscreen?.();
-        }
+        setIsFullscreen(v => !v);
     }
 
     useEffect(() => {
@@ -539,28 +527,7 @@ export function Lightbox({
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Track fullscreen changes (Android/desktop + iOS webkitEnterFullscreen)
-    useEffect(() => {
-        function onFsChange() {
-            setIsFullscreen(!!(
-                document.fullscreenElement ||
-                (document as any).webkitFullscreenElement
-            ));
-        }
-        function onVideoFsBegin() { setIsFullscreen(true); }
-        function onVideoFsEnd()   { setIsFullscreen(false); }
-
-        document.addEventListener("fullscreenchange",        onFsChange);
-        document.addEventListener("webkitfullscreenchange",  onFsChange);
-        videoRef.current?.addEventListener("webkitbeginsFullscreen", onVideoFsBegin);
-        videoRef.current?.addEventListener("webkitendsFullscreen",   onVideoFsEnd);
-        return () => {
-            document.removeEventListener("fullscreenchange",       onFsChange);
-            document.removeEventListener("webkitfullscreenchange", onFsChange);
-            videoRef.current?.removeEventListener("webkitbeginsFullscreen", onVideoFsBegin); // eslint-disable-line react-hooks/exhaustive-deps
-            videoRef.current?.removeEventListener("webkitendsFullscreen",   onVideoFsEnd);   // eslint-disable-line react-hooks/exhaustive-deps
-        };
-    }, []);
+    // isFullscreen agora é puramente CSS (toggle via botão) — sem API nativa.
 
     useEffect(() => {
         document.body.style.overflow = "hidden";
@@ -569,7 +536,6 @@ export function Lightbox({
 
     return (
         <div
-            ref={containerRef}
             className="fixed inset-0 z-50 overflow-y-auto"
             style={{ background: "rgba(0,0,0,0.93)", backdropFilter: "blur(10px)" }}
             onClick={onClose}
@@ -632,8 +598,9 @@ export function Lightbox({
                             maxHeight: isFullscreen
                                 ? "100dvh"
                                 : "min(calc(100svh - 260px), calc(100vh - 260px))",
-                            // transformOrigin é gerenciado diretamente pelo handler de pinch via DOM
-                            // (não colocar aqui — o React sobrescreveria a cada re-render)
+                            // "0 0" aqui evita que o React limpe o valor para "" a cada re-render
+                            // (o handler de pinch também define "0 0" — valores consistentes)
+                            transformOrigin: "0 0",
                         }}
                         controls
                         autoPlay
