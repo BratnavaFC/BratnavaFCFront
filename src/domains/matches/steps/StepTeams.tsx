@@ -54,7 +54,8 @@ function ColorSwatchPicker({
                 const hex = normalizeHex(c.hexValue);
                 const isSelected = selectedId === c.id;
                 const isOther = disabledId === c.id;
-                const isDisabled = readOnly || (isOther && !isSelected);
+                // Permite clicar na cor do outro time (o parent faz o swap automático)
+                const isDisabled = readOnly;
                 const white = isWhiteHex(hex);
 
                 return (
@@ -72,8 +73,10 @@ function ColorSwatchPicker({
                                 ? "border-slate-300"
                                 : "border-transparent",
                             !isDisabled && !isSelected && "hover:scale-105 hover:border-slate-400",
-                            isDisabled && !isSelected
+                            isDisabled
                                 ? "opacity-25 cursor-not-allowed"
+                                : isOther && !isSelected
+                                ? "opacity-55 cursor-pointer"   // cor do outro time: clicável, levemente esmaecida
                                 : "cursor-pointer"
                         )}
                         style={{ backgroundColor: hex }}
@@ -803,7 +806,10 @@ export function StepTeams({
                                 selectedId={teamAColorId}
                                 disabledId={teamBColorId}
                                 readOnly={colorsReadOnly}
-                                onSelect={setTeamAColorId}
+                                onSelect={(newId) => {
+                                    if (newId === teamBColorId) setTeamBColorId(teamAColorId);
+                                    setTeamAColorId(newId);
+                                }}
                             />
                             {teamAColor ? (
                                 <ColorPreviewChip hex={teamAColor.hexValue} name={teamAColor.name} />
@@ -824,7 +830,10 @@ export function StepTeams({
                                 selectedId={teamBColorId}
                                 disabledId={teamAColorId}
                                 readOnly={colorsReadOnly}
-                                onSelect={setTeamBColorId}
+                                onSelect={(newId) => {
+                                    if (newId === teamAColorId) setTeamAColorId(teamBColorId);
+                                    setTeamBColorId(newId);
+                                }}
                             />
                             {teamBColor ? (
                                 <ColorPreviewChip hex={teamBColor.hexValue} name={teamBColor.name} />
