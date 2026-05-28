@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, RotateCcw, UserPlus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, RotateCcw, Trash2, UserPlus } from "lucide-react";
 import { AddGuestModal } from "../components/modals/AddGuestModal";
+import ModalBackdrop from "../components/modals/ModalBackdrop";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
@@ -76,6 +77,8 @@ export default function MatchesPage() {
 
     const [loading, setLoading] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [deleting,          setDeleting]          = useState(false);
 
     const [mutatingInvite, setMutatingInvite] = useState<Record<string, boolean>>({});
 
@@ -878,13 +881,18 @@ export default function MatchesPage() {
     }
 
     async function deleteMatch() {
-        if (!groupId || !currentMatchId) return;
+        if (!admin || !groupId || !currentMatchId) return;
+        setDeleting(true);
         try {
             await MatchesApi.remove(groupId, currentMatchId);
-            await loadUpcoming();
             toast.success("Partida excluída.");
+            setConfirmDeleteOpen(false);
+            const sibling = upcomingMatches.find(m => m.matchId !== currentMatchId);
+            await loadUpcoming(sibling?.matchId);
         } catch (e) {
-            toast.error(getResponseMessage(e, "Falha ao excluir a partida."));
+            toast.error(getResponseMessage(e, "Falha ao excluir partida."));
+        } finally {
+            setDeleting(false);
         }
     }
 
@@ -1208,6 +1216,55 @@ export default function MatchesPage() {
                 }}
             />
 
+            {/* ── Confirmar exclusão ── */}
+            {confirmDeleteOpen && selectedMatch && (
+                <ModalBackdrop onClose={() => !deleting && setConfirmDeleteOpen(false)}>
+                    <div className="relative z-10 w-full max-w-sm mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+                        {/* Ícone */}
+                        <div className="flex items-center justify-center h-12 w-12 rounded-full bg-rose-100 dark:bg-rose-950/50 mx-auto">
+                            <Trash2 size={22} className="text-rose-600 dark:text-rose-400" />
+                        </div>
+
+                        {/* Texto */}
+                        <div className="text-center space-y-1">
+                            <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                                Excluir partida?
+                            </h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                {new Date(selectedMatch.playedAt + (selectedMatch.playedAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                                {selectedMatch.placeName ? ` · ${selectedMatch.placeName}` : ''}
+                            </p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 pt-1">
+                                Esta ação é irreversível. Todos os dados da partida serão perdidos.
+                            </p>
+                        </div>
+
+                        {/* Botões */}
+                        <div className="flex gap-3 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmDeleteOpen(false)}
+                                disabled={deleting}
+                                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={deleteMatch}
+                                disabled={deleting}
+                                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-sm font-semibold text-white transition disabled:opacity-60 flex items-center justify-center gap-2"
+                            >
+                                {deleting
+                                    ? <><Loader2 size={14} className="animate-spin" /> Excluindo…</>
+                                    : <><Trash2 size={14} /> Excluir</>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </ModalBackdrop>
+            )}
+
             {/* ── Page header ── */}
             <div className="page-header">
                 <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
@@ -1337,6 +1394,19 @@ export default function MatchesPage() {
                         <span className="hidden sm:inline">Próxima</span>
                         <ChevronRight size={15} />
                     </button>
+
+                    {/* Excluir partida */}
+                    {admin && !creatingNew && selectedMatch && selectedMatch.stepKey !== 'done' && (
+                        <button
+                            type="button"
+                            onClick={() => setConfirmDeleteOpen(true)}
+                            title="Excluir partida"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 shrink-0"
+                        >
+                            <Trash2 size={14} />
+                            <span className="hidden sm:inline">Excluir</span>
+                        </button>
+                    )}
 
                     {/* + Nova Partida */}
                     {canAddMore && !creatingNew && (
