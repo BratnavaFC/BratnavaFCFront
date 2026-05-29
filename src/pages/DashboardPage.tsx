@@ -9,7 +9,7 @@ import { getResponseMessage } from '../api/apiResponse';
 import {
   Calendar, CalendarDays, History, LayoutDashboard, MapPin,
   RefreshCw, CheckCircle2, AlertCircle, DollarSign, ChevronRight,
-  Clock, PartyPopper,
+  ChevronLeft, Clock, PartyPopper,
 } from 'lucide-react';
 import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
@@ -188,7 +188,7 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
   return (
     <button
       type="button"
-      onClick={() => nav('/app/matches')}
+      onClick={() => nav(`/app/matches?match=${header.matchId}`)}
       className="w-full flex items-stretch text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all"
     >
       {/* Accent bar */}
@@ -296,14 +296,17 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
 
 function UpcomingMatchCarousel({ matches }: { matches: UpcomingMatchFull[] }) {
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => { setActive(0); }, [matches.length]);
 
   useEffect(() => {
-    if (matches.length <= 1) return;
+    if (matches.length <= 1 || paused) return;
     const id = setInterval(() => setActive(i => (i + 1) % matches.length), 5000);
     return () => clearInterval(id);
-  }, [matches.length]);
+  }, [matches.length, paused]);
+
+  const go = (fn: (i: number) => number) => { setPaused(true); setActive(fn); };
 
   const safeIdx = active < matches.length ? active : 0;
   const current = matches[safeIdx];
@@ -313,20 +316,38 @@ function UpcomingMatchCarousel({ matches }: { matches: UpcomingMatchFull[] }) {
     <div className="space-y-2.5">
       <UpcomingMatchRow item={current} />
       {matches.length > 1 && (
-        <div className="flex justify-center gap-1.5">
-          {matches.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setActive(i)}
-              aria-label={`Partida ${i + 1}`}
-              className={`rounded-full transition-all duration-300 ${
-                i === active
-                  ? 'w-4 h-1.5 bg-blue-500'
-                  : 'w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
-              }`}
-            />
-          ))}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => go(i => (i - 1 + matches.length) % matches.length)}
+            aria-label="Partida anterior"
+            className="h-5 w-5 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+          >
+            <ChevronLeft size={13} />
+          </button>
+          <div className="flex gap-1.5">
+            {matches.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => go(() => i)}
+                aria-label={`Partida ${i + 1}`}
+                className={`rounded-full transition-all duration-300 ${
+                  i === active
+                    ? 'w-4 h-1.5 bg-blue-500'
+                    : 'w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
+                }`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => go(i => (i + 1) % matches.length)}
+            aria-label="Próxima partida"
+            className="h-5 w-5 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+          >
+            <ChevronRight size={13} />
+          </button>
         </div>
       )}
     </div>
@@ -338,14 +359,17 @@ function UpcomingMatchCarousel({ matches }: { matches: UpcomingMatchFull[] }) {
 function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: boolean }) {
   const nav = useNavigate();
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => { setActive(0); }, [events.length]);
 
   useEffect(() => {
-    if (events.length <= 1) return;
+    if (events.length <= 1 || paused) return;
     const id = setInterval(() => setActive(i => (i + 1) % events.length), 5000);
     return () => clearInterval(id);
-  }, [events.length]);
+  }, [events.length, paused]);
+
+  const go = (fn: (i: number) => number) => { setPaused(true); setActive(fn); };
 
   if (loading && events.length === 0) {
     return <div className="h-24 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />;
@@ -412,20 +436,38 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
       </button>
 
       {events.length > 1 && (
-        <div className="flex items-center justify-center gap-1.5">
-          {events.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setActive(i)}
-              aria-label={`Evento ${i + 1}`}
-              className={`rounded-full transition-all duration-300 ${
-                i === active
-                  ? 'w-4 h-1.5 bg-violet-500'
-                  : 'w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
-              }`}
-            />
-          ))}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => go(i => (i - 1 + events.length) % events.length)}
+            aria-label="Evento anterior"
+            className="h-5 w-5 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+          >
+            <ChevronLeft size={13} />
+          </button>
+          <div className="flex gap-1.5">
+            {events.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => go(() => i)}
+                aria-label={`Evento ${i + 1}`}
+                className={`rounded-full transition-all duration-300 ${
+                  i === active
+                    ? 'w-4 h-1.5 bg-violet-500'
+                    : 'w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
+                }`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => go(i => (i + 1) % events.length)}
+            aria-label="Próximo evento"
+            className="h-5 w-5 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+          >
+            <ChevronRight size={13} />
+          </button>
         </div>
       )}
     </div>
