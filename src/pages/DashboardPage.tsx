@@ -421,28 +421,26 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
           </p>
         )}
 
-        {/* Situação do jogador */}
-        {myPlayer && (
-          <div className="flex items-center gap-2 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wide shrink-0">Você</span>
-            {(myHex || myName) && (
-              <div className="flex items-center gap-1 min-w-0">
-                {myHex && (
-                  <span
-                    className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
-                    style={{ backgroundColor: myHex }}
-                  />
-                )}
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
-                  {myName}
-                </span>
-              </div>
-            )}
-            <span className={`text-xs font-semibold shrink-0 ${inviteCls}`}>
-              {inviteIcon} {inviteLabel}
-            </span>
-          </div>
-        )}
+        {/* Situação do jogador — sempre ocupa altura mesmo sem player (evita jumps no carrossel) */}
+        <div className={`flex items-center gap-2 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap ${myPlayer ? '' : 'invisible'}`}>
+          <span className="text-[10px] text-slate-400 uppercase tracking-wide shrink-0">Você</span>
+          {(myHex || myName) && (
+            <div className="flex items-center gap-1 min-w-0">
+              {myHex && (
+                <span
+                  className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
+                  style={{ backgroundColor: myHex }}
+                />
+              )}
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+                {myName}
+              </span>
+            </div>
+          )}
+          <span className={`text-xs font-semibold shrink-0 ${inviteCls}`}>
+            {inviteIcon} {inviteLabel}
+          </span>
+        </div>
 
         {/* Votação/evento vinculado — linha sempre presente para o card não pular de tamanho */}
         <PollRow poll={poll ?? null} />
