@@ -403,6 +403,8 @@ export function StepPost({
     participants,
     allVoted,
     eligibleVoters,
+    serverCanVote,
+    serverHasVoted,
     onRefresh,
     activeMatchPlayerId,
 
@@ -457,6 +459,12 @@ export function StepPost({
     allVoted: boolean;
     /** Backend: não-convidados que ainda não votaram */
     eligibleVoters: PlayerInMatchDto[];
+    /** Backend calculou: usuário autenticado pode votar (null = não tem player na partida) */
+    serverCanVote?: boolean | null;
+    /** Backend calculou: usuário autenticado já votou */
+    serverHasVoted?: boolean | null;
+    /** matchPlayerId em quem o usuário autenticado votou */
+    serverMyVotedForMatchPlayerId?: string | null;
     onRefresh: () => void;
     activeMatchPlayerId: string;
 
@@ -537,10 +545,10 @@ export function StepPost({
                 ? "—"
                 : `${currentScoreA} × ${currentScoreB}`;
 
-        // Backend tells us who can still vote and whether everyone is done
-        const canVote  = eligibleVoters.some(p => p.matchPlayerId === activeMatchPlayerId);
+        // Preferir flags do backend; fallback para cálculo local (compatibilidade)
+        const canVote  = serverCanVote  ?? eligibleVoters.some(p => p.matchPlayerId === activeMatchPlayerId);
         const myVote   = votes.find(v => v.voterMatchPlayerId === activeMatchPlayerId);
-        const hasVoted = !!myVote;
+        const hasVoted = serverHasVoted ?? !!myVote;
 
         return (
             <div className="card p-4 space-y-4">

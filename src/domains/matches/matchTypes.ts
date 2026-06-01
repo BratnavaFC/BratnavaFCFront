@@ -58,6 +58,10 @@ export type GoalDto = {
     timeSeconds?: number | null;
     time?: string | null;
     isOwnGoal?: boolean;
+    /** Placar do Time A imediatamente após este gol (calculado pelo backend). */
+    scoreAAfter?: number;
+    /** Placar do Time B imediatamente após este gol (calculado pelo backend). */
+    scoreBAfter?: number;
 };
 
 export type MatchMvpDto = {
@@ -173,6 +177,8 @@ export type MatchHeaderDto = {
     teamAGoals:   number | null;
     teamBGoals:   number | null;
     linkedPollId: string | null;
+    /** Momento real (UTC) em que o admin clicou em Iniciar. Usar para timeline. */
+    actualStartTime?: string | null;
 };
 
 export type ReplayClipDto = {

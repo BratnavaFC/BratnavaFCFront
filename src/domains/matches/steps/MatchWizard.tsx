@@ -44,6 +44,7 @@ export function MatchWizard({
     acceptedCount,
     pendingCount,
     acceptedOverLimit,
+    canAdvanceToMatchmaking,
 
     // create
     placeName,
@@ -326,9 +327,9 @@ export function MatchWizard({
                             type="button"
                             className={cls(
                                 "btn btn-primary flex items-center gap-2",
-                                (acceptedOverLimit || accepted.length < 2) && "opacity-50 cursor-not-allowed",
+                                !canAdvanceToMatchmaking && "opacity-50 cursor-not-allowed",
                             )}
-                            disabled={acceptedOverLimit || accepted.length < 2}
+                            disabled={!canAdvanceToMatchmaking}
                             onClick={onGoToMatchMaking}
                             title="Avança para MatchMaking (times/cores/swap)"
                         >

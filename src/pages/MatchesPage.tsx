@@ -501,14 +501,17 @@ export default function MatchesPage() {
     const pending: PlayerInMatchDto[]  = (current as any)?.pendingPlayers  ?? [];
 
     const acceptedOverLimit: boolean = (current as any)?.acceptedOverLimit ?? false;
+    // Backend calcula CanAdvanceToMatchmaking — frontend apenas exibe
+    const canAdvanceToMatchmaking: boolean = (current as any)?.canAdvanceToMatchmaking ?? false;
 
     const participants: PlayerInMatchDto[] = (current as any)?.participants ?? [];
 
-    const teamsAlreadyAssigned = useMemo(() => {
+    // Backend calcula TeamsAssigned — frontend não precisa contar players localmente
+    const teamsAlreadyAssigned: boolean = (current as any)?.teamsAssigned ?? (() => {
         const a = (current as any)?.teamAPlayers?.length ?? 0;
         const b = (current as any)?.teamBPlayers?.length ?? 0;
         return a > 0 && b > 0;
-    }, [(current as any)?.teamAPlayers, (current as any)?.teamBPlayers]);
+    })();
 
     // Backend returns players already sorted (goalkeeper first, then name)
     const sortedTeamAPlayers: PlayerInMatchDto[] = (current as any)?.teamAPlayers ?? [];
@@ -873,9 +876,10 @@ export default function MatchesPage() {
         }
     }
 
+    // Backend decide se pode iniciar via CanStartMatch — fallback para teamsAlreadyAssigned
     const canStartNow = useMemo(
-        () => admin && stepKey === "teams" && teamsAlreadyAssigned,
-        [admin, stepKey, teamsAlreadyAssigned]
+        () => admin && stepKey === "teams" && ((current as any)?.canStartMatch ?? teamsAlreadyAssigned),
+        [admin, stepKey, current, teamsAlreadyAssigned]
     );
 
     // ── edit / delete match ───────────────────────────────────────────────────
@@ -1090,6 +1094,10 @@ export default function MatchesPage() {
             voteCounts: (current as any)?.voteCounts ?? [],
             allVoted: (current as any)?.allVoted ?? false,
             eligibleVoters: (current as any)?.eligibleVoters ?? [],
+            // Flags calculados pelo backend para o usuário autenticado
+            serverCanVote: (current as any)?.canVote ?? null as boolean | null,
+            serverHasVoted: (current as any)?.hasVoted ?? null as boolean | null,
+            serverMyVotedForMatchPlayerId: (current as any)?.myVotedForMatchPlayerId ?? null as string | null,
             participants,
             scoreA,
             setScoreA,
@@ -1469,6 +1477,7 @@ export default function MatchesPage() {
                         acceptedCount={accepted.length}
                         pendingCount={pending.length}
                         acceptedOverLimit={acceptedOverLimit}
+                        canAdvanceToMatchmaking={canAdvanceToMatchmaking}
                         placeName={placeName}
                         setPlaceName={setPlaceName}
                         playedAtDate={playedAtDate}
