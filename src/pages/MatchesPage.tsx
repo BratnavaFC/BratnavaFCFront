@@ -729,6 +729,16 @@ export default function MatchesPage() {
         }
     }
 
+    async function setNoShow(matchPlayerId: string, didNotPlay: boolean) {
+        if (!admin || !groupId || !currentMatchId) return;
+        try {
+            await MatchesApi.setNoShow(groupId, currentMatchId, matchPlayerId, didNotPlay);
+            await refreshCurrent();
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao marcar ausência."));
+        }
+    }
+
     /** Move a single assigned player from their current team to the other team. */
     async function movePlayerToOtherTeam(playerId: string, fromTeam: "A" | "B") {
         if (!admin || !groupId || !currentMatchId) return;
@@ -1038,6 +1048,7 @@ export default function MatchesPage() {
             onSwapInOption: swapInGeneratedOption,
             onAssignUnassigned: assignUnassigned,
             onSetPlayerRole: setPlayerRole,
+            onSetNoShow: setNoShow,
             matchPlayedAt: (current as any)?.playedAt ?? '',
         };
     }, [

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, Check, Play, RefreshCw, Share2, Shuffle } from "lucide-react";
+import { ArrowLeftRight, Check, Play, RefreshCw, Share2, Shuffle, UserX, UserCheck } from "lucide-react";
 import { MatchShareCardModal, type CardTemplate } from "../../../components/modals/MatchShareCardModal";
 import { useAccountStore } from "../../../auth/accountStore";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
@@ -176,6 +176,7 @@ export function StepTeams({
     onSwapInOption,
     onAssignUnassigned,
     onSetPlayerRole,
+    onSetNoShow,
     matchPlayedAt,
 }: {
     admin: boolean;
@@ -226,6 +227,7 @@ export function StepTeams({
     onMovePlayerToTeam: (playerId: string, team: "A" | "B") => void;
     onSwapInOption: (playerAId: string, playerBId: string) => void;
     onSetPlayerRole?: (matchPlayerId: string, isGoalkeeper: boolean) => Promise<void>;
+    onSetNoShow?: (matchPlayerId: string, didNotPlay: boolean) => Promise<void>;
     onAssignUnassigned: (playerId: string, team: "A" | "B") => Promise<void>;
     matchPlayedAt: string;
 }) {
@@ -423,10 +425,11 @@ export function StepTeams({
                                     <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
                                         {p.playerName.charAt(0).toUpperCase()}
                                     </span>
-                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
+                                    <span className={cls("truncate flex-1 font-medium", p.didNotPlay ? "line-through text-slate-400 dark:text-slate-500" : isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
                                         {p.playerName}
+                                        {p.didNotPlay && <span className="ml-1.5 text-[10px] font-semibold text-rose-400 no-underline not-italic">não foi</span>}
                                     </span>
-                                    {admin && onSetPlayerRole ? (
+                                    {admin && onSetPlayerRole && !p.didNotPlay ? (
                                         <button
                                             title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
                                             className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
@@ -434,8 +437,17 @@ export function StepTeams({
                                         >
                                             <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
                                         </button>
-                                    ) : (
+                                    ) : (!admin || p.didNotPlay) && (
                                         <span title={p.isGoalkeeper ? "Goleiro" : "Jogador"} className="shrink-0 text-xs"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} /></span>
+                                    )}
+                                    {admin && onSetNoShow && (
+                                        <button
+                                            title={p.didNotPlay ? "Desfazer: marcar como presente" : "Marcar como não foi jogar"}
+                                            className={cls("shrink-0 px-1 rounded transition-colors", p.didNotPlay ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30" : "text-slate-300 dark:text-slate-600 hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30")}
+                                            onClick={(e) => { e.stopPropagation(); onSetNoShow(p.matchPlayerId, !p.didNotPlay); }}
+                                        >
+                                            {p.didNotPlay ? <UserCheck size={13} /> : <UserX size={13} />}
+                                        </button>
                                     )}
                                     {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>
@@ -495,10 +507,11 @@ export function StepTeams({
                                     <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
                                         {p.playerName.charAt(0).toUpperCase()}
                                     </span>
-                                    <span className={cls("truncate flex-1 font-medium", isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
+                                    <span className={cls("truncate flex-1 font-medium", p.didNotPlay ? "line-through text-slate-400 dark:text-slate-500" : isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
                                         {p.playerName}
+                                        {p.didNotPlay && <span className="ml-1.5 text-[10px] font-semibold text-rose-400 no-underline not-italic">não foi</span>}
                                     </span>
-                                    {admin && onSetPlayerRole ? (
+                                    {admin && onSetPlayerRole && !p.didNotPlay ? (
                                         <button
                                             title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
                                             className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
@@ -506,8 +519,17 @@ export function StepTeams({
                                         >
                                             <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
                                         </button>
-                                    ) : (
+                                    ) : (!admin || p.didNotPlay) && (
                                         <span title={p.isGoalkeeper ? "Goleiro" : "Jogador"} className="shrink-0 text-xs"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} /></span>
+                                    )}
+                                    {admin && onSetNoShow && (
+                                        <button
+                                            title={p.didNotPlay ? "Desfazer: marcar como presente" : "Marcar como não foi jogar"}
+                                            className={cls("shrink-0 px-1 rounded transition-colors", p.didNotPlay ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30" : "text-slate-300 dark:text-slate-600 hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30")}
+                                            onClick={(e) => { e.stopPropagation(); onSetNoShow(p.matchPlayerId, !p.didNotPlay); }}
+                                        >
+                                            {p.didNotPlay ? <UserCheck size={13} /> : <UserX size={13} />}
+                                        </button>
                                     )}
                                     {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
                                 </li>

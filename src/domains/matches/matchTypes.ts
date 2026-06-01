@@ -30,6 +30,7 @@ export type PlayerInMatchDto = {
     inviteResponse: number; // 1 None, 2 Rejected, 3 Accepted
     absenceType?: number | null;        // null = rejeição manual ou não-rejeitado
     absenceDescription?: string | null; // ex: "Viagem - Férias em SP"
+    didNotPlay?: boolean;               // admin marcou que o jogador não apareceu
 };
 
 export type VoteDto = {

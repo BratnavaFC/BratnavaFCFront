@@ -14,6 +14,8 @@ import {
     Pencil,
     Play,
     RefreshCw,
+    UserX,
+    UserCheck,
 } from "lucide-react";
 import { getResponseMessage } from "../api/apiResponse";
 import useAccountStore from "../auth/accountStore";
@@ -581,6 +583,16 @@ export default function MatchDetailsPage() {
         }
     }
 
+    async function handleSetNoShow(matchPlayerId: string, didNotPlay: boolean) {
+        if (!groupId || !matchId) return;
+        try {
+            await MatchesApi.setNoShow(groupId, matchId, matchPlayerId, didNotPlay);
+            await reloadMatch();
+        } catch (e) {
+            toast.error(getResponseMessage(e, 'Falha ao marcar ausência.'));
+        }
+    }
+
     async function handleAddGoal(
         scorerPlayerId: string,
         assistPlayerId: string | null,
@@ -993,7 +1005,7 @@ export default function MatchDetailsPage() {
                                 teamAPlayers.map((p: any) => (
                                     <li
                                         key={p.matchPlayerId}
-                                        className="flex items-center gap-2.5 px-4 py-2.5 border-l-[3px]"
+                                        className={`flex items-center gap-2.5 px-4 py-2.5 border-l-[3px] ${p.didNotPlay ? 'opacity-50' : ''}`}
                                         style={{ borderLeftColor: aColor }}
                                     >
                                         {p.isGoalkeeper && (
@@ -1001,13 +1013,23 @@ export default function MatchDetailsPage() {
                                                 <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={15} />
                                             </span>
                                         )}
-                                        <span className="text-sm text-slate-800 dark:text-slate-100 truncate flex-1">
+                                        <span className={`text-sm truncate flex-1 ${p.didNotPlay ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100'}`}>
                                             {p.playerName}
+                                            {p.didNotPlay && <span className="ml-1.5 text-[10px] font-semibold text-rose-400 no-underline">não foi</span>}
                                         </span>
-                                        {p.isMvp && (
+                                        {p.isMvp && !p.didNotPlay && (
                                             <span title="MVP" className="shrink-0">
                                                 <IconRenderer value={resolveIcon(_icons, 'mvp')} size={13} lucideProps={{ className: "text-amber-400" }} />
                                             </span>
+                                        )}
+                                        {isAdmin && (
+                                            <button
+                                                title={p.didNotPlay ? "Desfazer: marcar como presente" : "Marcar como não foi jogar"}
+                                                className={`shrink-0 p-1 rounded transition-colors ${p.didNotPlay ? 'text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30' : 'text-slate-300 dark:text-slate-600 hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'}`}
+                                                onClick={() => handleSetNoShow(p.matchPlayerId, !p.didNotPlay)}
+                                            >
+                                                {p.didNotPlay ? <UserCheck size={13} /> : <UserX size={13} />}
+                                            </button>
                                         )}
                                     </li>
                                 ))
@@ -1033,7 +1055,7 @@ export default function MatchDetailsPage() {
                                 teamBPlayers.map((p: any) => (
                                     <li
                                         key={p.matchPlayerId}
-                                        className="flex items-center gap-2.5 px-4 py-2.5 border-l-[3px]"
+                                        className={`flex items-center gap-2.5 px-4 py-2.5 border-l-[3px] ${p.didNotPlay ? 'opacity-50' : ''}`}
                                         style={{ borderLeftColor: bColor }}
                                     >
                                         {p.isGoalkeeper && (
@@ -1041,13 +1063,23 @@ export default function MatchDetailsPage() {
                                                 <IconRenderer value={resolveIcon(_icons, 'goalkeeper')} size={15} />
                                             </span>
                                         )}
-                                        <span className="text-sm text-slate-800 dark:text-slate-100 truncate flex-1">
+                                        <span className={`text-sm truncate flex-1 ${p.didNotPlay ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100'}`}>
                                             {p.playerName}
+                                            {p.didNotPlay && <span className="ml-1.5 text-[10px] font-semibold text-rose-400 no-underline">não foi</span>}
                                         </span>
-                                        {p.isMvp && (
+                                        {p.isMvp && !p.didNotPlay && (
                                             <span title="MVP" className="shrink-0">
                                                 <IconRenderer value={resolveIcon(_icons, 'mvp')} size={13} lucideProps={{ className: "text-amber-400" }} />
                                             </span>
+                                        )}
+                                        {isAdmin && (
+                                            <button
+                                                title={p.didNotPlay ? "Desfazer: marcar como presente" : "Marcar como não foi jogar"}
+                                                className={`shrink-0 p-1 rounded transition-colors ${p.didNotPlay ? 'text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30' : 'text-slate-300 dark:text-slate-600 hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'}`}
+                                                onClick={() => handleSetNoShow(p.matchPlayerId, !p.didNotPlay)}
+                                            >
+                                                {p.didNotPlay ? <UserCheck size={13} /> : <UserX size={13} />}
+                                            </button>
                                         )}
                                     </li>
                                 ))

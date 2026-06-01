@@ -138,6 +138,10 @@ export const MatchesApi = {
     groupId: string, matchId: string, matchPlayerId: string,
     dto: { isGoalkeeper: boolean }
   ) => http.patch<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/players/${matchPlayerId}/role`, dto),
+  setNoShow: (
+    groupId: string, matchId: string, matchPlayerId: string,
+    didNotPlay: boolean
+  ) => http.patch<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/players/${matchPlayerId}/no-show`, { didNotPlay }),
   replays: (groupId: string, matchId: string) =>
     http.get<ApiResponse<ReplayClipDto[]>>(`/api/Matches/group/${groupId}/${matchId}/replays`),
   downloadReplay: (groupId: string, clipId: string) =>
