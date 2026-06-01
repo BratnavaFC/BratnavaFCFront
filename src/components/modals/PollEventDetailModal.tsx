@@ -253,9 +253,9 @@ function PollEventDetailModal({
     const votedOptionId = poll.myVotedOptionIds[0] ?? null;
 
     const RSVP_CONFIG: Record<string, { icon: string; colorClass: string; bgClass: string; activeClass: string }> = {
-        'Sim':    { icon: '✅', colorClass: 'text-emerald-700', bgClass: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100', activeClass: 'bg-emerald-600 border-emerald-600 text-white' },
-        'Talvez': { icon: '🤔', colorClass: 'text-amber-700',   bgClass: 'bg-amber-50 border-amber-200 hover:bg-amber-100',     activeClass: 'bg-amber-500 border-amber-500 text-white' },
-        'Não':    { icon: '❌', colorClass: 'text-rose-700',    bgClass: 'bg-rose-50 border-rose-200 hover:bg-rose-100',        activeClass: 'bg-rose-600 border-rose-600 text-white' },
+        'Sim':    { icon: '✅', colorClass: 'text-emerald-700 dark:text-emerald-400', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300', activeClass: 'bg-emerald-600 border-emerald-600 text-white' },
+        'Talvez': { icon: '🤔', colorClass: 'text-amber-700 dark:text-amber-400',   bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300',     activeClass: 'bg-amber-500 border-amber-500 text-white' },
+        'Não':    { icon: '❌', colorClass: 'text-rose-700 dark:text-rose-400',    bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-800 dark:text-rose-300',        activeClass: 'bg-rose-600 border-rose-600 text-white' },
     };
 
     const PROGRESS_COLORS: Record<string, string> = {
@@ -411,7 +411,7 @@ function PollEventDetailModal({
                             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Sua resposta</p>
                             <div className="grid grid-cols-3 gap-2">
                                 {rsvpOptions.map(opt => {
-                                    const cfg = RSVP_CONFIG[opt.text] ?? { icon: '•', colorClass: 'text-slate-700', bgClass: 'bg-slate-50 border-slate-200 hover:bg-slate-100', activeClass: 'bg-slate-900 border-slate-900 text-white' };
+                                    const cfg = RSVP_CONFIG[opt.text] ?? { icon: '•', colorClass: 'text-slate-700 dark:text-slate-300', bgClass: 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300', activeClass: 'bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900' };
                                     const isVoted = votedOptionId === opt.id;
                                     return (
                                         <button
