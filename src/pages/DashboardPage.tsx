@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { PlayersApi, MatchesApi, PaymentsApi, CalendarApi } from '../api/endpoints';
+import { PlayersApi, MatchesApi, PaymentsApi, CalendarApi, PollsApi } from '../api/endpoints';
 import type { CalendarEvent } from '../types/calendar';
 import { usePaymentStore, calcPendingPaymentsCount } from '../stores/paymentStore';
 import { useAccountStore } from '../auth/accountStore';
 import { getResponseMessage } from '../api/apiResponse';
 import {
   Calendar, CalendarDays, History, LayoutDashboard, MapPin,
-  RefreshCw, CheckCircle2, AlertCircle, DollarSign, ChevronRight,
-  ChevronLeft, Clock, PartyPopper,
+  RefreshCw, CheckCircle2, XCircle, AlertCircle, DollarSign, ChevronRight,
+  ChevronLeft, Clock, PartyPopper, Vote,
 } from 'lucide-react';
 import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
@@ -19,9 +19,23 @@ import type { MatchHeaderDto, MatchDetailsDto } from '../domains/matches/matchTy
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
+type LinkedPollOption = { id: string; text: string };
+
+type LinkedPoll = {
+  id:                string;
+  title:             string;
+  type:              'poll' | 'event';
+  status:            string;
+  myVotedOptionIds:  string[];
+  totalVoters:       number;
+  eventIcon?:        string | null;
+  options:           LinkedPollOption[];
+};
+
 type UpcomingMatchFull = {
-  header:  MatchHeaderDto;
+  header:   MatchHeaderDto;
   details?: MatchDetailsDto | null;
+  poll?:    LinkedPoll | null;
 };
 
 type MyPlayer = {
@@ -91,12 +105,142 @@ function formatDate(playedAt?: string) {
 
 function stepKeyColor(stepKey?: string) {
   switch (stepKey) {
-    case 'playing':     return { bar: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800' };
-    case 'post':        return { bar: 'bg-orange-400', badge: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-800' };
-    case 'matchmaking': return { bar: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-400 dark:border-violet-800' };
-    case 'acceptation': return { bar: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800' };
-    default:            return { bar: 'bg-slate-300 dark:bg-slate-600', badge: 'bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
+    case 'playing': return { bar: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800' };
+    case 'post':    return { bar: 'bg-orange-400', badge: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-800' };
+    case 'teams':   return { bar: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-400 dark:border-violet-800' };
+    case 'accept':  return { bar: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800' };
+    case 'ended':   return { bar: 'bg-slate-400',  badge: 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
+    default:        return { bar: 'bg-slate-300 dark:bg-slate-600', badge: 'bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
   }
+}
+
+// ─── MatchRightPanel ──────────────────────────────────────────────────────────
+
+function MatchRightPanel({
+  header, details, myPlayer,
+}: {
+  header:    MatchHeaderDto;
+  details?:  MatchDetailsDto | null;
+  myPlayer:  MatchPlayer | null;
+}) {
+  const step     = header.stepKey;
+  const hasScore = typeof header.teamAGoals === 'number' && typeof header.teamBGoals === 'number';
+
+  const ScoreBox = hasScore ? (
+    <div className="rounded-lg bg-slate-900 dark:bg-slate-700 px-2.5 py-1.5 text-center">
+      <span className="text-sm font-extrabold text-white tabular-nums">
+        {header.teamAGoals} <span className="text-slate-400 font-normal text-[10px]">×</span> {header.teamBGoals}
+      </span>
+    </div>
+  ) : null;
+
+  // ── accept: contadores de convite ────────────────────────────────────────
+  if (step === 'accept') {
+    if (!details) return <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />;
+    const all      = [...(details.teamAPlayers ?? []), ...(details.teamBPlayers ?? []), ...(details.unassignedPlayers ?? [])];
+    const accepted = all.filter(p => p.inviteResponse === 3).length;
+    const refused  = all.filter(p => p.inviteResponse === 2).length;
+    const pending  = all.filter(p => p.inviteResponse === 1).length;
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          <span className="w-3 flex items-center justify-center shrink-0">
+            <CheckCircle2 size={11} />
+          </span>
+          <span className="tabular-nums">{accepted}</span>
+        </span>
+        <span className="flex items-center gap-1.5 text-xs font-medium text-amber-500 dark:text-amber-400">
+          <span className="w-3 flex items-center justify-center shrink-0">
+            <Clock size={11} />
+          </span>
+          <span className="tabular-nums">{pending}</span>
+        </span>
+        {refused > 0 && (
+          <span className="flex items-center gap-1.5 text-xs font-medium text-rose-500 dark:text-rose-400">
+            <span className="w-3 flex items-center justify-center shrink-0">
+              <XCircle size={11} />
+            </span>
+            <span className="tabular-nums">{refused}</span>
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // ── teams: time do jogador (se alocado) ou A vs B ───────────────────────
+  if (step === 'teams') {
+    if (!details) return <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />;
+    const myTeam  = myPlayer?.team ?? 0;
+    const myColor = myTeam === 1 ? details.teamAColor : myTeam === 2 ? details.teamBColor : null;
+    const myHex   = normalizeHex(myColor?.hexValue);
+
+    if (myTeam !== 0 && myColor) {
+      return (
+        <div className="flex flex-col items-end gap-0.5 min-w-[72px]">
+          <div className="flex items-center gap-1.5">
+            {myHex && (
+              <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-white/30"
+                style={{ backgroundColor: myHex }} />
+            )}
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[60px]">
+              {myColor.name}
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500">seu time</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-1 min-w-[96px]">
+        {([
+          { color: details.teamAColor, players: details.teamAPlayers ?? [], fallback: 'Time A' },
+          { color: details.teamBColor, players: details.teamBPlayers ?? [], fallback: 'Time B' },
+        ] as const).map(({ color, players, fallback }) => {
+          const hex = normalizeHex(color?.hexValue);
+          const isWhite = hex?.toLowerCase() === '#ffffff';
+          return (
+            <div key={fallback} className="flex items-center gap-1.5">
+              <span
+                className={`h-2.5 w-2.5 rounded-full shrink-0 ${!hex ? 'bg-slate-300 dark:bg-slate-600' : ''} ${hex && isWhite ? 'border border-slate-300' : ''}`}
+                style={hex ? { backgroundColor: hex } : undefined}
+              />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+                {color?.name ?? fallback}
+              </span>
+              <span className="text-[10px] text-slate-400 shrink-0 ml-auto pl-1">{players.length}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ── playing: placar ou pulsing live ─────────────────────────────────────
+  if (step === 'playing') {
+    return ScoreBox ?? (
+      <div className="flex flex-col items-center gap-1">
+        <span className="h-3 w-3 rounded-full bg-blue-500 animate-pulse" />
+        <span className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wide">vivo</span>
+      </div>
+    );
+  }
+
+  // ── post: placar + badge MVP se for o jogador ────────────────────────────
+  if (step === 'post') {
+    const isMvp = myPlayer && details?.computedMvps?.some(m => m.playerId === myPlayer.playerId);
+    return (
+      <div className="flex flex-col items-end gap-1">
+        {ScoreBox ?? <span className="text-xs text-slate-400">—</span>}
+        {isMvp && (
+          <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400">⭐ MVP</span>
+        )}
+      </div>
+    );
+  }
+
+  // ── ended / done / create / fallback ────────────────────────────────────
+  return ScoreBox ?? <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />;
 }
 
 // ─── Small atoms ──────────────────────────────────────────────────────────────
@@ -156,7 +300,7 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
   const store = useAccountStore();
   const selectedPlayerId = store.getActive()?.activePlayerId ?? '';
 
-  const { header, details } = item;
+  const { header, details, poll } = item;
   const dates  = formatDate(header.playedAt);
   const isLive = header.stepKey === 'playing';
   const { bar, badge } = stepKeyColor(header.stepKey);
@@ -230,8 +374,8 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
           </p>
         )}
 
-        {/* Situação do jogador */}
-        {myPlayer && (
+        {/* Situação do jogador — oculto no step accept (painel direito já mostra contadores) */}
+        {myPlayer && header.stepKey !== 'accept' && (
           <div className="flex items-center gap-2 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap">
             <span className="text-[10px] text-slate-400 uppercase tracking-wide shrink-0">Você</span>
             <div className="flex items-center gap-1 min-w-0">
@@ -250,43 +394,52 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
             </span>
           </div>
         )}
+
+        {/* Votação/evento vinculado */}
+        {poll && (() => {
+          const voted = poll.myVotedOptionIds.length > 0;
+          const votedText = voted
+            ? (poll.options.find(o => o.id === poll.myVotedOptionIds[0])?.text ?? '').toLowerCase().trim()
+            : '';
+
+          let badge: React.ReactNode;
+          if (poll.type === 'event') {
+            if (!voted) {
+              badge = poll.status === 'open'
+                ? <span className="text-[10px] font-semibold text-amber-500 dark:text-amber-400 shrink-0 uppercase tracking-wide">pendente</span>
+                : null;
+            } else if (votedText.startsWith('sim')) {
+              badge = <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">✓ Sim</span>;
+            } else if (votedText.startsWith('talv') || votedText.startsWith('maybe')) {
+              badge = <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 shrink-0">? Talvez</span>;
+            } else if (votedText.startsWith('não') || votedText.startsWith('nao') || votedText.startsWith('no')) {
+              badge = <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 shrink-0">✗ Não</span>;
+            } else {
+              badge = <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>;
+            }
+          } else {
+            badge = voted
+              ? <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0 uppercase tracking-wide">votado</span>
+              : poll.status === 'open'
+                ? <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 shrink-0 uppercase tracking-wide">pendente</span>
+                : null;
+          }
+
+          return (
+            <div className="flex items-center gap-1.5 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 min-w-0">
+              <Vote size={10} className="shrink-0 text-slate-400 dark:text-slate-500" />
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0">
+                {poll.eventIcon ? `${poll.eventIcon} ` : ''}{poll.title}
+              </span>
+              {badge}
+            </div>
+          );
+        })()}
       </div>
 
-      {/* Direita: placar OU times */}
+      {/* Direita: conteúdo por etapa */}
       <div className="flex items-center px-4 shrink-0 border-l border-slate-100 dark:border-slate-800">
-        {hasScore ? (
-          <div className="rounded-lg bg-slate-900 dark:bg-slate-700 px-2.5 py-1.5 text-center">
-            <span className="text-sm font-extrabold text-white tabular-nums">
-              {header.teamAGoals} <span className="text-slate-400 font-normal text-[10px]">×</span> {header.teamBGoals}
-            </span>
-          </div>
-        ) : details ? (
-          <div className="flex flex-col gap-1.5 min-w-[96px]">
-            {[
-              { color: details.teamAColor, players: details.teamAPlayers ?? [], fallback: 'Time A' },
-              { color: details.teamBColor, players: details.teamBPlayers ?? [], fallback: 'Time B' },
-            ].map(({ color, players, fallback }) => {
-              const hex = normalizeHex(color?.hexValue);
-              const isWhite = hex?.toLowerCase() === '#ffffff';
-              return (
-                <div key={fallback} className="flex items-center gap-1.5">
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full shrink-0 ${!hex ? 'bg-slate-300 dark:bg-slate-600' : ''} ${hex && isWhite ? 'border border-slate-300' : ''}`}
-                    style={hex ? { backgroundColor: hex } : undefined}
-                  />
-                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
-                    {color?.name ?? fallback}
-                  </span>
-                  <span className="text-[10px] text-slate-400 shrink-0 ml-auto pl-1">
-                    {players.length}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />
-        )}
+        <MatchRightPanel header={header} details={details} myPlayer={myPlayer} />
       </div>
     </button>
   );
@@ -682,17 +835,27 @@ export default function DashboardPage() {
       const headers = ((headersRes.data as any)?.data ?? headersRes.data ?? []) as MatchHeaderDto[];
       if (headers.length === 0) { setUpcomingMatches([]); return; }
 
-      // busca detalhes completos de cada partida em paralelo (times, jogadores, convites)
-      const detailsResults = await Promise.allSettled(
-        headers.map(h => MatchesApi.details(groupId, h.matchId))
-      );
+      // busca detalhes e polls vinculados em paralelo
+      const [detailsResults, pollResults] = await Promise.all([
+        Promise.allSettled(headers.map(h => MatchesApi.details(groupId, h.matchId))),
+        Promise.allSettled(headers.map(h =>
+          h.linkedPollId ? PollsApi.getPoll(groupId, h.linkedPollId) : Promise.resolve(null)
+        )),
+      ]);
 
       const full: UpcomingMatchFull[] = headers.map((header, i) => {
-        const r = detailsResults[i];
-        const details = r.status === 'fulfilled'
-          ? ((r.value.data as any)?.data ?? null) as MatchDetailsDto | null
+        const dr = detailsResults[i];
+        const details = dr.status === 'fulfilled'
+          ? ((dr.value.data as any)?.data ?? null) as MatchDetailsDto | null
           : null;
-        return { header, details };
+
+        const pr = pollResults[i];
+        const pollRaw = pr.status === 'fulfilled' ? pr.value : null;
+        const poll = pollRaw
+          ? ((pollRaw.data as any)?.data ?? (pollRaw.data as any) ?? null) as LinkedPoll | null
+          : null;
+
+        return { header, details, poll };
       });
 
       setUpcomingMatches(full);
