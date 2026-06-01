@@ -141,8 +141,8 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 ].join(" ")}>
                     {open && (
                         <img
-                            src="/bratnava-coin.png"
-                            alt="Bratnava Coin"
+                            src={`${import.meta.env.BASE_URL}bratnava-logo.png`}
+                            alt="Bratnava FC"
                             className="h-10 w-auto object-contain select-none dark:invert"
                         />
                     )}

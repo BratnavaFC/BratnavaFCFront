@@ -293,6 +293,53 @@ function SectionCard({
   );
 }
 
+// ─── PollRow ──────────────────────────────────────────────────────────────────
+
+function PollRow({ poll }: { poll: LinkedPoll | null }) {
+  // Sempre ocupa a mesma altura — evita o card mudar de tamanho
+  if (!poll) {
+    return <div className="mt-0.5 pt-1 h-[18px]" />;
+  }
+
+  const voted     = poll.myVotedOptionIds.length > 0;
+  const votedText = voted
+    ? (poll.options.find(o => o.id === poll.myVotedOptionIds[0])?.text ?? '').toLowerCase().trim()
+    : '';
+
+  let badge: React.ReactNode = null;
+  if (poll.type === 'event') {
+    if (!voted) {
+      badge = poll.status === 'open'
+        ? <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 shrink-0 uppercase tracking-wide">pendente</span>
+        : null;
+    } else if (votedText.startsWith('sim')) {
+      badge = <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">✓ Sim</span>;
+    } else if (votedText.startsWith('talv') || votedText.startsWith('maybe')) {
+      badge = <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 shrink-0">? Talvez</span>;
+    } else if (votedText.startsWith('não') || votedText.startsWith('nao') || votedText.startsWith('no')) {
+      badge = <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 shrink-0">✗ Não</span>;
+    } else {
+      badge = <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>;
+    }
+  } else {
+    badge = voted
+      ? <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0 uppercase tracking-wide">votado</span>
+      : poll.status === 'open'
+        ? <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 shrink-0 uppercase tracking-wide">pendente</span>
+        : null;
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 min-w-0 h-[18px]">
+      <Vote size={10} className="shrink-0 text-slate-400 dark:text-slate-500" />
+      <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0">
+        {poll.eventIcon ? `${poll.eventIcon} ` : ''}{poll.title}
+      </span>
+      {badge}
+    </div>
+  );
+}
+
 // ─── UpcomingMatchRow ─────────────────────────────────────────────────────────
 
 function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
@@ -374,67 +421,31 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
           </p>
         )}
 
-        {/* Situação do jogador — oculto no step accept (painel direito já mostra contadores) */}
-        {myPlayer && header.stepKey !== 'accept' && (
+        {/* Situação do jogador */}
+        {myPlayer && (
           <div className="flex items-center gap-2 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap">
             <span className="text-[10px] text-slate-400 uppercase tracking-wide shrink-0">Você</span>
-            <div className="flex items-center gap-1 min-w-0">
-              {myHex && (
-                <span
-                  className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
-                  style={{ backgroundColor: myHex }}
-                />
-              )}
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
-                {myName}
-              </span>
-            </div>
+            {(myHex || myName) && (
+              <div className="flex items-center gap-1 min-w-0">
+                {myHex && (
+                  <span
+                    className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
+                    style={{ backgroundColor: myHex }}
+                  />
+                )}
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+                  {myName}
+                </span>
+              </div>
+            )}
             <span className={`text-xs font-semibold shrink-0 ${inviteCls}`}>
               {inviteIcon} {inviteLabel}
             </span>
           </div>
         )}
 
-        {/* Votação/evento vinculado */}
-        {poll && (() => {
-          const voted = poll.myVotedOptionIds.length > 0;
-          const votedText = voted
-            ? (poll.options.find(o => o.id === poll.myVotedOptionIds[0])?.text ?? '').toLowerCase().trim()
-            : '';
-
-          let badge: React.ReactNode;
-          if (poll.type === 'event') {
-            if (!voted) {
-              badge = poll.status === 'open'
-                ? <span className="text-[10px] font-semibold text-amber-500 dark:text-amber-400 shrink-0 uppercase tracking-wide">pendente</span>
-                : null;
-            } else if (votedText.startsWith('sim')) {
-              badge = <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">✓ Sim</span>;
-            } else if (votedText.startsWith('talv') || votedText.startsWith('maybe')) {
-              badge = <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 shrink-0">? Talvez</span>;
-            } else if (votedText.startsWith('não') || votedText.startsWith('nao') || votedText.startsWith('no')) {
-              badge = <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 shrink-0">✗ Não</span>;
-            } else {
-              badge = <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>;
-            }
-          } else {
-            badge = voted
-              ? <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0 uppercase tracking-wide">votado</span>
-              : poll.status === 'open'
-                ? <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 shrink-0 uppercase tracking-wide">pendente</span>
-                : null;
-          }
-
-          return (
-            <div className="flex items-center gap-1.5 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 min-w-0">
-              <Vote size={10} className="shrink-0 text-slate-400 dark:text-slate-500" />
-              <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0">
-                {poll.eventIcon ? `${poll.eventIcon} ` : ''}{poll.title}
-              </span>
-              {badge}
-            </div>
-          );
-        })()}
+        {/* Votação/evento vinculado — linha sempre presente para o card não pular de tamanho */}
+        <PollRow poll={poll ?? null} />
       </div>
 
       {/* Direita: conteúdo por etapa */}
