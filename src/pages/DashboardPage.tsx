@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PlayersApi, MatchesApi, PaymentsApi, CalendarApi } from '../api/endpoints';
@@ -292,6 +292,29 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
   );
 }
 
+// ─── useSwipe ─────────────────────────────────────────────────────────────────
+
+function useSwipe(onLeft: () => void, onRight: () => void, threshold = 48) {
+  const startX = useRef<number | null>(null);
+  const startY = useRef<number | null>(null);
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      startX.current = e.touches[0].clientX;
+      startY.current = e.touches[0].clientY;
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      if (startX.current === null || startY.current === null) return;
+      const dx = e.changedTouches[0].clientX - startX.current;
+      const dy = e.changedTouches[0].clientY - startY.current;
+      if (Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy)) {
+        dx < 0 ? onLeft() : onRight();
+      }
+      startX.current = null;
+      startY.current = null;
+    },
+  };
+}
+
 // ─── UpcomingMatchCarousel ────────────────────────────────────────────────────
 
 function UpcomingMatchCarousel({ matches }: { matches: UpcomingMatchFull[] }) {
@@ -307,13 +330,17 @@ function UpcomingMatchCarousel({ matches }: { matches: UpcomingMatchFull[] }) {
   }, [matches.length, paused]);
 
   const go = (fn: (i: number) => number) => { setPaused(true); setActive(fn); };
+  const swipe = useSwipe(
+    () => go(i => (i + 1) % matches.length),
+    () => go(i => (i - 1 + matches.length) % matches.length),
+  );
 
   const safeIdx = active < matches.length ? active : 0;
   const current = matches[safeIdx];
   if (!current) return null;
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2.5" {...swipe}>
       <UpcomingMatchRow item={current} />
       {matches.length > 1 && (
         <div className="flex items-center justify-center gap-2">
@@ -370,6 +397,10 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
   }, [events.length, paused]);
 
   const go = (fn: (i: number) => number) => { setPaused(true); setActive(fn); };
+  const swipe = useSwipe(
+    () => go(i => (i + 1) % events.length),
+    () => go(i => (i - 1 + events.length) % events.length),
+  );
 
   if (loading && events.length === 0) {
     return <div className="h-24 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />;
@@ -391,7 +422,7 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
   const icon = ev.icon ?? ev.categoryIcon ?? null;
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2.5" {...swipe}>
       <button
         type="button"
         onClick={() => nav('/app/calendar')}
