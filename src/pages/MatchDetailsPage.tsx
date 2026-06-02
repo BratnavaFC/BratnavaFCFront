@@ -852,12 +852,16 @@ export default function MatchDetailsPage() {
             </button>
 
             {/* ── Hero / Placar ─────────────────────────────────────── */}
-            <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-lg">
-                {/* Top color strips */}
-                <div className="flex h-1.5">
-                    <div className="flex-1" style={{ backgroundColor: aColor }} />
-                    <div className="flex-1" style={{ backgroundColor: bColor }} />
-                </div>
+            <div style={{
+                padding: 5,
+                borderRadius: '1rem',
+                background: typeof data.teamAGoals === 'number' && typeof data.teamBGoals === 'number'
+                    ? (data.teamAGoals > data.teamBGoals ? aColor
+                      : data.teamBGoals > data.teamAGoals ? bColor
+                      : `linear-gradient(to right, ${aColor} 50%, ${bColor} 50%)`)
+                    : `linear-gradient(to right, ${aColor} 50%, ${bColor} 50%)`,
+            }} className="shadow-lg ring-1 ring-black/30 dark:ring-black/60">
+            <div className="rounded-[14px] overflow-hidden">
 
                 <div className="bg-slate-900 px-6 py-8 text-center">
                     {/* Team names */}
@@ -949,12 +953,8 @@ export default function MatchDetailsPage() {
                     })()}
                 </div>
 
-                {/* Bottom color strips */}
-                <div className="flex h-1.5">
-                    <div className="flex-1" style={{ backgroundColor: aColor }} />
-                    <div className="flex-1" style={{ backgroundColor: bColor }} />
-                </div>
-            </div>
+            </div>{/* end inner rounded */}
+            </div>{/* end gradient wrapper */}
 
             {/* ── Votação / Evento vinculado ────────────────────────── */}
             {(linkedPollId || isAdmin) && groupId && matchId && (

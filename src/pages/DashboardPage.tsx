@@ -140,7 +140,8 @@ function MatchRightPanel({
     const all      = [...(details.teamAPlayers ?? []), ...(details.teamBPlayers ?? []), ...(details.unassignedPlayers ?? [])];
     const accepted = all.filter(p => p.inviteResponse === 3).length;
     const refused  = all.filter(p => p.inviteResponse === 2).length;
-    const pending  = all.filter(p => p.inviteResponse === 1).length;
+    // Pendentes: apenas mensalistas (não convidados)
+    const pending  = all.filter(p => p.inviteResponse === 1 && !p.isGuest).length;
     return (
       <div className="flex flex-col gap-0.5">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -365,13 +366,16 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
   const myColor   = myTeam === 1 ? details?.teamAColor : myTeam === 2 ? details?.teamBColor : null;
   const myHex     = normalizeHex(myColor?.hexValue);
   const myName    = myColor?.name ?? (myTeam === 1 ? 'Time A' : myTeam === 2 ? 'Time B' : null);
-  const invite    = myPlayer?.inviteResponse ?? 1; // 1=Pendente 2=Recusou 3=Confirmado
-  const inviteCls = invite === 3
+  const rawInvite = myPlayer?.inviteResponse ?? 1; // 1=Pendente 2=Recusou 3=Confirmado
+  // Após a aceitação, quem não respondeu é tratado como recusado na exibição
+  const acceptOpen = header.stepKey === 'accept';
+  const invite     = rawInvite === 1 && !acceptOpen ? 2 : rawInvite;
+  const inviteCls  = invite === 3
     ? 'text-emerald-600 dark:text-emerald-400'
     : invite === 2
     ? 'text-rose-500 dark:text-rose-400'
     : 'text-amber-500 dark:text-amber-400';
-  const inviteLabel = invite === 3 ? 'Confirmado' : invite === 2 ? 'Recusou' : 'Pendente';
+  const inviteLabel = invite === 3 ? 'Confirmado' : invite === 2 ? 'Não aceitou' : 'Pendente';
   const inviteIcon  = invite === 3 ? '✓' : invite === 2 ? '✗' : '·';
 
   const hasScore = typeof header.teamAGoals === 'number' && typeof header.teamBGoals === 'number';
