@@ -125,6 +125,7 @@ export const MatchesApi = {
   rewind: (groupId: string, matchId: string) => http.post<ApiResponse<null>>(`/api/matches/group/${groupId}/${matchId}/rewind`),
   header: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/header`),
   acceptation: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/acceptation`),
+  acceptationSummary: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/acceptation/summary`),
   matchmaking: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   postgame: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/postgame`),
   history: (groupId: string, take: number, playerId?: string, skip?: number) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/history`, { params: { take, skip: skip ?? 0, ...(playerId ? { playerId } : {}) } }),

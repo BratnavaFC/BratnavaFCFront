@@ -32,10 +32,17 @@ type LinkedPoll = {
   options:           LinkedPollOption[];
 };
 
+type AcceptationSummary = {
+  acceptedPlayers: { isGuest: boolean }[];
+  rejectedPlayers: { isGuest: boolean }[];
+  pendingPlayers:  { isGuest: boolean }[];
+};
+
 type UpcomingMatchFull = {
-  header:   MatchHeaderDto;
-  details?: MatchDetailsDto | null;
-  poll?:    LinkedPoll | null;
+  header:              MatchHeaderDto;
+  details?:            MatchDetailsDto | null;
+  poll?:               LinkedPoll | null;
+  acceptationSummary?: AcceptationSummary | null;
 };
 
 type MyPlayer = {
@@ -117,11 +124,12 @@ function stepKeyColor(stepKey?: string) {
 // ─── MatchRightPanel ──────────────────────────────────────────────────────────
 
 function MatchRightPanel({
-  header, details, myPlayer,
+  header, details, myPlayer, acceptationSummary,
 }: {
-  header:    MatchHeaderDto;
-  details?:  MatchDetailsDto | null;
-  myPlayer:  MatchPlayer | null;
+  header:               MatchHeaderDto;
+  details?:             MatchDetailsDto | null;
+  myPlayer:             MatchPlayer | null;
+  acceptationSummary?:  AcceptationSummary | null;
 }) {
   const step     = header.stepKey;
   const hasScore = typeof header.teamAGoals === 'number' && typeof header.teamBGoals === 'number';
@@ -134,14 +142,12 @@ function MatchRightPanel({
     </div>
   ) : null;
 
-  // ── accept: contadores de convite ────────────────────────────────────────
+  // ── accept: contadores de convite (via summary — só mensalistas) ─────────
   if (step === 'accept') {
-    if (!details) return <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />;
-    const all      = [...(details.teamAPlayers ?? []), ...(details.teamBPlayers ?? []), ...(details.unassignedPlayers ?? [])];
-    const accepted = all.filter(p => p.inviteResponse === 3).length;
-    const refused  = all.filter(p => p.inviteResponse === 2).length;
-    // Pendentes: apenas mensalistas (não convidados)
-    const pending  = all.filter(p => p.inviteResponse === 1 && !p.isGuest).length;
+    if (!acceptationSummary) return <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />;
+    const accepted = acceptationSummary.acceptedPlayers.length;
+    const refused  = acceptationSummary.rejectedPlayers.length;
+    const pending  = acceptationSummary.pendingPlayers.length;
     return (
       <div className="flex flex-col gap-0.5">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -348,7 +354,7 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
   const store = useAccountStore();
   const selectedPlayerId = store.getActive()?.activePlayerId ?? '';
 
-  const { header, details, poll } = item;
+  const { header, details, poll, acceptationSummary } = item;
   const dates  = formatDate(header.playedAt);
   const isLive = header.stepKey === 'playing';
   const { bar, badge } = stepKeyColor(header.stepKey);
@@ -452,7 +458,7 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
 
       {/* Direita: conteúdo por etapa */}
       <div className="flex items-center px-4 shrink-0 border-l border-slate-100 dark:border-slate-800">
-        <MatchRightPanel header={header} details={details} myPlayer={myPlayer} />
+        <MatchRightPanel header={header} details={details} myPlayer={myPlayer} acceptationSummary={acceptationSummary} />
       </div>
     </button>
   );
@@ -848,11 +854,21 @@ export default function DashboardPage() {
       const headers = ((headersRes.data as any)?.data ?? headersRes.data ?? []) as MatchHeaderDto[];
       if (headers.length === 0) { setUpcomingMatches([]); return; }
 
-      // busca detalhes e polls vinculados em paralelo
-      const [detailsResults, pollResults] = await Promise.all([
+      // busca detalhes, polls e summary de aceitação (só para partidas em "accept") em paralelo
+      const isAcceptStep = (h: MatchHeaderDto) => {
+        const k = (h.stepKey ?? '').toLowerCase();
+        return k === 'accept' || k === 'acceptation' || k === 'create';
+      };
+
+      const [detailsResults, pollResults, summaryResults] = await Promise.all([
         Promise.allSettled(headers.map(h => MatchesApi.details(groupId, h.matchId))),
         Promise.allSettled(headers.map(h =>
           h.linkedPollId ? PollsApi.getPoll(groupId, h.linkedPollId) : Promise.resolve(null)
+        )),
+        Promise.allSettled(headers.map(h =>
+          isAcceptStep(h)
+            ? MatchesApi.acceptationSummary(groupId, h.matchId)
+            : Promise.resolve(null)
         )),
       ]);
 
@@ -868,7 +884,12 @@ export default function DashboardPage() {
           ? ((pollRaw.data as any)?.data ?? (pollRaw.data as any) ?? null) as LinkedPoll | null
           : null;
 
-        return { header, details, poll };
+        const sr = summaryResults[i];
+        const acceptationSummary = sr.status === 'fulfilled' && sr.value
+          ? ((sr.value.data as any)?.data ?? null) as AcceptationSummary | null
+          : null;
+
+        return { header, details, poll, acceptationSummary };
       });
 
       setUpcomingMatches(full);
