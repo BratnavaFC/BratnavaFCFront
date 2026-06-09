@@ -653,13 +653,19 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
             const context = (ctxRes.data as any) as CurrentMatchBetContextDto;
             setCtx(context);
 
-            // Buscar cores/nomes dos times
-            try {
-                const detRes = await MatchesApi.details(groupId, matchId);
-                const det    = (detRes.data as any)?.data ?? detRes.data;
-                if (det?.teamAColor?.name) setTeamA({ name: det.teamAColor.name, hex: det.teamAColor.hexValue ?? "#0f172a" });
-                if (det?.teamBColor?.name) setTeamB({ name: det.teamBColor.name, hex: det.teamBColor.hexValue ?? "#0f172a" });
-            } catch { /* sem cores definidas */ }
+            // Cores/nomes dos times: usa os campos do contexto de aposta (backend atualizado)
+            // com fallback para /details (compatibilidade)
+            if (context?.teamAName) {
+                setTeamA({ name: context.teamAName, hex: context.teamAColorHex ?? "#0f172a" });
+                setTeamB({ name: context.teamBName ?? "Time B", hex: context.teamBColorHex ?? "#0f172a" });
+            } else {
+                try {
+                    const detRes = await MatchesApi.details(groupId, matchId);
+                    const det    = (detRes.data as any)?.data ?? detRes.data;
+                    if (det?.teamAColor?.name) setTeamA({ name: det.teamAColor.name, hex: det.teamAColor.hexValue ?? "#0f172a" });
+                    if (det?.teamBColor?.name) setTeamB({ name: det.teamBColor.name, hex: det.teamBColor.hexValue ?? "#0f172a" });
+                } catch { /* sem cores definidas ainda */ }
+            }
 
             if (context?.myBet?.selections?.length) {
                 const sels: SelectionForm[] = context.myBet.selections.map((s: any) => {
@@ -986,9 +992,23 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                 </div>
             )}
 
-            {/* Escalação + resumo de apostas */}
+            {/* Escalação + apostas ao vivo — atualiza conforme o formulário é preenchido */}
             {ctx.players.some((p) => p.team !== 0) && (() => {
-                const summary = parseBetSummary(ctx.myBet);
+                // Prioriza as seleções do formulário (edição em andamento);
+                // cai de volta para a aposta salva apenas quando a janela está fechada.
+                const liveSummary: BetSummary = { goals: {}, assists: {} };
+                const srcSelections = !isLocked ? selections : [];
+                for (const sel of srcSelections) {
+                    if (sel.category === "WinningTeam" && sel.winTeam)
+                        liveSummary.winningTeam = sel.winTeam as BetSummary["winningTeam"];
+                    else if (sel.category === "FinalScore" && sel.scoreA !== undefined && sel.scoreB !== undefined)
+                        liveSummary.finalScore = `${sel.scoreA}:${sel.scoreB}`;
+                    else if (sel.category === "PlayerGoals" && sel.playerMatchId)
+                        liveSummary.goals[sel.playerMatchId] = (liveSummary.goals[sel.playerMatchId] ?? 0) + (sel.playerCount ?? 0);
+                    else if (sel.category === "PlayerAssists" && sel.playerMatchId)
+                        liveSummary.assists[sel.playerMatchId] = (liveSummary.assists[sel.playerMatchId] ?? 0) + (sel.playerCount ?? 0);
+                }
+                const summary = (srcSelections.length > 0) ? liveSummary : parseBetSummary(ctx.myBet);
                 const winA    = summary.winningTeam === "TeamA";
                 const winB    = summary.winningTeam === "TeamB";
                 const isDraw  = summary.winningTeam === "Draw";

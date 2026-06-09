@@ -34,12 +34,16 @@ export interface MatchBetDto {
 }
 
 export interface CurrentMatchBetContextDto {
-    matchId:       string;
-    playedAt:      string;
-    statusName:    string;
-    betWindowOpen: boolean;
-    players:       BetPlayer[];
-    myBet:         MatchBetDto | null;
+    matchId:        string;
+    playedAt:       string;
+    statusName:     string;
+    betWindowOpen:  boolean;
+    teamAName?:     string | null;
+    teamBName?:     string | null;
+    teamAColorHex?: string | null;
+    teamBColorHex?: string | null;
+    players:        BetPlayer[];
+    myBet:          MatchBetDto | null;
 }
 
 export interface UserBetResultDto {

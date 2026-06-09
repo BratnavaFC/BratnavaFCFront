@@ -191,7 +191,8 @@ export default function MatchesPage() {
                 rejectedPlayers: dto?.rejectedPlayers ?? dto?.RejectedPlayers ?? [],
                 pendingPlayers:  dto?.pendingPlayers  ?? dto?.PendingPlayers  ?? [],
                 maxPlayers:      dto?.maxPlayers      ?? dto?.MaxPlayers      ?? 0,
-                acceptedOverLimit: dto?.acceptedOverLimit ?? dto?.AcceptedOverLimit ?? false,
+                acceptedOverLimit:       dto?.acceptedOverLimit       ?? dto?.AcceptedOverLimit       ?? false,
+                canAdvanceToMatchmaking: dto?.canAdvanceToMatchmaking ?? dto?.CanAdvanceToMatchmaking ?? false,
                 teamAPlayers: (current?.teamAPlayers ?? []) as any,
                 teamBPlayers: (current?.teamBPlayers ?? []) as any,
             } as any;

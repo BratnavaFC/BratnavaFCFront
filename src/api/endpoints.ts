@@ -424,6 +424,12 @@ export const GodModeApi = {
 };
 
 export const MatchCardApi = {
+  getPrompt: (groupId: string, dto: {
+    template: 'match_preview' | 'match_result';
+    teamAName: string; teamAColorHex: string; teamAPlayers: { name: string; isGoalkeeper: boolean }[];
+    teamBName: string; teamBColorHex: string; teamBPlayers: { name: string; isGoalkeeper: boolean }[];
+    playedAt?: string; teamAGoals?: number; teamBGoals?: number; mvpName?: string; winnerTeamName?: string;
+  }) => http.post<ApiResponse<string>>(`/api/MatchCard/group/${groupId}/prompt`, dto),
   generate: (groupId: string, dto: {
     template: 'match_preview' | 'match_result';
     teamAName: string;

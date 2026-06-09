@@ -42,11 +42,50 @@ export function MatchShareCardModal({
     onClose,
 }: MatchShareCardProps) {
     const [imageBase64, setImageBase64] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
+    const [prompt,      setPrompt]      = useState<string | null>(null);
+    const [promptLoading, setPromptLoading] = useState(false);
+    const [promptCopied,  setPromptCopied]  = useState(false);
+    const [loading,     setLoading]     = useState(false);
+    const [error,       setError]       = useState<string | null>(null);
+    const [copied,      setCopied]      = useState(false);
 
     const isResult = template === 'match_result';
+
+    const dto = useCallback(() => ({
+        template,
+        teamAName, teamAColorHex,
+        teamAPlayers: teamAPlayers.map(p => ({ name: p.playerName, isGoalkeeper: p.isGoalkeeper })),
+        teamBName, teamBColorHex,
+        teamBPlayers: teamBPlayers.map(p => ({ name: p.playerName, isGoalkeeper: p.isGoalkeeper })),
+        playedAt: matchPlayedAt || undefined,
+        teamAGoals: isResult ? teamAGoals : undefined,
+        teamBGoals: isResult ? teamBGoals : undefined,
+        mvpName: isResult ? mvpName : undefined,
+        winnerTeamName: isResult ? winnerTeamName : undefined,
+    }), [template, teamAName, teamAColorHex, teamAPlayers, teamBName, teamBColorHex, teamBPlayers, matchPlayedAt, isResult, teamAGoals, teamBGoals, mvpName, winnerTeamName]);
+
+    // ── Buscar prompt ──
+    const handleGetPrompt = useCallback(async () => {
+        setPromptLoading(true);
+        setError(null);
+        try {
+            const res = await MatchCardApi.getPrompt(groupId, dto());
+            const data = res.data;
+            if (data?.success && data.data) setPrompt(data.data);
+            else setError((data as any)?.error || 'Erro ao gerar prompt.');
+        } catch (err: any) {
+            setError(err?.response?.data?.error || err?.message || 'Erro de rede.');
+        } finally {
+            setPromptLoading(false);
+        }
+    }, [groupId, dto]);
+
+    async function handleCopyPrompt() {
+        if (!prompt) return;
+        await navigator.clipboard.writeText(prompt);
+        setPromptCopied(true);
+        setTimeout(() => setPromptCopied(false), 2500);
+    }
 
     // ── Gerar imagem via API ──
     const handleGenerate = useCallback(async () => {
@@ -55,26 +94,7 @@ export function MatchShareCardModal({
         setImageBase64(null);
 
         try {
-            const res = await MatchCardApi.generate(groupId, {
-                template,
-                teamAName,
-                teamAColorHex,
-                teamAPlayers: teamAPlayers.map(p => ({
-                    name: p.playerName,
-                    isGoalkeeper: p.isGoalkeeper,
-                })),
-                teamBName,
-                teamBColorHex,
-                teamBPlayers: teamBPlayers.map(p => ({
-                    name: p.playerName,
-                    isGoalkeeper: p.isGoalkeeper,
-                })),
-                playedAt: matchPlayedAt || undefined,
-                teamAGoals: isResult ? teamAGoals : undefined,
-                teamBGoals: isResult ? teamBGoals : undefined,
-                mvpName: isResult ? mvpName : undefined,
-                winnerTeamName: isResult ? winnerTeamName : undefined,
-            });
+            const res = await MatchCardApi.generate(groupId, dto());
 
             const data = res.data;
             if (data?.success && data.data) {
@@ -88,7 +108,7 @@ export function MatchShareCardModal({
         } finally {
             setLoading(false);
         }
-    }, [groupId, template, teamAName, teamAColorHex, teamAPlayers, teamBName, teamBColorHex, teamBPlayers, matchPlayedAt, teamAGoals, teamBGoals, mvpName, winnerTeamName, isResult]);
+    }, [groupId, dto]);
 
     // ── Copy to clipboard ──
     async function handleCopy() {
@@ -155,6 +175,48 @@ export function MatchShareCardModal({
                             </div>
                         )}
                     </div>
+
+                    {/* ── Prompt section ── */}
+                    {!imageBase64 && (
+                        <div className="w-full space-y-2">
+                            {/* Botão ver prompt */}
+                            {!prompt && (
+                                <button
+                                    type="button"
+                                    onClick={handleGetPrompt}
+                                    disabled={promptLoading}
+                                    className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+                                >
+                                    {promptLoading
+                                        ? <><Loader2 size={14} className="animate-spin" /> Gerando prompt…</>
+                                        : <><ImageIcon size={14} /> Ver prompt para geração externa</>
+                                    }
+                                </button>
+                            )}
+
+                            {/* Prompt text + copy */}
+                            {prompt && (
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                    <div className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Prompt para DALL-E / Midjourney</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyPrompt}
+                                            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                        >
+                                            {promptCopied ? <><Check size={12} /> Copiado!</> : <><Copy size={12} /> Copiar</>}
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        readOnly
+                                        value={prompt}
+                                        rows={6}
+                                        className="w-full px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 resize-none outline-none"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Generate button */}
                     {!imageBase64 && !loading && (

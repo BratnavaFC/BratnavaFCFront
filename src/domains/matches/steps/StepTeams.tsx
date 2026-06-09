@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
+import { MatchFlyerModal } from "../ui/MatchFlyer";
 import { ArrowLeftRight, Check, Play, RefreshCw, Share2, Shuffle, UserX, UserCheck } from "lucide-react";
 import { MatchShareCardModal, type CardTemplate } from "../../../components/modals/MatchShareCardModal";
 import { useAccountStore } from "../../../auth/accountStore";
@@ -292,6 +293,7 @@ export function StepTeams({
     const [sel1, setSel1] = useState<{ id: string; team: "A" | "B" } | null>(null);
     const [sel2Id, setSel2Id] = useState<string | null>(null);
     const [acting, setActing] = useState(false);
+    const [showFlyer, setShowFlyer] = useState(false);
 
     function handlePlayerClick(playerId: string, team: "A" | "B") {
         if (sel1?.id === playerId) { setSel1(null); setSel2Id(null); return; }
@@ -961,7 +963,32 @@ export function StepTeams({
                     Gerar card para o Instagram
                 </button>
             )}
+
+            {/* Compartilhar escalação — renderização local, sem OpenAI */}
+            {teamsAlreadyAssigned && sortedTeamAPlayers.length > 0 && (
+                <button
+                    type="button"
+                    onClick={() => setShowFlyer(true)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-blue-300 dark:border-blue-700 py-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+                >
+                    <Share2 size={15} />
+                    Compartilhar escalação
+                </button>
+            )}
         </div>
+
+        {showFlyer && (
+            <MatchFlyerModal
+                teamAName={currentTeamAColorName}
+                teamBName={currentTeamBColorName}
+                teamAHex={currentTeamAColorHex}
+                teamBHex={currentTeamBColorHex}
+                teamAPlayers={sortedTeamAPlayers}
+                teamBPlayers={sortedTeamBPlayers}
+                playedAt={matchPlayedAt}
+                onClose={() => setShowFlyer(false)}
+            />
+        )}
 
         {shareCardData && _groupId && (
             <MatchShareCardModal
