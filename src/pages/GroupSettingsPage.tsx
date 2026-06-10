@@ -109,9 +109,16 @@ export default function GroupSettingsPage() {
 
     // ── regra de empate MVP ────────────────────────────────────────
     /** 0 = NoMvp, 1 = AllMvp, 2 = AllMvpUpToMax */
-    const [mvpTieRule,       setMvpTieRule]       = useState<number>(1);
-    const [mvpTieMaxPlayers, setMvpTieMaxPlayers] = useState<number>(2);
-    const [showPlayerStats,  setShowPlayerStats]  = useState<boolean>(false);
+    const [mvpTieRule,           setMvpTieRule]           = useState<number>(1);
+    const [mvpTieMaxPlayers,     setMvpTieMaxPlayers]     = useState<number>(2);
+    const [showPlayerStats,      setShowPlayerStats]      = useState<boolean>(false);
+    const [autoFinalizeMvpHours, setAutoFinalizeMvpHours] = useState<number | null>(null);
+
+    // ── tab ────────────────────────────────────────────────────────
+    const [activeTab, setActiveTab] = useState(0);
+
+    // ── pagamento — notificações ───────────────────────────────────
+    const [paymentDueDay, setPaymentDueDay] = useState<number | null>(null);
 
     // ── ícones ─────────────────────────────────────────────────────
     const [goalIcon,       setGoalIcon]       = useState<string | null>(null);
@@ -178,6 +185,8 @@ export default function GroupSettingsPage() {
                 setMvpTieRule(gs.mvpTieRule ?? 1);
                 setMvpTieMaxPlayers(gs.mvpTieMaxPlayers ?? 2);
                 setShowPlayerStats(gs.showPlayerStats ?? false);
+                setPaymentDueDay(gs.paymentDueDay ?? null);
+                setAutoFinalizeMvpHours(gs.autoFinalizeMvpHours ?? null);
             }
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao carregar configurações.'));
@@ -257,6 +266,8 @@ export default function GroupSettingsPage() {
                 mvpTieRule,
                 mvpTieMaxPlayers: mvpTieRule === 2 ? mvpTieMaxPlayers : undefined,
                 showPlayerStats,
+                paymentDueDay: paymentMode === 0 ? paymentDueDay : null,
+                autoFinalizeMvpHours,
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
@@ -365,15 +376,15 @@ export default function GroupSettingsPage() {
                 </div>
             </div>
 
-            {/* ── Configurações gerais ──────────────────────────── */}
+            {/* ── Configurações ────────────────────────────────── */}
             <div className="card p-0 overflow-hidden shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                 <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80">
                     <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
                         <Settings size={14} />
                     </div>
                     <div>
-                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Configurações gerais</div>
-                        <div className="text-xs text-slate-400 dark:text-slate-500">Regras de partidas e modo de cobrança</div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Configurações</div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500">Regras, pagamento, MVP e ícones da patota</div>
                     </div>
                 </div>
                 <div className="p-6">
@@ -382,66 +393,109 @@ export default function GroupSettingsPage() {
                         <Loader2 size={16} className="animate-spin" /> Carregando…
                     </div>
                 ) : (
-                    <div className="space-y-6">
-                        <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-5">
 
-                            {/* ── Jogadores ── */}
-                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                                        <Users size={17} />
+                        {/* ── Tab bar ── */}
+                        <div className="flex p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl gap-1">
+                            {(['Geral', 'Pagamento', 'MVP', 'Ícones'] as const).map((tab, i) => (
+                                <button
+                                    key={tab}
+                                    type="button"
+                                    onClick={() => setActiveTab(i)}
+                                    className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all ${
+                                        activeTab === i
+                                            ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    }`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* ── Tab 0: Geral ── */}
+                        {activeTab === 0 && (
+                            <div className="space-y-4">
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {/* Jogadores */}
+                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                                <Users size={17} />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-white">Jogadores</div>
+                                                <div className="text-xs text-slate-400 dark:text-slate-500">Por partida</div>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Field label="Mínimo">
+                                                <input className="input" type="number" min={2} max={maxPlayers} value={minPlayers}
+                                                    onChange={(e) => setMinPlayers(Number(e.target.value))} />
+                                            </Field>
+                                            <Field label="Máximo">
+                                                <input className="input" type="number" min={minPlayers} value={maxPlayers}
+                                                    onChange={(e) => setMaxPlayers(Number(e.target.value))} />
+                                            </Field>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Jogadores</div>
-                                        <div className="text-xs text-slate-400 dark:text-slate-500">Por partida</div>
+                                    {/* Padrões */}
+                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                                                <CalendarClock size={17} />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-white">Padrões</div>
+                                                <div className="text-xs text-slate-400 dark:text-slate-500">Local, dia e horário</div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Field label="Local padrão">
+                                                <input className="input" type="text" placeholder="Ex: Boca Jrs" maxLength={120}
+                                                    value={defaultPlaceName} onChange={(e) => setDefaultPlaceName(e.target.value)} />
+                                            </Field>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Field label="Dia">
+                                                    <select className="input" value={defaultDayOfWeek}
+                                                        onChange={(e) => setDefaultDayOfWeek(e.target.value)}>
+                                                        {DAY_OPTIONS.map((o) => (
+                                                            <option key={o.value} value={o.value}>{o.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </Field>
+                                                <Field label="Horário">
+                                                    <input className="input" type="time" value={defaultKickoffTime}
+                                                        onChange={(e) => setDefaultKickoffTime(e.target.value)} />
+                                                </Field>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Field label="Mínimo">
-                                        <input className="input" type="number" min={2} max={maxPlayers} value={minPlayers}
-                                            onChange={(e) => setMinPlayers(Number(e.target.value))} />
-                                    </Field>
-                                    <Field label="Máximo">
-                                        <input className="input" type="number" min={minPlayers} value={maxPlayers}
-                                            onChange={(e) => setMaxPlayers(Number(e.target.value))} />
-                                    </Field>
+                                {/* Exibir stats */}
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                                <BarChart2 size={17} />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-white">Exibir gols e assistências</div>
+                                                <div className="text-xs text-slate-400 dark:text-slate-500">Jogadores comuns poderão ver gols e assistências. Admins sempre visualizam.</div>
+                                            </div>
+                                        </div>
+                                        <button type="button" role="switch" aria-checked={showPlayerStats}
+                                            onClick={() => setShowPlayerStats((v) => !v)}
+                                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${showPlayerStats ? 'bg-slate-900 dark:bg-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 shadow transition-transform ${showPlayerStats ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                        )}
 
-                            {/* ── Padrões de Partida ── */}
-                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                                        <CalendarClock size={17} />
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Padrões</div>
-                                        <div className="text-xs text-slate-400 dark:text-slate-500">Local, dia e horário</div>
-                                    </div>
-                                </div>
-                                <div className="space-y-3">
-                                    <Field label="Local padrão">
-                                        <input className="input" type="text" placeholder="Ex: Boca Jrs" maxLength={120}
-                                            value={defaultPlaceName} onChange={(e) => setDefaultPlaceName(e.target.value)} />
-                                    </Field>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Field label="Dia">
-                                            <select className="input" value={defaultDayOfWeek}
-                                                onChange={(e) => setDefaultDayOfWeek(e.target.value)}>
-                                                {DAY_OPTIONS.map((o) => (
-                                                    <option key={o.value} value={o.value}>{o.label}</option>
-                                                ))}
-                                            </select>
-                                        </Field>
-                                        <Field label="Horário">
-                                            <input className="input" type="time" value={defaultKickoffTime}
-                                                onChange={(e) => setDefaultKickoffTime(e.target.value)} />
-                                        </Field>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* ── Pagamento ── */}
+                        {/* ── Tab 1: Pagamento ── */}
+                        {activeTab === 1 && (
                             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
                                 <div className="flex items-center gap-3">
                                     <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -452,12 +506,11 @@ export default function GroupSettingsPage() {
                                         <div className="text-xs text-slate-400 dark:text-slate-500">Modo de cobrança</div>
                                     </div>
                                 </div>
-                                <div className="space-y-3">
+                                <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-2">
                                         {[{ val: 0, label: 'Mensal' }, { val: 1, label: 'Por jogo' }].map(({ val, label }) => (
                                             <label key={val} className={`flex items-center justify-center p-2.5 rounded-lg border-2 cursor-pointer transition-all text-sm font-medium select-none ${paymentMode === val ? 'border-slate-900 bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-                                                <input type="radio" name="paymentMode" value={val} checked={paymentMode === val}
-                                                    onChange={() => setPaymentMode(val)} className="sr-only" />
+                                                <input type="radio" name="paymentMode" value={val} checked={paymentMode === val} onChange={() => setPaymentMode(val)} className="sr-only" />
                                                 {label}
                                             </label>
                                         ))}
@@ -465,124 +518,130 @@ export default function GroupSettingsPage() {
                                     {paymentMode === 0 && (
                                         <>
                                             <Field label="Mensalidade Jogador (R$)">
-                                                <input className="input" type="number" min={0} step={0.01}
-                                                    placeholder="Ex: 50.00" value={monthlyFee}
-                                                    onChange={(e) => setMonthlyFee(e.target.value)} />
+                                                <input className="input" type="number" min={0} step={0.01} placeholder="Ex: 50.00" value={monthlyFee} onChange={(e) => setMonthlyFee(e.target.value)} />
                                             </Field>
                                             <Field label="Mensalidade Goleiro (R$)">
-                                                <input className="input" type="number" min={0} step={0.01}
-                                                    placeholder="Padrão: igual ao jogador" value={goalkeeperMonthlyFee}
-                                                    onChange={(e) => setGoalkeeperMonthlyFee(e.target.value)} />
+                                                <input className="input" type="number" min={0} step={0.01} placeholder="Padrão: igual ao jogador" value={goalkeeperMonthlyFee} onChange={(e) => setGoalkeeperMonthlyFee(e.target.value)} />
+                                            </Field>
+                                            <Field label="Dia de vencimento">
+                                                <select className="input" value={paymentDueDay ?? ''} onChange={(e) => setPaymentDueDay(e.target.value !== '' ? Number(e.target.value) : null)}>
+                                                    <option value="">Sem lembrete</option>
+                                                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                                                        <option key={d} value={d}>Dia {d}</option>
+                                                    ))}
+                                                </select>
+                                                {paymentDueDay != null && (
+                                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Lembrete enviado no dia&nbsp;1 e no dia&nbsp;{paymentDueDay} para quem ainda não pagou.</p>
+                                                )}
                                             </Field>
                                         </>
                                     )}
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-                                        {paymentMode === 0
-                                            ? 'Cobrado mensalmente ao encerrar uma partida.'
-                                            : 'O financeiro define o valor ao encerrar cada partida.'}
+                                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                                        {paymentMode === 0 ? 'Cobrado mensalmente ao encerrar uma partida.' : 'O financeiro define o valor ao encerrar cada partida.'}
                                     </p>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* ── Regra de empate MVP ── */}
-                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
-                            <div className="flex items-center gap-3">
-                                <div className="h-9 w-9 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center shrink-0">
-                                    <Trophy size={17} />
+                        {/* ── Tab 2: MVP ── */}
+                        {activeTab === 2 && (
+                            <div className="space-y-4">
+                                {/* Empate */}
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-9 w-9 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center shrink-0">
+                                            <Trophy size={17} />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-900 dark:text-white">Empate no MVP</div>
+                                            <div className="text-xs text-slate-400 dark:text-slate-500">O que acontece quando dois ou mais jogadores empatam em votos</div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {([
+                                            { val: 0, label: 'Nenhum recebe MVP', desc: 'Em caso de empate, ninguém é eleito.' },
+                                            { val: 1, label: 'Todos recebem MVP', desc: 'Todos os empatados são eleitos MVPs.' },
+                                            { val: 2, label: 'Todos até um máximo', desc: 'Todos recebem MVP se o número de empatados não ultrapassar o limite.' },
+                                        ] as { val: number; label: string; desc: string }[]).map(({ val, label, desc }) => (
+                                            <label key={val} className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all select-none ${mvpTieRule === val ? 'border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+                                                <input type="radio" name="mvpTieRule" value={val} checked={mvpTieRule === val} onChange={() => setMvpTieRule(val)} className="sr-only" />
+                                                <div className="pt-0.5">
+                                                    <div className="text-sm font-medium leading-tight">{label}</div>
+                                                    <div className={`text-xs mt-0.5 leading-relaxed ${mvpTieRule === val ? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>{desc}</div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {mvpTieRule === 2 && (
+                                        <Field label="Máximo de MVPs empatados">
+                                            <input className="input" type="number" min={2} max={22} value={mvpTieMaxPlayers} onChange={(e) => setMvpTieMaxPlayers(Math.max(2, Number(e.target.value)))} />
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Se {mvpTieMaxPlayers} ou menos jogadores empatarem, todos recebem MVP. Se ultrapassar, ninguém recebe.</p>
+                                        </Field>
+                                    )}
                                 </div>
-                                <div>
-                                    <div className="text-sm font-semibold text-slate-900 dark:text-white">Empate no MVP</div>
-                                    <div className="text-xs text-slate-400 dark:text-slate-500">O que acontece quando dois ou mais jogadores empatam em votos</div>
+                                {/* Auto-finalize */}
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-9 w-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-900 dark:text-white">Encerrar votação MVP automaticamente</div>
+                                            <div className="text-xs text-slate-400 dark:text-slate-500">Finaliza a partida após um tempo configurado</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            {autoFinalizeMvpHours != null ? `A partida será finalizada automaticamente ${autoFinalizeMvpHours}h após ser encerrada. Um lembrete é enviado 1h antes.` : 'Desativado — o admin finaliza manualmente quando quiser.'}
+                                        </p>
+                                        <button type="button" role="switch" aria-checked={autoFinalizeMvpHours != null}
+                                            onClick={() => setAutoFinalizeMvpHours(autoFinalizeMvpHours != null ? null : 2)}
+                                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${autoFinalizeMvpHours != null ? 'bg-slate-900 dark:bg-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 shadow transition-transform ${autoFinalizeMvpHours != null ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+                                    {autoFinalizeMvpHours != null && (
+                                        <Field label="Horas para encerrar após fim da partida">
+                                            <input className="input" type="number" min={1} max={48} value={autoFinalizeMvpHours} onChange={(e) => setAutoFinalizeMvpHours(Math.max(1, Number(e.target.value)))} />
+                                        </Field>
+                                    )}
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                {([
-                                    { val: 0, label: 'Nenhum recebe MVP', desc: 'Em caso de empate, ninguém é eleito.' },
-                                    { val: 1, label: 'Todos recebem MVP', desc: 'Todos os empatados são eleitos MVPs.' },
-                                    { val: 2, label: 'Todos até um máximo', desc: 'Todos recebem MVP se o número de empatados não ultrapassar o limite.' },
-                                ] as { val: number; label: string; desc: string }[]).map(({ val, label, desc }) => (
-                                    <label
-                                        key={val}
-                                        className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all select-none ${mvpTieRule === val ? 'border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
-                                    >
-                                        <input type="radio" name="mvpTieRule" value={val} checked={mvpTieRule === val}
-                                            onChange={() => setMvpTieRule(val)} className="sr-only" />
-                                        <div className="pt-0.5">
-                                            <div className="text-sm font-medium leading-tight">{label}</div>
-                                            <div className={`text-xs mt-0.5 leading-relaxed ${mvpTieRule === val ? 'opacity-70' : 'text-slate-400 dark:text-slate-500'}`}>{desc}</div>
+                        )}
+
+                        {/* ── Tab 3: Ícones ── */}
+                        {activeTab === 3 && (
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {[
+                                    { label: 'Gol',         value: goalIcon,       def: DEFAULT_ICONS.goalIcon,       opts: GOAL_OPTIONS,       set: setGoalIcon },
+                                    { label: 'Goleiro',     value: goalkeeperIcon, def: DEFAULT_ICONS.goalkeeperIcon, opts: GOALKEEPER_OPTIONS, set: setGoalkeeperIcon },
+                                    { label: 'Assistência', value: assistIcon,     def: DEFAULT_ICONS.assistIcon,     opts: ASSIST_OPTIONS,     set: setAssistIcon },
+                                    { label: 'Gol contra',  value: ownGoalIcon,    def: DEFAULT_ICONS.ownGoalIcon,    opts: OWN_GOAL_OPTIONS,   set: setOwnGoalIcon },
+                                    { label: 'MVP',         value: mvpIcon,        def: DEFAULT_ICONS.mvpIcon,        opts: MVP_OPTIONS,        set: setMvpIcon },
+                                    { label: 'Jogador',     value: playerIcon,     def: DEFAULT_ICONS.playerIcon,     opts: PLAYER_OPTIONS,     set: setPlayerIcon },
+                                    { label: '1º lugar',    value: rank1Icon,      def: DEFAULT_ICONS.rank1Icon,      opts: RANK_OPTIONS,       set: setRank1Icon },
+                                    { label: '2º lugar',    value: rank2Icon,      def: DEFAULT_ICONS.rank2Icon,      opts: RANK_OPTIONS,       set: setRank2Icon },
+                                    { label: '3º lugar',    value: rank3Icon,      def: DEFAULT_ICONS.rank3Icon,      opts: RANK_OPTIONS,       set: setRank3Icon },
+                                ].map(({ label, value, def, opts, set }) => (
+                                    <div key={label} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 p-4 space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                                <IconRenderer value={value ?? def} size={22} />
+                                            </div>
+                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{label}</span>
                                         </div>
-                                    </label>
+                                        <IconPicker options={opts} value={value} onChange={set} />
+                                    </div>
                                 ))}
                             </div>
-                            {mvpTieRule === 2 && (
-                                <Field label="Máximo de MVPs empatados">
-                                    <input
-                                        className="input"
-                                        type="number"
-                                        min={2}
-                                        max={22}
-                                        value={mvpTieMaxPlayers}
-                                        onChange={(e) => setMvpTieMaxPlayers(Math.max(2, Number(e.target.value)))}
-                                    />
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                                        Se {mvpTieMaxPlayers} ou menos jogadores empatarem, todos recebem MVP. Se ultrapassar, ninguém recebe.
-                                    </p>
-                                </Field>
-                            )}
-                        </div>
-
-                        {/* ── Visibilidade de estatísticas ── */}
-                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                        <BarChart2 size={17} />
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-semibold text-slate-900 dark:text-white">Exibir gols e assistências</div>
-                                        <div className="text-xs text-slate-400 dark:text-slate-500">
-                                            Jogadores comuns poderão ver gols e assistências nas partidas. Administradores sempre visualizam.
-                                        </div>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={showPlayerStats}
-                                    onClick={() => setShowPlayerStats((v) => !v)}
-                                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${
-                                        showPlayerStats
-                                            ? 'bg-slate-900 dark:bg-white'
-                                            : 'bg-slate-200 dark:bg-slate-700'
-                                    }`}
-                                >
-                                    <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 shadow transition-transform ${
-                                            showPlayerStats ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
-                                    />
-                                </button>
-                            </div>
-                        </div>
+                        )}
 
                         {/* ── Salvar ── */}
                         <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                            <button
-                                className="btn btn-primary flex items-center gap-2 px-6"
-                                onClick={save}
-                                disabled={saving || loading}
-                            >
-                                {saving
-                                    ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
-                                    : <><Save size={15} /> Salvar configurações</>
-                                }
+                            <button className="btn btn-primary flex items-center gap-2 px-6" onClick={save} disabled={saving || loading}>
+                                {saving ? <><Loader2 size={15} className="animate-spin" /> Salvando…</> : <><Save size={15} /> Salvar configurações</>}
                             </button>
-                            {msg && (
-                                <span className={`text-sm font-medium ${msg.ok ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {msg.ok ? '✓ ' : '✕ '}{msg.text}
-                                </span>
-                            )}
+                            {msg && <span className={`text-sm font-medium ${msg.ok ? 'text-emerald-600' : 'text-red-600'}`}>{msg.ok ? '✓ ' : '✕ '}{msg.text}</span>}
                             {!isPersisted && !msg && (
                                 <span className="text-xs text-amber-600 flex items-center gap-1">
                                     <AlertCircle size={13} /> Usando valores padrão — salve para persistir.
@@ -591,44 +650,6 @@ export default function GroupSettingsPage() {
                         </div>
                     </div>
                 )}
-                </div>
-            </div>
-
-            {/* ── Ícones da patota ─────────────────────────────── */}
-            <div className="card p-0 overflow-hidden shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
-                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80">
-                    <div className="h-8 w-8 rounded-lg bg-violet-600 text-white flex items-center justify-center shrink-0 text-base leading-none">
-                        ⚽
-                    </div>
-                    <div>
-                        <div className="font-semibold text-slate-900 dark:text-white text-sm">Ícones da patota</div>
-                        <div className="text-xs text-slate-400 dark:text-slate-500">Personalize os ícones exibidos em toda a aplicação</div>
-                    </div>
-                </div>
-                <div className="p-6">
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {[
-                        { label: 'Gol',         value: goalIcon,        def: DEFAULT_ICONS.goalIcon,        opts: GOAL_OPTIONS,        set: setGoalIcon },
-                        { label: 'Goleiro',     value: goalkeeperIcon,  def: DEFAULT_ICONS.goalkeeperIcon,  opts: GOALKEEPER_OPTIONS,  set: setGoalkeeperIcon },
-                        { label: 'Assistência', value: assistIcon,      def: DEFAULT_ICONS.assistIcon,      opts: ASSIST_OPTIONS,      set: setAssistIcon },
-                        { label: 'Gol contra',  value: ownGoalIcon,     def: DEFAULT_ICONS.ownGoalIcon,     opts: OWN_GOAL_OPTIONS,    set: setOwnGoalIcon },
-                        { label: 'MVP',         value: mvpIcon,         def: DEFAULT_ICONS.mvpIcon,         opts: MVP_OPTIONS,         set: setMvpIcon },
-                        { label: 'Jogador',     value: playerIcon,      def: DEFAULT_ICONS.playerIcon,      opts: PLAYER_OPTIONS,      set: setPlayerIcon },
-                        { label: '1º lugar',    value: rank1Icon,       def: DEFAULT_ICONS.rank1Icon,       opts: RANK_OPTIONS,        set: setRank1Icon },
-                        { label: '2º lugar',    value: rank2Icon,       def: DEFAULT_ICONS.rank2Icon,       opts: RANK_OPTIONS,        set: setRank2Icon },
-                        { label: '3º lugar',    value: rank3Icon,       def: DEFAULT_ICONS.rank3Icon,       opts: RANK_OPTIONS,        set: setRank3Icon },
-                    ].map(({ label, value, def, opts, set }) => (
-                        <div key={label} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50 p-4 space-y-3">
-                            <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                                    <IconRenderer value={value ?? def} size={22} />
-                                </div>
-                                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{label}</span>
-                            </div>
-                            <IconPicker options={opts} value={value} onChange={set} />
-                        </div>
-                    ))}
-                </div>
                 </div>
             </div>
 
