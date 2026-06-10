@@ -17,6 +17,7 @@ import { useAccountStore } from "../auth/accountStore";
 import { isAdmin } from "../auth/guards";
 import { PlayersApi, GroupsApi, GroupSettingsApi, NotificationsApi, type AppNotificationDto } from "../api/endpoints";
 import { Field } from "../components/Field";
+import { notificationRoute, parseNotifData } from "../lib/notificationRouter";
 
 type MyPlayerDto = {
     playerId: string;
@@ -592,7 +593,13 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                                             <button
                                                 key={n.id}
                                                 type="button"
-                                                onClick={() => { if (!n.isRead) handleMarkRead(n.id); }}
+                                                onClick={() => {
+                                                    if (!n.isRead) handleMarkRead(n.id);
+                                                    setBellOpen(false);
+                                                    const data  = parseNotifData(n.dataJson);
+                                                    const route = notificationRoute(n.type, data);
+                                                    nav(route);
+                                                }}
                                                 className={`w-full text-left px-4 py-3 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800 flex gap-3 items-start ${!n.isRead ? "bg-sky-50/60 dark:bg-sky-900/10" : ""}`}
                                             >
                                                 <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 transition-colors ${!n.isRead ? "bg-sky-500" : "bg-transparent"}`} />
