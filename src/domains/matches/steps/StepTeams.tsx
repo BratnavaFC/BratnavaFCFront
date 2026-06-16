@@ -16,6 +16,7 @@ import type {
 import { InviteResponse, STRATEGIES } from "../matchTypes";
 import { cls } from "../matchUtils";
 import { TeamGenCarousel } from "../ui/TeamGenCarousel";
+import { HorizontalTeamField, type FieldPlayer } from "../ui/MatchField";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -377,172 +378,77 @@ export function StepTeams({
                 )}
             </div>
 
-            {/* Two team columns — stack on mobile, side-by-side on sm+ */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700">
-                {/* ── Team A ── */}
-                <div>
-                    <div
-                        className="flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700"
-                        style={hasAColor ? { backgroundColor: aHex + "18", borderBottom: `2px solid ${aHex}` } : undefined}
-                    >
-                        <div className="flex items-center gap-2">
-                            {hasAColor && (
-                                <span
-                                    className="w-3 h-3 rounded-full shrink-0"
-                                    style={{
-                                        backgroundColor: aHex,
-                                        outline: isWhiteHex(aHex) ? "1.5px solid #cbd5e1" : "none",
-                                        outlineOffset: "1px",
-                                    }}
-                                />
-                            )}
-                            <span
-                                className="text-sm font-bold"
-                                style={{ color: hasAColor && !isWhiteHex(aHex) ? aHex : undefined }}
-                            >
-                                {aName}
-                            </span>
+            {/* ── Match-day field ── */}
+            {(() => {
+                const aFieldPlayers: FieldPlayer[] = sortedTeamAPlayers.map(p => ({
+                    id: p.playerId, name: p.playerName, isGoalkeeper: p.isGoalkeeper, dimmed: p.didNotPlay,
+                }));
+                const bFieldPlayers: FieldPlayer[] = sortedTeamBPlayers.map(p => ({
+                    id: p.playerId, name: p.playerName, isGoalkeeper: p.isGoalkeeper, dimmed: p.didNotPlay,
+                }));
+                return (
+                    <div className="px-4 py-3">
+                        <div className="w-full md:w-[418px] mx-auto">
+                            <HorizontalTeamField
+                                teamAPlayers={aFieldPlayers}
+                                teamBPlayers={bFieldPlayers}
+                                teamAHex={currentTeamAColorHex}
+                                teamBHex={currentTeamBColorHex}
+                                teamAName={aName}
+                                teamBName={bName}
+                                sel1Id={sel1?.id ?? null}
+                                sel1Team={sel1?.team ?? null}
+                                sel2Id={sel2Id}
+                                canInteract={admin}
+                                onPlayerClick={admin ? handlePlayerClick : undefined}
+                            />
                         </div>
-                        <span className="text-xs text-slate-400">{sortedTeamAPlayers.length}j</span>
                     </div>
-                    <ul className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                        {sortedTeamAPlayers.map((p) => {
-                            const isSel1 = sel1?.id === p.playerId;
-                            const isSel2 = sel2Id === p.playerId;
-                            const isSelected = isSel1 || isSel2;
-                            const isOpposite = admin && sel1 && sel1.team !== "A" && !isSel1;
-                            return (
-                                <li
-                                    key={p.playerId}
-                                    onClick={admin ? () => handlePlayerClick(p.playerId, "A") : undefined}
-                                    className={cls(
-                                        "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
-                                        admin && "cursor-pointer",
-                                        isSel1 ? "bg-amber-50 dark:bg-amber-900/20 border-l-[3px] border-amber-400"
-                                        : isSel2 ? "bg-emerald-50 dark:bg-emerald-900/20 border-l-[3px] border-emerald-400"
-                                        : isOpposite ? "hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                                        : admin ? "hover:bg-slate-50 dark:hover:bg-slate-700/50" : ""
-                                    )}
-                                >
-                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
-                                        {p.playerName.charAt(0).toUpperCase()}
-                                    </span>
-                                    <span className={cls("truncate flex-1 font-medium", p.didNotPlay ? "line-through text-slate-400 dark:text-slate-500" : isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
-                                        {p.playerName}
-                                        {p.didNotPlay && <span className="ml-1.5 text-[10px] font-semibold text-rose-400 no-underline not-italic">não foi</span>}
-                                    </span>
-                                    {admin && onSetPlayerRole && !p.didNotPlay ? (
-                                        <button
-                                            title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
-                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
-                                        >
-                                            <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
-                                        </button>
-                                    ) : (!admin || p.didNotPlay) && (
-                                        <span title={p.isGoalkeeper ? "Goleiro" : "Jogador"} className="shrink-0 text-xs"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} /></span>
-                                    )}
-                                    {admin && onSetNoShow && (
-                                        <button
-                                            title={p.didNotPlay ? "Desfazer: marcar como presente" : "Marcar como não foi jogar"}
-                                            className={cls("shrink-0 px-1 rounded transition-colors", p.didNotPlay ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30" : "text-slate-300 dark:text-slate-600 hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30")}
-                                            onClick={(e) => { e.stopPropagation(); onSetNoShow(p.matchPlayerId, !p.didNotPlay); }}
-                                        >
-                                            {p.didNotPlay ? <UserCheck size={13} /> : <UserX size={13} />}
-                                        </button>
-                                    )}
-                                    {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
-                                </li>
-                            );
-                        })}
-                        {sortedTeamAPlayers.length === 0 && (
-                            <li className="px-4 py-3 text-xs text-slate-400">Nenhum jogador</li>
-                        )}
-                    </ul>
-                </div>
+                );
+            })()}
 
-                {/* ── Team B ── */}
-                <div>
-                    <div
-                        className="flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700"
-                        style={hasBColor ? { backgroundColor: bHex + "18", borderBottom: `2px solid ${bHex}` } : undefined}
-                    >
-                        <div className="flex items-center gap-2">
-                            {hasBColor && (
-                                <span
-                                    className="w-3 h-3 rounded-full shrink-0"
-                                    style={{
-                                        backgroundColor: bHex,
-                                        outline: isWhiteHex(bHex) ? "1.5px solid #cbd5e1" : "none",
-                                        outlineOffset: "1px",
-                                    }}
-                                />
-                            )}
-                            <span
-                                className="text-sm font-bold"
-                                style={{ color: hasBColor && !isWhiteHex(bHex) ? bHex : undefined }}
-                            >
-                                {bName}
-                            </span>
-                        </div>
-                        <span className="text-xs text-slate-400">{sortedTeamBPlayers.length}j</span>
+            {/* ── Compact admin controls (role / no-show) ── */}
+            {admin && (onSetPlayerRole || onSetNoShow) && (
+                <details className="border-t border-slate-100 dark:border-slate-700">
+                    <summary className="px-4 py-2 text-xs text-slate-400 dark:text-slate-500 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 select-none list-none flex items-center gap-1">
+                        <span>⚙️</span> Gerenciar jogadores
+                    </summary>
+                    <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-700">
+                        {([
+                            { players: sortedTeamAPlayers, hex: aHex, hasColor: hasAColor },
+                            { players: sortedTeamBPlayers, hex: bHex, hasColor: hasBColor },
+                        ] as const).map(({ players, hex, hasColor }, ti) => (
+                            <ul key={ti} className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                                {players.map(p => (
+                                    <li key={p.playerId} className="flex items-center gap-1.5 px-3 py-1.5 text-xs">
+                                        <span className={cls("truncate flex-1 font-medium", p.didNotPlay ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-200")}>
+                                            {p.playerName.split(' ')[0]}
+                                        </span>
+                                        {onSetPlayerRole && !p.didNotPlay && (
+                                            <button
+                                                title={p.isGoalkeeper ? "Goleiro → linha" : "Linha → goleiro"}
+                                                className="shrink-0 px-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                                onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
+                                            >
+                                                <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} />
+                                            </button>
+                                        )}
+                                        {onSetNoShow && (
+                                            <button
+                                                title={p.didNotPlay ? "Desfazer: marcar como presente" : "Marcar como não foi"}
+                                                className={cls("shrink-0 px-0.5 rounded transition-colors", p.didNotPlay ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30" : "text-slate-300 dark:text-slate-600 hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30")}
+                                                onClick={(e) => { e.stopPropagation(); onSetNoShow(p.matchPlayerId, !p.didNotPlay); }}
+                                            >
+                                                {p.didNotPlay ? <UserCheck size={12} /> : <UserX size={12} />}
+                                            </button>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        ))}
                     </div>
-                    <ul className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                        {sortedTeamBPlayers.map((p) => {
-                            const isSel1 = sel1?.id === p.playerId;
-                            const isSel2 = sel2Id === p.playerId;
-                            const isSelected = isSel1 || isSel2;
-                            const isOpposite = admin && sel1 && sel1.team !== "B" && !isSel1;
-                            return (
-                                <li
-                                    key={p.playerId}
-                                    onClick={admin ? () => handlePlayerClick(p.playerId, "B") : undefined}
-                                    className={cls(
-                                        "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors select-none",
-                                        admin && "cursor-pointer",
-                                        isSel1 ? "bg-amber-50 dark:bg-amber-900/20 border-l-[3px] border-amber-400"
-                                        : isSel2 ? "bg-emerald-50 dark:bg-emerald-900/20 border-l-[3px] border-emerald-400"
-                                        : isOpposite ? "hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                                        : admin ? "hover:bg-slate-50 dark:hover:bg-slate-700/50" : ""
-                                    )}
-                                >
-                                    <span className={cls("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isSel1 ? "bg-amber-400 text-white" : isSel2 ? "bg-emerald-400 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
-                                        {p.playerName.charAt(0).toUpperCase()}
-                                    </span>
-                                    <span className={cls("truncate flex-1 font-medium", p.didNotPlay ? "line-through text-slate-400 dark:text-slate-500" : isSel1 ? "text-amber-700" : isSel2 ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
-                                        {p.playerName}
-                                        {p.didNotPlay && <span className="ml-1.5 text-[10px] font-semibold text-rose-400 no-underline not-italic">não foi</span>}
-                                    </span>
-                                    {admin && onSetPlayerRole && !p.didNotPlay ? (
-                                        <button
-                                            title={p.isGoalkeeper ? "Goleiro — clique para jogar na linha nesta partida" : "Linha — clique para jogar como goleiro nesta partida"}
-                                            className="shrink-0 text-xs px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); onSetPlayerRole(p.matchPlayerId, !p.isGoalkeeper); }}
-                                        >
-                                            <IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={14} />
-                                        </button>
-                                    ) : (!admin || p.didNotPlay) && (
-                                        <span title={p.isGoalkeeper ? "Goleiro" : "Jogador"} className="shrink-0 text-xs"><IconRenderer value={resolveIcon(_icons, p.isGoalkeeper ? 'goalkeeper' : 'player')} size={13} /></span>
-                                    )}
-                                    {admin && onSetNoShow && (
-                                        <button
-                                            title={p.didNotPlay ? "Desfazer: marcar como presente" : "Marcar como não foi jogar"}
-                                            className={cls("shrink-0 px-1 rounded transition-colors", p.didNotPlay ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30" : "text-slate-300 dark:text-slate-600 hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30")}
-                                            onClick={(e) => { e.stopPropagation(); onSetNoShow(p.matchPlayerId, !p.didNotPlay); }}
-                                        >
-                                            {p.didNotPlay ? <UserCheck size={13} /> : <UserX size={13} />}
-                                        </button>
-                                    )}
-                                    {isSelected && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
-                                </li>
-                            );
-                        })}
-                        {sortedTeamBPlayers.length === 0 && (
-                            <li className="px-4 py-3 text-xs text-slate-400">Nenhum jogador</li>
-                        )}
-                    </ul>
-                </div>
-            </div>
+                </details>
+            )}
 
             {/* ── Unassigned players — only visible after teams have been generated ── */}
             {admin && generatedOptions !== null && allPlayers.some((p) => (p as any).team === 0 && p.inviteResponse === InviteResponse.Accepted) && (

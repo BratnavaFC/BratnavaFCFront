@@ -9,8 +9,9 @@ import { getResponseMessage } from '../api/apiResponse';
 import {
   Calendar, CalendarDays, History, LayoutDashboard, MapPin,
   RefreshCw, CheckCircle2, XCircle, AlertCircle, DollarSign, ChevronRight,
-  ChevronLeft, Clock, PartyPopper, Vote,
+  ChevronLeft, Clock, PartyPopper, Vote, ChevronDown, Users,
 } from 'lucide-react';
+import { HorizontalTeamField, type FieldPlayer } from '../domains/matches/ui/MatchField';
 import { useGroupIcons } from '../hooks/useGroupIcons';
 import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
@@ -353,6 +354,7 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
   const nav   = useNavigate();
   const store = useAccountStore();
   const selectedPlayerId = store.getActive()?.activePlayerId ?? '';
+  const [showField, setShowField] = useState(false);
 
   const { header, details, poll, acceptationSummary } = item;
   const dates  = formatDate(header.playedAt);
@@ -386,81 +388,134 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
 
   const hasScore = typeof header.teamAGoals === 'number' && typeof header.teamBGoals === 'number';
 
+  // ── VER TIMES ──────────────────────────────────────────────────────────────
+  const teamAFieldPlayers: FieldPlayer[] = (details?.teamAPlayers ?? []).map(p => ({
+    id: p.playerId, name: p.playerName, isGoalkeeper: p.isGoalkeeper,
+  }));
+  const teamBFieldPlayers: FieldPlayer[] = (details?.teamBPlayers ?? []).map(p => ({
+    id: p.playerId, name: p.playerName, isGoalkeeper: p.isGoalkeeper,
+  }));
+  const teamsSet = teamAFieldPlayers.length > 0 || teamBFieldPlayers.length > 0;
+  const fieldAHex  = normalizeHex(details?.teamAColor?.hexValue ?? '') ?? '';
+  const fieldBHex  = normalizeHex(details?.teamBColor?.hexValue ?? '') ?? '';
+  const fieldAName = details?.teamAColor?.name ?? 'Time A';
+  const fieldBName = details?.teamBColor?.name ?? 'Time B';
+
   return (
-    <button
-      type="button"
-      onClick={() => nav(`/app/matches?match=${header.matchId}`)}
-      className="w-full flex items-stretch text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all"
-    >
-      {/* Accent bar */}
+    <div className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all flex">
+      {/* Accent bar — spans full card height */}
       <div className={`w-1 shrink-0 ${bar}`} />
 
-      {/* Date box */}
-      <div className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800 px-3 py-3 shrink-0 min-w-[52px]">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-          {dates?.month ?? '—'}
-        </span>
-        <span className="text-lg font-extrabold text-slate-800 dark:text-slate-100 leading-tight">
-          {dates?.day ?? '—'}
-        </span>
-        {dates?.time && (
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{dates.time}</span>
-        )}
-      </div>
+      <div className="flex-1 min-w-0 flex flex-col">
+      {/* Main clickable row */}
+      <button
+        type="button"
+        onClick={() => nav(`/app/matches?match=${header.matchId}`)}
+        className="w-full flex items-stretch text-left"
+      >
 
-      {/* Info + situação */}
-      <div className="flex-1 min-w-0 px-3 py-2.5 flex flex-col justify-center gap-1">
-        {/* Status */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {isLive && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-              Ao vivo
-            </span>
-          )}
-          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${badge}`}>
-            {header.statusName}
+        {/* Date box */}
+        <div className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800 px-3 py-3 shrink-0 min-w-[52px]">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            {dates?.month ?? '—'}
           </span>
+          <span className="text-lg font-extrabold text-slate-800 dark:text-slate-100 leading-tight">
+            {dates?.day ?? '—'}
+          </span>
+          {dates?.time && (
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{dates.time}</span>
+          )}
         </div>
 
-        {/* Local */}
-        {header.placeName && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-            <MapPin size={10} className="shrink-0 text-slate-300 dark:text-slate-600" />
-            {header.placeName}
-          </p>
-        )}
-
-        {/* Situação do jogador — sempre ocupa altura mesmo sem player (evita jumps no carrossel) */}
-        <div className={`flex items-center gap-2 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap ${myPlayer ? '' : 'invisible'}`}>
-          <span className="text-[10px] text-slate-400 uppercase tracking-wide shrink-0">Você</span>
-          {(myHex || myName) && (
-            <div className="flex items-center gap-1 min-w-0">
-              {myHex && (
-                <span
-                  className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
-                  style={{ backgroundColor: myHex }}
-                />
-              )}
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
-                {myName}
+        {/* Info + situação */}
+        <div className="flex-1 min-w-0 px-3 py-2.5 flex flex-col justify-center gap-1">
+          {/* Status */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {isLive && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                Ao vivo
               </span>
-            </div>
+            )}
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${badge}`}>
+              {header.statusName}
+            </span>
+          </div>
+
+          {/* Local */}
+          {header.placeName && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+              <MapPin size={10} className="shrink-0 text-slate-300 dark:text-slate-600" />
+              {header.placeName}
+            </p>
           )}
-          <span className={`text-xs font-semibold shrink-0 ${inviteCls}`}>
-            {inviteIcon} {inviteLabel}
-          </span>
+
+          {/* Situação do jogador — sempre ocupa altura mesmo sem player (evita jumps no carrossel) */}
+          <div className={`flex items-center gap-2 pt-1 mt-0.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap ${myPlayer ? '' : 'invisible'}`}>
+            <span className="text-[10px] text-slate-400 uppercase tracking-wide shrink-0">Você</span>
+            {(myHex || myName) && (
+              <div className="flex items-center gap-1 min-w-0">
+                {myHex && (
+                  <span
+                    className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
+                    style={{ backgroundColor: myHex }}
+                  />
+                )}
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+                  {myName}
+                </span>
+              </div>
+            )}
+            <span className={`text-xs font-semibold shrink-0 ${inviteCls}`}>
+              {inviteIcon} {inviteLabel}
+            </span>
+          </div>
+
+          {/* Votação/evento vinculado — linha sempre presente para o card não pular de tamanho */}
+          <PollRow poll={poll ?? null} />
         </div>
 
-        {/* Votação/evento vinculado — linha sempre presente para o card não pular de tamanho */}
-        <PollRow poll={poll ?? null} />
+        {/* Direita: conteúdo por etapa */}
+        <div className="flex items-center px-4 shrink-0 border-l border-slate-100 dark:border-slate-800">
+          <MatchRightPanel header={header} details={details} myPlayer={myPlayer} acceptationSummary={acceptationSummary} />
+        </div>
+      </button>
+
+      {/* VER TIMES footer — altura fixa em todos os cards para evitar redimensionamento no carrossel */}
+      <div className="h-9 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-center">
+        {teamsSet && (
+          <button
+            type="button"
+            onClick={() => setShowField(v => !v)}
+            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+          >
+            {showField ? 'Ocultar times' : 'Ver times'}
+            <ChevronDown size={11} className={`transition-transform duration-200 ${showField ? 'rotate-180' : ''}`} />
+          </button>
+        )}
       </div>
 
-      {/* Direita: conteúdo por etapa */}
-      <div className="flex items-center px-4 shrink-0 border-l border-slate-100 dark:border-slate-800">
-        <MatchRightPanel header={header} details={details} myPlayer={myPlayer} acceptationSummary={acceptationSummary} />
-      </div>
-    </button>
+      {/* Campo expandido */}
+      {showField && teamsSet && (
+        <div className="px-3 pb-3 border-t border-slate-100 dark:border-slate-700/50 flex justify-center">
+          <div className="w-full md:w-[418px]">
+            <HorizontalTeamField
+              teamAPlayers={teamAFieldPlayers}
+              teamBPlayers={teamBFieldPlayers}
+              teamAHex={fieldAHex}
+              teamBHex={fieldBHex}
+              teamAName={fieldAName}
+              teamBName={fieldBName}
+              sel1Id={null}
+              sel1Team={null}
+              sel2Id={null}
+              canInteract={false}
+            />
+          </div>
+        </div>
+      )}
+      </div>{/* end flex-1 content column */}
+    </div>
   );
 }
 

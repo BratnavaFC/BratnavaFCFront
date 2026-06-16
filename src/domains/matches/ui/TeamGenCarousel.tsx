@@ -6,6 +6,7 @@ import { useAccountStore } from "../../../auth/accountStore";
 import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
 import { resolveIcon } from "../../../lib/groupIcons";
+import { HorizontalTeamField, type FieldPlayer } from "./MatchField";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -72,6 +73,7 @@ export function TeamGenCarousel({
     const bHasColor = (teamBHex ?? "").trim().length > 0;
 
     // ── Selection state (move / swap) ────────────────────────────────────────
+    const [showExplanation, setShowExplanation] = useState(false);
     const [sel1Id, setSel1Id] = useState<string | null>(null);
     const [sel1Team, setSel1Team] = useState<"A" | "B" | null>(null);
     const [sel2Id, setSel2Id] = useState<string | null>(null);
@@ -106,113 +108,18 @@ export function TeamGenCarousel({
     const aButtonColor = aHasColor && !isWhiteHex(aHex) ? aHex : "#1d4ed8";
     const bButtonColor = bHasColor && !isWhiteHex(bHex) ? bHex : "#1d4ed8";
 
-    // ── Team renderer ─────────────────────────────────────────────────────────
-    const renderTeam = (
-        hex: string,
-        name: string,
-        hasColor: boolean,
-        list: PlayerWeightDto[],
-        teamKey: "A" | "B"
-    ) => {
-        const white = isWhiteHex(hex);
-        const canInteract = adminView && (!!onMoveToTeam || !!onSwapInOption);
-        return (
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden">
-                {/* Team header */}
-                <div
-                    className="flex items-center justify-between px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700"
-                    style={hasColor ? { backgroundColor: hex + "18", borderBottom: `2px solid ${hex}` } : undefined}
-                >
-                    <div className="flex items-center gap-1.5">
-                        {hasColor && (
-                            <span
-                                className="w-2.5 h-2.5 rounded-full shrink-0"
-                                style={{
-                                    backgroundColor: hex,
-                                    outline: white ? "1px solid #cbd5e1" : "none",
-                                    outlineOffset: "1px",
-                                }}
-                            />
-                        )}
-                        <span
-                            className="text-sm font-semibold text-slate-900 dark:text-white"
-                            style={{ color: hasColor && !white ? hex : undefined }}
-                        >
-                            {name}
-                        </span>
-                    </div>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">{list.length}j</span>
-                </div>
-
-                {/* Player list */}
-                <ul className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                    {list.map((x) => {
-                        const player = byPlayerId.get(x.playerId);
-                        const playerName = player?.playerName ?? x.playerId;
-                        const isGk = !!player?.isGoalkeeper;
-                        const isSel1 = sel1Id === x.playerId;
-                        const isSel2 = sel2Id === x.playerId;
-                        const isOpposite = canInteract && sel1Id !== null && sel1Team !== teamKey && !isSel1;
-                        return (
-                            <li
-                                key={x.playerId}
-                                onClick={canInteract ? () => handleTeamPlayerClick(x.playerId, teamKey) : undefined}
-                                className={cls(
-                                    "flex items-center gap-2.5 px-3 py-2 transition-colors select-none",
-                                    canInteract && "cursor-pointer",
-                                    isSel1
-                                        ? "bg-amber-50 dark:bg-amber-900/20 border-l-[3px] border-amber-400"
-                                        : isSel2
-                                        ? "bg-emerald-50 dark:bg-emerald-900/20 border-l-[3px] border-emerald-400"
-                                        : isOpposite
-                                        ? "hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                                        : canInteract
-                                        ? "hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                        : ""
-                                )}
-                            >
-                                <span
-                                    className={cls(
-                                        "w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0",
-                                        isSel1
-                                            ? "bg-amber-400 text-white"
-                                            : isSel2
-                                            ? "bg-emerald-400 text-white"
-                                            : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                                    )}
-                                >
-                                    {playerName.charAt(0).toUpperCase()}
-                                </span>
-                                <span
-                                    className={cls(
-                                        "truncate flex-1 text-sm font-medium",
-                                        isSel1
-                                            ? "text-amber-700 dark:text-amber-400"
-                                            : isSel2
-                                            ? "text-emerald-700 dark:text-emerald-400"
-                                            : "text-slate-900 dark:text-slate-100"
-                                    )}
-                                >
-                                    {playerName}
-                                    <span title={isGk ? "Goleiro" : "Jogador"} className="ml-1 text-xs">
-                                        <IconRenderer value={resolveIcon(_icons, isGk ? 'goalkeeper' : 'player')} size={13} />
-                                    </span>
-                                </span>
-                                {adminView && (
-                                    <span className="text-xs font-mono text-slate-400 dark:text-slate-500 shrink-0">
-                                        {fmtWeight(x.weight)}
-                                    </span>
-                                )}
-                            </li>
-                        );
-                    })}
-                    {list.length === 0 && (
-                        <li className="px-3 py-3 text-xs text-slate-400 dark:text-slate-500">Nenhum jogador</li>
-                    )}
-                </ul>
-            </div>
-        );
-    };
+    // ── Converts PlayerWeightDto[] → FieldPlayer[] ────────────────────────────
+    const toFieldPlayers = (list: PlayerWeightDto[]): FieldPlayer[] =>
+        list.map(pw => {
+            const p = byPlayerId.get(pw.playerId);
+            return {
+                id:            pw.playerId,
+                name:          p?.playerName ?? pw.playerId,
+                isGoalkeeper:  !!p?.isGoalkeeper,
+                attackRating:  pw.attackRatingNorm ?? null,
+                defenseRating: pw.defenseRatingNorm ?? null,
+            };
+        });
 
     return (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
@@ -339,11 +246,22 @@ export function TeamGenCarousel({
 
                 {/* Admin explanation */}
                 {adminView && opt.explanation && (
-                    <div className="rounded-lg border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/20 p-3 space-y-1 text-xs text-slate-700 dark:text-slate-300">
-                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Resumo: </span>{opt.explanation.resumo}</p>
-                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Time A: </span>{opt.explanation.analiseTimeA}</p>
-                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Time B: </span>{opt.explanation.analiseTimeB}</p>
-                        <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Conclusão: </span>{opt.explanation.conclusao}</p>
+                    <div>
+                        <button
+                            type="button"
+                            onClick={() => setShowExplanation(v => !v)}
+                            className="text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline underline-offset-2"
+                        >
+                            {showExplanation ? 'Ocultar resumo' : 'Ver resumo'}
+                        </button>
+                        {showExplanation && (
+                            <div className="mt-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/20 p-3 space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                                <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Resumo: </span>{opt.explanation.resumo}</p>
+                                <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Time A: </span>{opt.explanation.analiseTimeA}</p>
+                                <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Time B: </span>{opt.explanation.analiseTimeB}</p>
+                                <p><span className="font-semibold text-indigo-700 dark:text-indigo-400">Conclusão: </span>{opt.explanation.conclusao}</p>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -394,10 +312,23 @@ export function TeamGenCarousel({
                     </div>
                 )}
 
-                {/* Team panels */}
-                <div className="grid md:grid-cols-2 gap-3">
-                    {renderTeam(aHex, aName, aHasColor, opt.teamA, "A")}
-                    {renderTeam(bHex, bName, bHasColor, opt.teamB, "B")}
+                {/* Team field — horizontal */}
+                <div className="flex justify-center">
+                    <div style={{ width: 418 }}>
+                        <HorizontalTeamField
+                            teamAPlayers={toFieldPlayers(opt.teamA)}
+                            teamBPlayers={toFieldPlayers(opt.teamB)}
+                            teamAHex={teamAHex ?? ""}
+                            teamBHex={teamBHex ?? ""}
+                            teamAName={aName}
+                            teamBName={bName}
+                            sel1Id={sel1Id}
+                            sel1Team={sel1Team}
+                            sel2Id={sel2Id}
+                            canInteract={adminView && (!!onMoveToTeam || !!onSwapInOption)}
+                            onPlayerClick={handleTeamPlayerClick}
+                        />
+                    </div>
                 </div>
 
                 {/* Unassigned players */}
