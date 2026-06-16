@@ -350,11 +350,16 @@ function PollRow({ poll }: { poll: LinkedPoll | null }) {
 
 // ─── UpcomingMatchRow ─────────────────────────────────────────────────────────
 
-function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
+function UpcomingMatchRow({
+  item, showField, onShowFieldChange,
+}: {
+  item: UpcomingMatchFull;
+  showField: boolean;
+  onShowFieldChange: (v: boolean) => void;
+}) {
   const nav   = useNavigate();
   const store = useAccountStore();
   const selectedPlayerId = store.getActive()?.activePlayerId ?? '';
-  const [showField, setShowField] = useState(false);
 
   const { header, details, poll, acceptationSummary } = item;
   const dates  = formatDate(header.playedAt);
@@ -486,7 +491,7 @@ function UpcomingMatchRow({ item }: { item: UpcomingMatchFull }) {
         {teamsSet && (
           <button
             type="button"
-            onClick={() => setShowField(v => !v)}
+            onClick={() => onShowFieldChange(!showField)}
             className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
             {showField ? 'Ocultar times' : 'Ver times'}
@@ -547,14 +552,17 @@ function useSwipe(onLeft: () => void, onRight: () => void, threshold = 48) {
 function UpcomingMatchCarousel({ matches }: { matches: UpcomingMatchFull[] }) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [showField, setShowField] = useState(false);
 
   useEffect(() => { setActive(0); }, [matches.length]);
 
+  useEffect(() => { setShowField(false); }, [active]);
+
   useEffect(() => {
-    if (matches.length <= 1 || paused) return;
+    if (matches.length <= 1 || paused || showField) return;
     const id = setInterval(() => setActive(i => (i + 1) % matches.length), 5000);
     return () => clearInterval(id);
-  }, [matches.length, paused]);
+  }, [matches.length, paused, showField]);
 
   const go = (fn: (i: number) => number) => { setPaused(true); setActive(fn); };
   const swipe = useSwipe(
@@ -568,7 +576,7 @@ function UpcomingMatchCarousel({ matches }: { matches: UpcomingMatchFull[] }) {
 
   return (
     <div className="space-y-2.5" {...swipe}>
-      <UpcomingMatchRow item={current} />
+      <UpcomingMatchRow item={current} showField={showField} onShowFieldChange={setShowField} />
       {matches.length > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
