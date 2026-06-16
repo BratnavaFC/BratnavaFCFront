@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
     plugins: [react()],
     base: "/BratnavaFCFront/",
+    server: { port: Number(process.env.PORT) || 5173 },
     test: {
         environment: "jsdom",
         globals: true,
