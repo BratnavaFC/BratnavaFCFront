@@ -28,6 +28,7 @@ import AbsencesPage from './pages/AbsencesPage';
 import ReplayVaultPage from './pages/ReplayVaultPage';
 import BetPage from './pages/BetPage';
 import PlayerHistoryPage from './pages/PlayerHistoryPage';
+import TeamBuilderPage   from './pages/TeamBuilderPage';
 import PublicClipPage from './pages/PublicClipPage';
 import PublicMatchReplaysPage from './pages/PublicMatchReplaysPage';
 
@@ -61,6 +62,7 @@ export default function App() {
                 <Route path="calendar" element={<CalendarPage />} />
                 <Route path="groups/:groupId/visual-stats" element={<VisualStatsPage />} />
                 <Route path="groups/:groupId/player-history" element={<PlayerHistoryPage />} />
+                <Route path="team-builder" element={<TeamBuilderPage />} />
                 <Route path="spotlight" element={<PlayerSpotlightPage />} />
                 <Route path="payments" element={<PaymentsPage />} />
                 <Route path="polls" element={<PollsPage />} />

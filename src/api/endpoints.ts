@@ -414,6 +414,26 @@ export const NotificationsApi = {
     http.delete<{ data: boolean }>(`/api/Notifications/${id}`),
 };
 
+export const TeamBuilderApi = {
+  stats: (groupId: string, playerIds: string[]) =>
+    http.post<ApiResponse<TeamBuilderStatsDto>>(`/api/TeamBuilder/group/${groupId}/stats`, { playerIds }),
+};
+
+export type TeamBuilderPlayerDto = { id: string; name: string; isGoalkeeper: boolean };
+export type AssistPairDto        = { assisterId: string; assisterName: string; scorerId: string; scorerName: string; count: number };
+export type TeamBuilderStatsDto  = {
+  neverPlayedTogether:  boolean;
+  totalMatches:         number;
+  wins:                 number;
+  draws:                number;
+  losses:               number;
+  goalsScored:          number;
+  goalsConceded:        number;
+  goalsScoredByPlayers: number;
+  assistPairs:          AssistPairDto[];
+  players:              TeamBuilderPlayerDto[];
+};
+
 export const GodModeApi = {
   notifyGroup: (groupId: string, dto: { title: string; body: string }) =>
     http.post<ApiResponse<null>>(`/api/admin/groups/${groupId}/notify`, dto),
