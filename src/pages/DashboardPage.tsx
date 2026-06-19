@@ -9,7 +9,7 @@ import { getResponseMessage } from '../api/apiResponse';
 import {
   Calendar, CalendarDays, History, LayoutDashboard, MapPin,
   RefreshCw, CheckCircle2, XCircle, AlertCircle, DollarSign, ChevronRight,
-  ChevronLeft, Clock, PartyPopper, Vote, ChevronDown, Users,
+  ChevronLeft, Clock, Vote, ChevronDown, Users,
 } from 'lucide-react';
 import { HorizontalTeamField, type FieldPlayer } from '../domains/matches/ui/MatchField';
 import { useGroupIcons } from '../hooks/useGroupIcons';
@@ -241,7 +241,9 @@ function MatchRightPanel({
       <div className="flex flex-col items-end gap-1">
         {ScoreBox ?? <span className="text-xs text-slate-400">—</span>}
         {isMvp && (
-          <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400">⭐ MVP</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700/50">
+            MVP
+          </span>
         )}
       </div>
     );
@@ -266,11 +268,9 @@ function ColorDot({ hex, lg }: { hex?: string | null; lg?: boolean }) {
 }
 
 function SectionCard({
-  icon, iconBg, iconColor, title, action, loading, children, className = '',
+  icon, title, action, loading, children, className = '',
 }: {
   icon: React.ReactNode;
-  iconBg: string;
-  iconColor: string;
   title: string;
   action?: { label: string; onClick: () => void };
   loading?: boolean;
@@ -280,9 +280,7 @@ function SectionCard({
   return (
     <div className={`card p-0 overflow-hidden shadow-sm ${className}`}>
       <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 flex items-center gap-2.5">
-        <div className={`h-6 w-6 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
-          <span className={iconColor}>{icon}</span>
-        </div>
+        <span className="text-slate-400 dark:text-slate-500 shrink-0">{icon}</span>
         <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex-1 truncate">{title}</span>
         {loading && <RefreshCw size={12} className="animate-spin text-slate-400 shrink-0" />}
         {action && (
@@ -644,7 +642,7 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
   if (events.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 py-6 text-center">
-        <PartyPopper size={20} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+        <CalendarDays size={20} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
         <p className="text-xs text-slate-400">Nenhum evento próximo</p>
       </div>
     );
@@ -1091,8 +1089,6 @@ export default function DashboardPage() {
             {/* Próximas Partidas */}
             <SectionCard
               icon={<CalendarDays size={13} />}
-              iconBg="bg-blue-500/10"
-              iconColor="text-blue-600"
               title="Próximas Partidas"
               action={{ label: 'Ver tudo', onClick: () => navigate('/app/matches') }}
               loading={upcomingLoading}
@@ -1115,8 +1111,6 @@ export default function DashboardPage() {
             {/* Últimas Partidas */}
             <SectionCard
               icon={<History size={13} />}
-              iconBg="bg-slate-500/10"
-              iconColor="text-slate-500"
               title={`Minhas últimas partidas${selectedPlayer ? ` · ${selectedPlayer.playerName}` : ''}`}
               loading={recentLoading}
             >
@@ -1149,8 +1143,6 @@ export default function DashboardPage() {
             {/* Financeiro */}
             <SectionCard
               icon={<DollarSign size={13} />}
-              iconBg="bg-emerald-500/10"
-              iconColor="text-emerald-600"
               title="Financeiro"
               action={{ label: 'Ver', onClick: () => navigate('/app/payments') }}
               loading={paymentSummaryLoading}
@@ -1160,30 +1152,30 @@ export default function DashboardPage() {
               ) : !paymentSummary ? (
                 <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-3">Não disponível.</p>
               ) : paymentSummary.isUpToDate ? (
-                <div className="flex items-center gap-3 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-3">
-                  <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Em dia</p>
-                    <p className="text-xs text-emerald-700 dark:text-emerald-400/80 mt-0.5">Sem pendências.</p>
-                  </div>
+                <div className="flex items-center gap-2 py-1">
+                  <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Em dia</span>
+                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700/50">
+                    Sem pendências
+                  </span>
                 </div>
               ) : (
-                <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-3 py-3">
-                  <AlertCircle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Pendências</p>
-                    <div className="flex flex-col gap-0.5 mt-1">
-                      {paymentSummary.hasPendingMonthly && (
-                        <span className="text-xs text-amber-800 dark:text-amber-300">
-                          {paymentSummary.pendingMonthsCount} {paymentSummary.pendingMonthsCount === 1 ? 'mensalidade' : 'mensalidades'}
-                        </span>
-                      )}
-                      {paymentSummary.pendingExtraCharges?.length > 0 && (
-                        <span className="text-xs text-amber-800 dark:text-amber-300">
-                          {paymentSummary.pendingExtraCharges.length} {paymentSummary.pendingExtraCharges.length === 1 ? 'cobrança extra' : 'cobranças extras'}
-                        </span>
-                      )}
-                    </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={14} className="text-amber-500 shrink-0" />
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Pendências</span>
+                  </div>
+                  <div className="flex flex-col gap-1 pl-5">
+                    {paymentSummary.hasPendingMonthly && (
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {paymentSummary.pendingMonthsCount} {paymentSummary.pendingMonthsCount === 1 ? 'mensalidade' : 'mensalidades'}
+                      </span>
+                    )}
+                    {paymentSummary.pendingExtraCharges?.length > 0 && (
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {paymentSummary.pendingExtraCharges.length} {paymentSummary.pendingExtraCharges.length === 1 ? 'cobrança extra' : 'cobranças extras'}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -1191,9 +1183,7 @@ export default function DashboardPage() {
 
             {/* Próximos Eventos — carrossel */}
             <SectionCard
-              icon={<PartyPopper size={13} />}
-              iconBg="bg-violet-500/10"
-              iconColor="text-violet-600"
+              icon={<CalendarDays size={13} />}
               title="Próximos Eventos"
               action={{ label: 'Calendário', onClick: () => navigate('/app/calendar') }}
               loading={eventsLoading}

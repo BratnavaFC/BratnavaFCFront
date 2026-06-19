@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-    Vote, Plus, X, Loader2, Check, Lock, Unlock,
+    Vote, Plus, X, Loader2, Check,
     CalendarPlus, Users, ChevronRight,
     Eye, EyeOff, RefreshCw,
     CheckSquare, Clock, DollarSign, CalendarDays,
@@ -42,6 +42,7 @@ interface PollSummary {
     costType?: string | null;
     costAmount?: number | null;
     linkedMatchId?: string | null;
+    allowGuests?: boolean;
 }
 
 interface PollOption {
@@ -57,6 +58,7 @@ interface PollVote {
     optionId: string;
     playerId: string;
     playerName: string;
+    guests: { id: string; voterPlayerId: string; voterPlayerName: string; guestName: string; isAdult: boolean; }[];
 }
 
 interface PollMemberVote {
@@ -87,6 +89,8 @@ interface Poll {
     costType?: string | null;
     costAmount?: number | null;
     members?: PollMemberVote[] | null; // somente para admins
+    allowGuests: boolean;
+    isAcceptingVotes: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -165,6 +169,11 @@ function EventCard({ poll, onClick, loadingId, onLinkToMatch }: { poll: PollSumm
                     {poll.linkedMatchId && (
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-700/50 flex items-center gap-0.5">
                             <Link2 size={8} /> Vinculado à partida
+                        </span>
+                    )}
+                    {poll.allowGuests && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-700/50 flex items-center gap-0.5">
+                            <Users size={8} /> Convidados
                         </span>
                     )}
                 </div>
@@ -546,14 +555,16 @@ export default function PollsPage() {
         } finally { setLoadingDetailId(null); }
     }
 
-    function handlePollUpdated(updated: Poll) {
-        setSelectedPoll(updated);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function handlePollUpdated(updated: any) {
+        setSelectedPoll(updated as Poll);
         load();
     }
 
-    function handlePollCreated(poll: Poll) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function handlePollCreated(poll: any) {
         load();
-        setSelectedPoll(poll);
+        setSelectedPoll(poll as Poll);
     }
 
     return (
@@ -604,19 +615,19 @@ export default function PollsPage() {
 
                 {/* Tabs */}
                 {groupId && (
-                    <div className="relative mt-4 flex gap-2">
+                    <div className="relative mt-4 flex border-b border-white/20">
                         <button
                             type="button"
                             onClick={() => setActiveTab('events')}
-                            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border ${
+                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
                                 activeTab === 'events'
-                                    ? 'bg-white text-slate-900 border-white'
-                                    : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
+                                    ? 'border-white text-white'
+                                    : 'border-transparent text-white/60 hover:text-white/80'
                             }`}
                         >
                             <CalendarDays size={14} /> Eventos
                             {eventPolls.filter(p => p.status === 'open').length > 0 && (
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'events' ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'}`}>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'events' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
                                     {eventPolls.filter(p => p.status === 'open').length}
                                 </span>
                             )}
@@ -624,15 +635,15 @@ export default function PollsPage() {
                         <button
                             type="button"
                             onClick={() => setActiveTab('polls')}
-                            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition border ${
+                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
                                 activeTab === 'polls'
-                                    ? 'bg-white text-slate-900 border-white'
-                                    : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
+                                    ? 'border-white text-white'
+                                    : 'border-transparent text-white/60 hover:text-white/80'
                             }`}
                         >
                             <Vote size={14} /> Votações
                             {votePolls.filter(p => p.status === 'open').length > 0 && (
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'polls' ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'}`}>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'polls' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
                                     {votePolls.filter(p => p.status === 'open').length}
                                 </span>
                             )}
@@ -681,14 +692,9 @@ export default function PollsPage() {
                     {/* Open */}
                     {tabPolls.filter(p => p.status === 'open').length > 0 && (
                         <div className="card p-0 overflow-hidden shadow-sm">
-                            <div className="px-5 py-3 border-b bg-slate-50/80 flex items-center gap-2">
-                                <div className="h-5 w-5 rounded-md bg-emerald-500 flex items-center justify-center">
-                                    <Unlock size={11} className="text-white" />
-                                </div>
-                                <span className="text-sm font-semibold text-slate-700">{activeTab === 'events' ? 'Abertos' : 'Abertas'}</span>
-                                <span className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                                    {openCount}
-                                </span>
+                            <div className="px-5 py-3 border-b bg-slate-50/80 dark:bg-slate-800/80 flex items-center gap-1.5">
+                                <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">{activeTab === 'events' ? 'Abertos' : 'Abertas'}</span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">· {openCount}</span>
                             </div>
                             <div className="divide-y divide-slate-100">
                                 {tabPolls.filter(p => p.status === 'open').map(poll =>
@@ -703,14 +709,9 @@ export default function PollsPage() {
                     {/* Closed */}
                     {tabPolls.filter(p => p.status === 'closed').length > 0 && (
                         <div className="card p-0 overflow-hidden shadow-sm">
-                            <div className="px-5 py-3 border-b bg-slate-50/80 flex items-center gap-2">
-                                <div className="h-5 w-5 rounded-md bg-slate-400 flex items-center justify-center">
-                                    <Lock size={11} className="text-white" />
-                                </div>
-                                <span className="text-sm font-semibold text-slate-700">{activeTab === 'events' ? 'Encerrados' : 'Encerradas'}</span>
-                                <span className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
-                                    {closedCount}
-                                </span>
+                            <div className="px-5 py-3 border-b bg-slate-50/80 dark:bg-slate-800/80 flex items-center gap-1.5">
+                                <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">{activeTab === 'events' ? 'Encerrados' : 'Encerradas'}</span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">· {closedCount}</span>
                             </div>
                             <div className="divide-y divide-slate-100">
                                 {tabPolls.filter(p => p.status === 'closed').map(poll =>
@@ -741,6 +742,7 @@ export default function PollsPage() {
                     poll={selectedPoll}
                     groupId={groupId}
                     isAdmin={isAdmin}
+                    myPlayerId={active?.activePlayerId ?? undefined}
                     onClose={() => { setSelectedPoll(null); load(); }}
                     onUpdated={handlePollUpdated}
                 />
