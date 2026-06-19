@@ -136,6 +136,25 @@ function scoreConsistentWithWinner(
     return true;
 }
 
+function hexLuminance(hex: string): number {
+    const clean = hex.replace('#', '');
+    if (clean.length !== 6) return 0;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+/** Returns dark or light foreground color that contrasts well against `hex` background. */
+function getContrastColor(hex: string): string {
+    return hexLuminance(hex) > 0.5 ? '#0f172a' : '#ffffff';
+}
+
+/** Returns the team hex if readable on a light card background, otherwise falls back to slate-500. */
+function teamColorOnLight(hex: string): string {
+    return hexLuminance(hex) > 0.75 ? '#64748b' : hex;
+}
+
 function fichasColor(v: number | null | undefined) {
     if (v == null) return "text-slate-400";
     if (v > 0)  return "text-emerald-400";
@@ -274,7 +293,11 @@ function SelectionCard({
                             <button key={opt} type="button"
                                 onClick={() => !locked && onUpdate({ ...sel, winTeam: opt })}
                                 disabled={locked && !active}
-                                style={active && info ? { background: info.hex, borderColor: info.hex, color: "#fff" } : undefined}
+                                style={active && info ? {
+                                    background: info.hex,
+                                    borderColor: hexLuminance(info.hex) > 0.5 ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.55)',
+                                    color: getContrastColor(info.hex),
+                                } : undefined}
                                 className={[
                                     "py-2 rounded-xl text-sm font-semibold border transition-all flex items-center justify-center gap-1.5",
                                     locked && !active ? "opacity-30 cursor-default" : "",
@@ -300,7 +323,7 @@ function SelectionCard({
                     <div className="flex items-center gap-3">
                         <div className="flex-1">
                             <label className="text-[10px] font-medium uppercase tracking-wide flex items-center gap-1"
-                                style={{ color: teamA?.hex ?? undefined }}>
+                                style={{ color: teamA ? teamColorOnLight(teamA.hex) : undefined }}>
                                 {teamA ? <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: teamA.hex }} /> : null}
                                 {teamA?.name ?? "Time A"}
                             </label>
@@ -312,7 +335,7 @@ function SelectionCard({
                         <span className="text-xl font-black text-slate-400 mt-5">×</span>
                         <div className="flex-1">
                             <label className="text-[10px] font-medium uppercase tracking-wide flex items-center gap-1"
-                                style={{ color: teamB?.hex ?? undefined }}>
+                                style={{ color: teamB ? teamColorOnLight(teamB.hex) : undefined }}>
                                 {teamB ? <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: teamB.hex }} /> : null}
                                 {teamB?.name ?? "Time B"}
                             </label>
@@ -1017,24 +1040,27 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                         {/* Headers dos times */}
                         <div className="grid grid-cols-2">
-                            <div className="px-3 py-2 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wide text-white"
-                                style={{ background: teamA?.hex ?? "#334155" }}>
-                                {teamA?.name ?? "Time A"}
-                                {(winA || isDraw) && ctx.myBet && (
-                                    <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full">
-                                        {isDraw ? "EMPATE" : "✓ VITÓRIA"}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="px-3 py-2 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wide text-white border-l border-white/20"
-                                style={{ background: teamB?.hex ?? "#334155" }}>
-                                {teamB?.name ?? "Time B"}
-                                {(winB || isDraw) && ctx.myBet && (
-                                    <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full">
-                                        {isDraw ? "EMPATE" : "✓ VITÓRIA"}
-                                    </span>
-                                )}
-                            </div>
+                            {([
+                                { team: teamA, win: winA },
+                                { team: teamB, win: winB },
+                            ] as const).map(({ team, win }, i) => {
+                                const bg      = team?.hex ?? "#334155";
+                                const fg      = getContrastColor(bg);
+                                const badgeBg = fg === '#ffffff' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)';
+                                return (
+                                    <div key={i}
+                                        className={`px-3 py-2 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wide${i === 1 ? ' border-l' : ''}`}
+                                        style={{ background: bg, color: fg, borderColor: `${fg}33` }}>
+                                        {team?.name ?? (i === 0 ? "Time A" : "Time B")}
+                                        {(win || isDraw) && ctx.myBet && (
+                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
+                                                style={{ background: badgeBg }}>
+                                                {isDraw ? "EMPATE" : "✓ VITÓRIA"}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {/* Placar previsto */}
