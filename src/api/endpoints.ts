@@ -331,6 +331,12 @@ export const PollsApi = {
                            http.post(`/api/Polls/group/${groupId}/${pollId}/admin-vote`, dto),
   updateDeadline:        (groupId: string, pollId: string, dto: { deadlineDate?: string | null; deadlineTime?: string | null; clearDeadline?: boolean }) =>
                            http.patch(`/api/Polls/group/${groupId}/${pollId}/deadline`, dto),
+  setAllowGuests:        (groupId: string, pollId: string, allowGuests: boolean) =>
+                           http.patch(`/api/Polls/group/${groupId}/${pollId}/allow-guests`, { allowGuests }),
+  addGuest:              (groupId: string, pollId: string, dto: { guestName: string; isAdult: boolean }) =>
+                           http.post<ApiResponse<{ id: string; voterPlayerId: string; voterPlayerName: string; guestName: string; isAdult: boolean }>>(`/api/Polls/group/${groupId}/${pollId}/guests`, dto),
+  removeGuest:           (groupId: string, pollId: string, guestId: string) =>
+                           http.delete(`/api/Polls/group/${groupId}/${pollId}/guests/${guestId}`),
 };
 
 export const PaymentsApi = {

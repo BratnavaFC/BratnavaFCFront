@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-    X, Loader2, Check, Eye, EyeOff, Clock, DollarSign, MapPin,
+    X, Loader2, Check, Eye, EyeOff, Clock, DollarSign, MapPin, Users,
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
 import { extractApiError } from '../../lib/apiError';
@@ -80,7 +80,8 @@ function PollCreateEventModal({
     const [costAmount, setCostAmount] = useState('');
     const [deadlineDate, setDeadlineDate] = useState('');
     const [deadlineTime, setDeadlineTime] = useState('');
-    const [showVotes, setShowVotes] = useState(true);
+    const [showVotes, setShowVotes]       = useState(true);
+    const [allowGuests, setAllowGuests]   = useState(false);
 
     async function handleCreate() {
         if (!title.trim()) { toast.error('Título é obrigatório.'); return; }
@@ -99,6 +100,7 @@ function PollCreateEventModal({
                 deadlineDate: deadlineDate || null,
                 deadlineTime: deadlineTime || null,
                 showVotes,
+                allowGuests,
             };
             const res = await PollsApi.createEventPoll(groupId, dto);
             onCreate(res.data.data);
@@ -261,7 +263,7 @@ function PollCreateEventModal({
                     </div>
 
                     {/* Show votes toggle */}
-                    <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/60 dark:bg-slate-700/30 p-3">
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/60 dark:bg-slate-700/30 p-3 space-y-3">
                         <label className="flex items-center justify-between gap-3 cursor-pointer">
                             <div>
                                 <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
@@ -277,6 +279,23 @@ function PollCreateEventModal({
                                 <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${showVotes ? 'translate-x-5' : 'translate-x-0.5'}`} />
                             </div>
                         </label>
+                        <div className="border-t border-slate-200 dark:border-slate-600 pt-3">
+                            <label className="flex items-center justify-between gap-3 cursor-pointer">
+                                <div>
+                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                        <Users size={15} />
+                                        Permitir convidados
+                                    </p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Quem confirmar presença poderá levar convidados</p>
+                                </div>
+                                <div
+                                    onClick={() => setAllowGuests(p => !p)}
+                                    className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${allowGuests ? 'bg-slate-900' : 'bg-slate-200 dark:bg-slate-600'}`}
+                                >
+                                    <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${allowGuests ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
