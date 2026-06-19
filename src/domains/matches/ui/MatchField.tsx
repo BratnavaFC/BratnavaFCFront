@@ -24,15 +24,22 @@ function normalizeHex(v: string): string {
     return s.startsWith('#') ? s : `#${s}`;
 }
 
-function isWhiteish(hex: string): boolean {
-    const h = normalizeHex(hex).replace('#', '').toLowerCase();
-    return h === 'ffffff' || h === 'fff';
-}
-
 function safeColor(hex: string, fallback: string): string {
     const n = normalizeHex(hex);
-    if (!n || isWhiteish(n)) return fallback;
-    return n;
+    return n || fallback;
+}
+
+function hexLuminance(hex: string): number {
+    const clean = hex.replace('#', '');
+    if (clean.length !== 6) return 0;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+function contrastColor(hex: string): string {
+    return hexLuminance(hex) > 0.5 ? '#0f172a' : '#ffffff';
 }
 
 function initials(name: string): string {
@@ -60,12 +67,12 @@ const MINI_OUT: Record<number, Pos[]> = {
 const TOP_OUT: Record<number, Pos[]> = {
     0: [],
     1: [{ x: 0.50, y: 0.35 }],
-    2: [{ x: 0.22, y: 0.35 }, { x: 0.78, y: 0.35 }],
-    3: [{ x: 0.50, y: 0.24 }, { x: 0.14, y: 0.38 }, { x: 0.86, y: 0.38 }],
-    4: [{ x: 0.25, y: 0.24 }, { x: 0.75, y: 0.24 }, { x: 0.14, y: 0.40 }, { x: 0.86, y: 0.40 }],
-    5: [{ x: 0.50, y: 0.22 }, { x: 0.14, y: 0.30 }, { x: 0.86, y: 0.30 }, { x: 0.15, y: 0.43 }, { x: 0.85, y: 0.43 }],
-    6: [{ x: 0.10, y: 0.19 }, { x: 0.50, y: 0.23 }, { x: 0.90, y: 0.19 }, { x: 0.12, y: 0.38 }, { x: 0.50, y: 0.44 }, { x: 0.88, y: 0.38 }],
-    7: [{ x: 0.10, y: 0.19 }, { x: 0.33, y: 0.25 }, { x: 0.67, y: 0.25 }, { x: 0.90, y: 0.19 }, { x: 0.12, y: 0.37 }, { x: 0.50, y: 0.44 }, { x: 0.88, y: 0.37 }],
+    2: [{ x: 0.25, y: 0.35 }, { x: 0.75, y: 0.35 }],
+    3: [{ x: 0.50, y: 0.24 }, { x: 0.20, y: 0.38 }, { x: 0.80, y: 0.38 }],
+    4: [{ x: 0.28, y: 0.24 }, { x: 0.72, y: 0.24 }, { x: 0.20, y: 0.40 }, { x: 0.80, y: 0.40 }],
+    5: [{ x: 0.50, y: 0.22 }, { x: 0.20, y: 0.30 }, { x: 0.80, y: 0.30 }, { x: 0.22, y: 0.43 }, { x: 0.78, y: 0.43 }],
+    6: [{ x: 0.18, y: 0.19 }, { x: 0.50, y: 0.23 }, { x: 0.82, y: 0.19 }, { x: 0.18, y: 0.38 }, { x: 0.50, y: 0.44 }, { x: 0.82, y: 0.38 }],
+    7: [{ x: 0.18, y: 0.19 }, { x: 0.36, y: 0.25 }, { x: 0.64, y: 0.25 }, { x: 0.82, y: 0.19 }, { x: 0.18, y: 0.37 }, { x: 0.50, y: 0.44 }, { x: 0.82, y: 0.37 }],
 };
 
 function clampTable(tbl: Record<number, Pos[]>, n: number): Pos[] {
@@ -195,16 +202,22 @@ function FieldPin({
             }}
         >
             <div
-                className={`${compact ? 'w-7 h-7' : 'w-9 h-9'} rounded-full border-2 border-white shadow-md flex items-center justify-center font-black transition-transform group-hover:scale-110`}
-                style={{ backgroundColor: bg }}
+                className={`${compact ? 'w-7 h-7' : 'w-9 h-9'} rounded-full border-2 shadow-md flex items-center justify-center font-black transition-transform group-hover:scale-110`}
+                style={{
+                    backgroundColor: bg,
+                    borderColor: hexLuminance(bg) > 0.5 ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.9)',
+                }}
             >
                 {player.isGoalkeeper
                     ? <span className={compact ? 'text-sm leading-none' : 'text-xl leading-none'}>🧤</span>
-                    : <span className={`${compact ? 'text-[9px]' : 'text-[11px]'} text-white`}>{initials(player.name)}</span>}
+                    : <span className={`${compact ? 'text-[9px]' : 'text-[11px]'} font-black`} style={{ color: contrastColor(bg) }}>{initials(player.name)}</span>}
             </div>
             {!hideLabel && (
-                <div className={`mt-0.5 px-1 py-px bg-black/60 rounded text-white font-semibold leading-tight ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
-                    {player.name.split(' ')[0]}
+                <div
+                    className={`mt-0.5 px-1 py-px bg-black/60 rounded text-white font-semibold leading-tight text-center ${compact ? 'text-[9px]' : 'text-[10px]'}`}
+                    style={{ maxWidth: compact ? 52 : 64, wordBreak: 'break-word' }}
+                >
+                    {player.name}
                 </div>
             )}
         </button>
@@ -502,8 +515,8 @@ export function MatchDayField({
                 {/* Team A badge — top */}
                 <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                     <span
-                        className="px-2.5 py-0.5 rounded-full text-[10px] font-black text-white shadow"
-                        style={{ backgroundColor: aColor + 'cc' }}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-black shadow"
+                        style={{ backgroundColor: aColor + 'cc', color: contrastColor(aColor) }}
                     >
                         ▲ {teamAName}
                     </span>
@@ -512,8 +525,8 @@ export function MatchDayField({
                 {/* Team B badge — bottom */}
                 <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                     <span
-                        className="px-2.5 py-0.5 rounded-full text-[10px] font-black text-white shadow"
-                        style={{ backgroundColor: bColor + 'cc' }}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-black shadow"
+                        style={{ backgroundColor: bColor + 'cc', color: contrastColor(bColor) }}
                     >
                         {teamBName} ▼
                     </span>
