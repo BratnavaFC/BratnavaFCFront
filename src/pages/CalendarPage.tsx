@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     ChevronLeft, ChevronRight, Plus, Settings2, CalendarCheck, Loader2,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { CalendarApi, MatchesApi } from "../api/endpoints";
+import { useConfirm } from '../components/ConfirmDialog';
 import { getResponseMessage } from "../api/apiResponse";
 import { toast } from "sonner";
 import type { MatchHeaderDto } from "../domains/matches/matchTypes";
@@ -142,23 +143,23 @@ function isMatchPast(ev: CalendarEvent): boolean {
 
 function eventStyle(ev: CalendarEvent): { bg: string; text: string; border: string } {
     if (ev.type === "birthday")
-        return { bg: "bg-pink-100", text: "text-pink-800", border: "border-pink-200" };
+        return { bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-800 dark:text-pink-300", border: "border-pink-200 dark:border-pink-800/50" };
     if (ev.type === "match") {
         return isMatchPast(ev)
-            ? { bg: "bg-slate-100", text: "text-slate-500", border: "border-slate-300" }
-            : { bg: "bg-green-100", text: "text-green-800", border: "border-green-300" };
+            ? { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-500 dark:text-slate-400", border: "border-slate-300 dark:border-slate-600" }
+            : { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-800 dark:text-green-300", border: "border-green-300 dark:border-green-800/50" };
     }
     if (ev.type === "holiday")
-        return { bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200" };
+        return { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-800 dark:text-amber-300", border: "border-amber-200 dark:border-amber-800/50" };
     if (ev.type === "worldcup")
-        return { bg: "bg-lime-100", text: "text-lime-800", border: "border-lime-300" };
+        return { bg: "bg-lime-100 dark:bg-lime-900/30", text: "text-lime-800 dark:text-lime-300", border: "border-lime-300 dark:border-lime-800/50" };
     if (ev.type === "event")
-        return { bg: "bg-violet-100", text: "text-violet-800", border: "border-violet-200" };
+        return { bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-800 dark:text-violet-300", border: "border-violet-200 dark:border-violet-800/50" };
     // manual: use category color if available
     if (ev.categoryColor) {
         return { bg: "bg-[var(--ev-bg)]", text: "text-[var(--ev-text)]", border: "border-[var(--ev-border)]" };
     }
-    return { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" };
+    return { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300", border: "border-slate-200 dark:border-slate-700" };
 }
 
 function eventCSSVars(ev: CalendarEvent): React.CSSProperties {
@@ -541,9 +542,11 @@ export default function CalendarPage() {
     function openNewEvent(date?: string) { setCreateInitialDate(date); setShowCreateModal(true); }
     function openDayModal(day: Date, dayEvs: CalendarEvent[]) { setDayModal({ day, events: dayEvs }); }
 
+    const { confirm, confirmDialog } = useConfirm();
+
     async function handleDeleteEvent(ev: CalendarEvent) {
         if (!ev.id || !groupId) return;
-        if (!confirm(`Excluir "${ev.title}"?`)) return;
+        if (!(await confirm({ title: 'Excluir evento', message: `Excluir "${ev.title}"?`, confirmLabel: 'Excluir', danger: true }))) return;
         try {
             const res = await CalendarApi.deleteEvent(groupId, ev.id);
             if (res.data.message) toast.success(res.data.message);
@@ -706,6 +709,8 @@ export default function CalendarPage() {
                     onNewEvent={date => { setDayModal(null); openNewEvent(date); }}
                 />
             )}
+
+            {confirmDialog}
         </div>
     );
 }

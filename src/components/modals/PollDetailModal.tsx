@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
     X, Loader2, Check, Lock, Unlock, Trash2,
@@ -7,6 +7,7 @@ import {
     CheckSquare, Square, BarChart2, AlertCircle, CalendarDays,
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
+import { useConfirm } from '../ConfirmDialog';
 import { extractApiError } from '../../lib/apiError';
 import { compressImage } from '../../lib/compressImage';
 import ModalBackdrop from './ModalBackdrop';
@@ -606,6 +607,8 @@ function PollDetailModal({
     const [showDeadlineEdit, setShowDeadlineEdit] = useState(false);
     const [deadlineDateDraft, setDeadlineDateDraft] = useState(poll.deadlineDate ?? '');
     const [deadlineTimeDraft, setDeadlineTimeDraft] = useState(poll.deadlineTime ?? '');
+    const [showDescEdit, setShowDescEdit] = useState(false);
+    const [descriptionDraft, setDescriptionDraft] = useState(poll.description ?? '');
 
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
     const isOpen = poll.status === 'open' && !deadlinePassed;
@@ -698,6 +701,20 @@ function PollDetailModal({
         } finally { setActionLoading(null); }
     }
 
+    async function handleUpdateDescription() {
+        setActionLoading('description');
+        try {
+            const res = await PollsApi.updatePollDetails(groupId, poll.id, {
+                description: descriptionDraft.trim() !== '' ? descriptionDraft.trim() : '',
+            });
+            onUpdated({ ...poll, description: res.data.data.description ?? null });
+            setShowDescEdit(false);
+            toast.success('Descrição atualizada.');
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao atualizar.'));
+        } finally { setActionLoading(null); }
+    }
+
     async function handleUpdateDeadline(clear = false) {
         setActionLoading('deadline');
         try {
@@ -719,8 +736,10 @@ function PollDetailModal({
         } finally { setActionLoading(null); }
     }
 
+    const { confirm, confirmDialog } = useConfirm();
+
     async function handleDeletePoll() {
-        if (!confirm(`Excluir a votação "${poll.title}"?`)) return;
+        if (!(await confirm({ title: 'Excluir votação', message: `Excluir a votação "${poll.title}"?`, confirmLabel: 'Excluir', danger: true }))) return;
         setActionLoading('delete');
         try {
             await PollsApi.deletePoll(groupId, poll.id);
@@ -732,7 +751,7 @@ function PollDetailModal({
     }
 
     async function handleDeleteOption(optionId: string) {
-        if (!confirm('Excluir esta opção?')) return;
+        if (!(await confirm({ title: 'Excluir opção', message: 'Excluir esta opção da votação?', confirmLabel: 'Excluir', danger: true }))) return;
         setActionLoading(`del-opt-${optionId}`);
         try {
             await PollsApi.deleteOption(groupId, poll.id, optionId);
@@ -994,6 +1013,40 @@ function PollDetailModal({
                     )}
                 </div>
 
+                {/* Inline description editor (admin) */}
+                {isAdmin && showDescEdit && (
+                    <div className="px-5 py-3 border-t dark:border-slate-700 bg-indigo-50/60 dark:bg-indigo-900/10 space-y-2.5 shrink-0">
+                        <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                            <Pencil size={12} /> Editar descrição
+                        </p>
+                        <textarea
+                            rows={3}
+                            value={descriptionDraft}
+                            onChange={e => setDescriptionDraft(e.target.value)}
+                            placeholder="Descrição opcional…"
+                            className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
+                        />
+                        <div className="flex gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={handleUpdateDescription}
+                                disabled={!!actionLoading}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                                {actionLoading === 'description' ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                Salvar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowDescEdit(false)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Inline deadline editor (admin) */}
                 {isAdmin && showDeadlineEdit && (
                     <div className="px-5 py-3 border-t dark:border-slate-700 bg-amber-50/60 dark:bg-amber-900/10 space-y-2.5 shrink-0">
@@ -1085,6 +1138,16 @@ function PollDetailModal({
                         <div className="flex items-center gap-2 ml-auto flex-wrap">
                             <button
                                 type="button"
+                                onClick={() => { setShowDescEdit(p => !p); setDescriptionDraft(poll.description ?? ''); }}
+                                disabled={!!actionLoading}
+                                title="Editar descrição"
+                                className={`px-3 py-2 rounded-xl border text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${showDescEdit ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
+                            >
+                                <Pencil size={13} />
+                                Editar
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => { setShowDeadlineEdit(p => !p); setDeadlineDateDraft(poll.deadlineDate ?? ''); setDeadlineTimeDraft(poll.deadlineTime ?? ''); }}
                                 disabled={!!actionLoading}
                                 title="Alterar prazo de vencimento"
@@ -1159,6 +1222,7 @@ function PollDetailModal({
         {lightbox && (
             <ImageLightbox images={lightbox.images} startIdx={lightbox.idx} onClose={() => setLightbox(null)} />
         )}
+        {confirmDialog}
     </>
     );
 }

@@ -1,11 +1,12 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { toast } from 'sonner';
 import {
     X, Loader2, Check, Lock, Unlock, Trash2,
     Users, Clock, DollarSign, CalendarDays,
-    MapPin, AlertCircle, UserPlus, UserMinus,
+    MapPin, AlertCircle, UserPlus, UserMinus, Pencil,
 } from 'lucide-react';
 import { PollsApi } from '../../api/endpoints';
+import { useConfirm } from '../ConfirmDialog';
 import { extractApiError } from '../../lib/apiError';
 import ModalBackdrop from './ModalBackdrop';
 import PollClosePollModal from './PollClosePollModal';
@@ -453,6 +454,10 @@ function PollEventDetailModal({
     const [showDeadlineEdit, setShowDeadlineEdit] = useState(false);
     const [deadlineDateDraft, setDeadlineDateDraft] = useState(poll.deadlineDate ?? '');
     const [deadlineTimeDraft, setDeadlineTimeDraft] = useState(poll.deadlineTime ?? '');
+    const [showDetailsEdit, setShowDetailsEdit] = useState(false);
+    const [descriptionDraft, setDescriptionDraft] = useState(poll.description ?? '');
+    const [costTypeDraft, setCostTypeDraft] = useState(poll.costType ?? '');
+    const [costAmountDraft, setCostAmountDraft] = useState(poll.costAmount != null ? String(poll.costAmount) : '');
     const [activeTab, setActiveTab] = useState<'respostas' | 'presencas'>('respostas');
 
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
@@ -510,6 +515,23 @@ function PollEventDetailModal({
         } finally { setActionLoading(null); }
     }
 
+    async function handleUpdateDetails() {
+        setActionLoading('details');
+        try {
+            const costAmt = costAmountDraft.trim() !== '' ? parseFloat(costAmountDraft) : null;
+            const res = await PollsApi.updatePollDetails(groupId, poll.id, {
+                description: descriptionDraft.trim() !== '' ? descriptionDraft.trim() : '',
+                costAmount:  costAmt,
+                costType:    costTypeDraft || '',
+            });
+            onUpdated(res.data.data as unknown as Poll);
+            setShowDetailsEdit(false);
+            toast.success('Evento atualizado.');
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao atualizar.'));
+        } finally { setActionLoading(null); }
+    }
+
     async function handleClosePoll(dto: any) {
         setActionLoading('close');
         try {
@@ -543,8 +565,10 @@ function PollEventDetailModal({
         } finally { setActionLoading(null); }
     }
 
+    const { confirm, confirmDialog } = useConfirm();
+
     async function handleDeletePoll() {
-        if (!confirm(`Excluir o evento "${poll.title}"?`)) return;
+        if (!(await confirm({ title: 'Excluir evento', message: `Excluir o evento "${poll.title}"?`, confirmLabel: 'Excluir', danger: true }))) return;
         setActionLoading('delete');
         try {
             await PollsApi.deletePoll(groupId, poll.id);
@@ -820,6 +844,71 @@ function PollEventDetailModal({
                     </div>
                 )}
 
+                {/* Inline details editor (admin) */}
+                {isAdmin && showDetailsEdit && (
+                    <div className="px-5 py-3 border-t dark:border-slate-700 bg-indigo-50/60 dark:bg-indigo-900/10 space-y-3 shrink-0">
+                        <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                            <Pencil size={12} /> Editar evento
+                        </p>
+                        <div>
+                            <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Descrição</label>
+                            <textarea
+                                rows={3}
+                                value={descriptionDraft}
+                                onChange={e => setDescriptionDraft(e.target.value)}
+                                placeholder="Descrição opcional…"
+                                className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
+                            />
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                            <div>
+                                <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Custo</label>
+                                <select
+                                    value={costTypeDraft}
+                                    onChange={e => setCostTypeDraft(e.target.value)}
+                                    className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
+                                >
+                                    <option value="">Sem custo</option>
+                                    <option value="individual">Individual</option>
+                                    <option value="group">Grupo</option>
+                                </select>
+                            </div>
+                            {costTypeDraft && (
+                                <div>
+                                    <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Valor (R$)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={costAmountDraft}
+                                        onChange={e => setCostAmountDraft(e.target.value)}
+                                        placeholder="0,00"
+                                        className="w-24 text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={handleUpdateDetails}
+                                disabled={!!actionLoading}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                                {actionLoading === 'details' ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                Salvar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowDetailsEdit(false)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Footer (admin) */}
                 {isAdmin && (
                     <div className="px-5 py-3 border-t dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/30 flex items-center gap-2 flex-wrap justify-end shrink-0">
@@ -836,6 +925,16 @@ function PollEventDetailModal({
                         >
                             {actionLoading === 'allowGuests' ? <Loader2 size={13} className="animate-spin" /> : <Users size={13} />}
                             {poll.allowGuests ? 'Convidados: ativo' : 'Permitir convidados'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setShowDetailsEdit(p => !p); setDescriptionDraft(poll.description ?? ''); setCostTypeDraft(poll.costType ?? ''); setCostAmountDraft(poll.costAmount != null ? String(poll.costAmount) : ''); }}
+                            disabled={!!actionLoading}
+                            title="Editar descrição e valor"
+                            className={`px-3 py-2 rounded-xl border text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${showDetailsEdit ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
+                        >
+                            <Pencil size={13} />
+                            Editar
                         </button>
                         <button
                             type="button"
@@ -889,6 +988,7 @@ function PollEventDetailModal({
                 onConfirm={handleClosePoll}
             />
         )}
+        {confirmDialog}
         </>
     );
 }
