@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart2, CalendarDays, Check, Link2, Loader2, Plus, X } from "lucide-react";
 import { PollsApi, MatchesApi } from "../../../api/endpoints";
@@ -89,9 +89,10 @@ function LinkPollModal({
     }, [onClose]);
 
     useEffect(() => {
-        PollsApi.getPolls(groupId)
+        PollsApi.getPolls(groupId, { page: 1, pageSize: 100 })
             .then((res) => {
-                const list = ((res.data as any)?.data ?? res.data) as PollListItem[];
+                const raw  = (res.data as any)?.data ?? res.data;
+                const list = (raw?.items ?? raw ?? []) as PollListItem[];
                 // Only open polls/events can be linked
                 setPolls(list.filter((p) => p.status === "open"));
             })

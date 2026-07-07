@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
     CheckCircle2, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
     Upload, Download, Loader2, DollarSign, Calendar, Users,
-    TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, RefreshCw
+    TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, RefreshCw,
+    Pencil, RotateCcw
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PaymentsApi, GroupSettingsApi, TransactionsApi } from '../api/endpoints';
@@ -14,6 +15,8 @@ import CreateExtraChargeModal from '../components/modals/CreateExtraChargeModal'
 import ExtraPaymentModal from '../components/modals/ExtraPaymentModal';
 import BulkExtraDiscountModal from '../components/modals/BulkExtraDiscountModal';
 import PaymentSelectModal from '../components/modals/PaymentSelectModal';
+import LoadMoreButton from '../components/LoadMoreButton';
+import { useConfirm } from '../components/ConfirmDialog';
 
 // ── Tipos locais ──────────────────────────────────────────────────────────────
 interface MonthlyCell {
@@ -61,20 +64,40 @@ interface ChargeCardProps {
     finalized?: boolean; groupId: string;
     onToggle(): void; onBulkDiscount(): void; onCancel(): void;
     onEditPayment(payment: ExtraChargePayment): void;
+    onReactivate(): void;
+    onEditDetails(dto: { name?: string; description?: string | null; amount?: number | null }): Promise<void>;
 }
-function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle, onBulkDiscount, onCancel, onEditPayment }: ChargeCardProps) {
+function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle, onBulkDiscount, onCancel, onEditPayment, onReactivate, onEditDetails }: ChargeCardProps) {
+    const [showEdit, setShowEdit] = useState(false);
+    const [nameDraft, setNameDraft]   = useState(charge.name);
+    const [descDraft, setDescDraft]   = useState(charge.description ?? '');
+    const [amtDraft, setAmtDraft]     = useState(charge.amount.toString());
+    const [saving, setSaving]         = useState(false);
+
+    async function submitEdit() {
+        setSaving(true);
+        try {
+            await onEditDetails({
+                name: nameDraft.trim() || undefined,
+                description: descDraft.trim() || null,
+                amount: parseFloat(amtDraft) || undefined,
+            });
+            setShowEdit(false);
+        } finally { setSaving(false); }
+    }
+
     return (
         <div className={cls(
             'border rounded-xl overflow-hidden',
-            charge.isCancelled ? 'opacity-50 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900' :
-            finalized ? 'border-green-200 bg-green-50/30' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
+            charge.isCancelled ? 'opacity-60 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900' :
+            finalized ? 'border-green-200 bg-green-50/30 dark:border-green-800/50 dark:bg-green-900/10' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
         )}>
             <div className="flex items-center gap-3 px-4 py-3">
                 <button className="flex-1 text-left" onClick={onToggle}>
                     <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm text-slate-900 dark:text-white">{charge.name}</span>
                         {charge.isCancelled && <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Cancelada</span>}
-                        {finalized && !charge.isCancelled && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={10}/>Finalizada</span>}
+                        {finalized && !charge.isCancelled && <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={10}/>Finalizada</span>}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                         <span>R$ {charge.amount.toFixed(2)}</span>
@@ -84,6 +107,21 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                     </div>
                 </button>
                 <div className="flex items-center gap-2">
+                    {charge.isCancelled && (
+                        <button onClick={e => { e.stopPropagation(); onReactivate(); }}
+                            className="flex items-center gap-1 px-2 py-1 border border-emerald-300 dark:border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg text-xs font-medium transition"
+                            title="Reativar cobrança">
+                            <RotateCcw size={12} /> Reativar
+                        </button>
+                    )}
+                    <button onClick={e => { e.stopPropagation(); setShowEdit(v => !v); setNameDraft(charge.name); setDescDraft(charge.description ?? ''); setAmtDraft(charge.amount.toString()); }}
+                        className={cls(
+                            'p-1.5 rounded-lg transition',
+                            showEdit ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-400 dark:text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                        )}
+                        title="Editar cobrança">
+                        <Pencil size={14} />
+                    </button>
                     {!charge.isCancelled && charge.payments.length > 0 && (
                         <button onClick={e => { e.stopPropagation(); onBulkDiscount(); }}
                             className="flex items-center gap-1 px-2 py-1 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg text-xs font-medium transition"
@@ -101,6 +139,38 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                     {open ? <ChevronUp size={16} className="text-slate-400 dark:text-slate-500"/> : <ChevronDown size={16} className="text-slate-400 dark:text-slate-500"/>}
                 </div>
             </div>
+            {showEdit && (
+                <div className="border-t border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-950/20 px-4 py-3 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="col-span-2">
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Nome</label>
+                            <input value={nameDraft} onChange={e => setNameDraft(e.target.value)}
+                                className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Valor (R$)</label>
+                            <input type="number" min="0.01" step="0.01" value={amtDraft} onChange={e => setAmtDraft(e.target.value)}
+                                className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Descrição</label>
+                            <input value={descDraft} onChange={e => setDescDraft(e.target.value)}
+                                placeholder="Opcional"
+                                className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                        </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                        <button onClick={() => setShowEdit(false)}
+                            className="px-3 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            Cancelar
+                        </button>
+                        <button onClick={submitEdit} disabled={saving || !nameDraft.trim() || !amtDraft}
+                            className="px-3 py-1 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition disabled:opacity-50">
+                            {saving ? <Loader2 size={12} className="animate-spin inline" /> : 'Salvar'}
+                        </button>
+                    </div>
+                </div>
+            )}
             {open && (
                 <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50 dark:divide-slate-800">
                     {charge.payments.length === 0 && (
@@ -134,7 +204,7 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                                     )}
                                     <span className={cls(
                                         'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-                                        paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-500'
+                                        paid ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400'
                                     )}>
                                         {paid ? <CheckCircle2 size={11}/> : <XCircle size={11}/>}
                                         {paid ? 'Pago' : 'Pendente'}
@@ -165,6 +235,7 @@ export default function PaymentsPage() {
     );
 
     const setPendingPaymentsCount = usePaymentStore((s) => s.setPendingPaymentsCount);
+    const { confirm, confirmDialog } = useConfirm();
 
     const [paymentMode, setPaymentMode] = useState<number>(0); // 0=Monthly, 1=PerGame
     const [tab, setTab]           = useState<'monthly' | 'extra' | 'caixa'>('monthly');
@@ -174,6 +245,18 @@ export default function PaymentsPage() {
     const [loading, setLoading]   = useState(false);
     const [extraYear, setExtraYear]   = useState(new Date().getFullYear());
     const [extraMonth, setExtraMonth] = useState(new Date().getMonth() + 1);
+
+    // Paginação das cobranças extras (mês selecionado) + resumo por mês (badges)
+    const EXTRA_PAGE_SIZE = 20;
+    interface MonthSummary { month: number; count: number; allPaid: boolean; hasPending: boolean }
+    const [chargesTotal, setChargesTotal]             = useState(0);
+    const [chargesPage, setChargesPage]               = useState(1);
+    const [loadingMoreCharges, setLoadingMoreCharges] = useState(false);
+    const [monthsSummary, setMonthsSummary]           = useState<MonthSummary[]>([]);
+    const [myChargesTotal, setMyChargesTotal]             = useState(0);
+    const [myChargesPage, setMyChargesPage]               = useState(1);
+    const [loadingMoreMyCharges, setLoadingMoreMyCharges] = useState(false);
+    const [mySummary, setMySummary]                       = useState<any>(null);
 
     // Modais
     const [monthModal, setMonthModal]             = useState<{ row: PlayerRow; month: number } | null>(null);
@@ -228,17 +311,38 @@ export default function PaymentsPage() {
     const loadMyData = useCallback(async () => {
         if (!groupId) return;
         try {
-            const [rowRes, chargesRes, summaryRes] = await Promise.all([
+            const [rowRes, chargesRes, summaryRes, monthsRes] = await Promise.all([
                 PaymentsApi.getMyMonthlyRow(groupId, year),
-                PaymentsApi.getMyExtraCharges(groupId),
+                PaymentsApi.getMyExtraCharges(groupId, { year: extraYear, month: extraMonth, page: 1, pageSize: EXTRA_PAGE_SIZE }),
                 PaymentsApi.getMySummary(groupId),
+                PaymentsApi.getExtraChargesSummary(groupId, extraYear),
             ]);
             const rowData = rowRes.data.data as any;
             setMyRow(rowData ? { ...rowData, months: rowData.months ?? [] } : null);
-            setMyCharges((chargesRes.data.data as any[]) ?? []);
-            setPendingPaymentsCount(calcPendingPaymentsCount((summaryRes.data as any)?.data));
+            const paged = chargesRes.data.data as any;
+            setMyCharges((paged?.items as any[]) ?? []);
+            setMyChargesTotal(paged?.total ?? 0);
+            setMyChargesPage(1);
+            const summaryData = (summaryRes.data as any)?.data;
+            setMySummary(summaryData ?? null);
+            setPendingPaymentsCount(calcPendingPaymentsCount(summaryData));
+            setMonthsSummary(((monthsRes.data as any)?.data as MonthSummary[]) ?? []);
         } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar seus pagamentos')); }
-    }, [groupId, year, activePlayerId, setPendingPaymentsCount]);
+    }, [groupId, year, extraYear, extraMonth, activePlayerId, setPendingPaymentsCount]);
+
+    const loadMoreMyCharges = useCallback(async () => {
+        if (!groupId) return;
+        setLoadingMoreMyCharges(true);
+        try {
+            const next = myChargesPage + 1;
+            const res  = await PaymentsApi.getMyExtraCharges(groupId, { year: extraYear, month: extraMonth, page: next, pageSize: EXTRA_PAGE_SIZE });
+            const paged = res.data.data as any;
+            setMyCharges(prev => [...prev, ...((paged?.items as any[]) ?? [])]);
+            setMyChargesTotal(paged?.total ?? 0);
+            setMyChargesPage(next);
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar mais cobranças')); }
+        finally { setLoadingMoreMyCharges(false); }
+    }, [groupId, extraYear, extraMonth, myChargesPage]);
 
     useEffect(() => { if (groupId) loadMyData(); }, [groupId, year, loadMyData]);
 
@@ -256,11 +360,32 @@ export default function PaymentsPage() {
         if (!groupId) return;
         setLoading(true);
         try {
-            const res = await PaymentsApi.getExtraCharges(groupId);
-            setCharges((res.data.data as any[]) ?? []);
+            const [res, sumRes] = await Promise.all([
+                PaymentsApi.getExtraCharges(groupId, { year: extraYear, month: extraMonth, page: 1, pageSize: EXTRA_PAGE_SIZE }),
+                PaymentsApi.getExtraChargesSummary(groupId, extraYear),
+            ]);
+            const paged = res.data.data as any;
+            setCharges((paged?.items as any[]) ?? []);
+            setChargesTotal(paged?.total ?? 0);
+            setChargesPage(1);
+            setMonthsSummary(((sumRes.data as any)?.data as MonthSummary[]) ?? []);
         } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar cobranças')); }
         finally { setLoading(false); }
-    }, [groupId]);
+    }, [groupId, extraYear, extraMonth]);
+
+    const loadMoreExtra = useCallback(async () => {
+        if (!groupId) return;
+        setLoadingMoreCharges(true);
+        try {
+            const next = chargesPage + 1;
+            const res  = await PaymentsApi.getExtraCharges(groupId, { year: extraYear, month: extraMonth, page: next, pageSize: EXTRA_PAGE_SIZE });
+            const paged = res.data.data as any;
+            setCharges(prev => [...prev, ...((paged?.items as any[]) ?? [])]);
+            setChargesTotal(paged?.total ?? 0);
+            setChargesPage(next);
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao carregar mais cobranças')); }
+        finally { setLoadingMoreCharges(false); }
+    }, [groupId, extraYear, extraMonth, chargesPage]);
 
     const loadCaixaMes = useCallback(async () => {
         if (!groupId) return;
@@ -317,7 +442,7 @@ export default function PaymentsPage() {
 
     const clearPayments = useCallback(async () => {
         if (!groupId || clearingPayments) return;
-        if (!window.confirm('⚠️ Isso vai apagar TODAS as mensalidades e resetar TODOS os pagamentos de cobranças extras para pendente (e também limpar o caixa). Continuar?')) return;
+        if (!(await confirm({ title: 'Limpar todos os pagamentos', message: 'Isso vai apagar TODAS as mensalidades, resetar TODOS os pagamentos de cobranças extras para pendente e limpar o caixa.\n\nEssa ação não pode ser desfeita.', confirmLabel: 'Apagar tudo', danger: true }))) return;
         setClearingPayments(true);
         try {
             const res = await PaymentsApi.clearAllPayments(groupId);
@@ -330,11 +455,11 @@ export default function PaymentsPage() {
             else loadCaixaGeral();
         } catch (e) { toast.error(getResponseMessage(e, 'Erro ao limpar pagamentos')); }
         finally { setClearingPayments(false); }
-    }, [groupId, clearingPayments, caixaSubTab, loadMonthly, loadExtra, loadCaixaMes, loadCaixaGeral]);
+    }, [groupId, clearingPayments, caixaSubTab, loadMonthly, loadExtra, loadCaixaMes, loadCaixaGeral, confirm]);
 
     const clearCaixa = useCallback(async () => {
         if (!groupId || clearing) return;
-        if (!window.confirm('⚠️ Isso vai apagar TODOS os lançamentos do caixa (inclusive manuais). Continuar?')) return;
+        if (!(await confirm({ title: 'Limpar o caixa', message: 'Isso vai apagar TODOS os lançamentos do caixa, inclusive os manuais.\n\nEssa ação não pode ser desfeita.', confirmLabel: 'Apagar tudo', danger: true }))) return;
         setClearing(true);
         try {
             const res = await TransactionsApi.clearAllTransactions(groupId);
@@ -344,7 +469,7 @@ export default function PaymentsPage() {
             else loadCaixaGeral();
         } catch (e) { toast.error(getResponseMessage(e, 'Erro ao limpar caixa')); }
         finally { setClearing(false); }
-    }, [groupId, clearing, caixaSubTab, loadCaixaMes, loadCaixaGeral]);
+    }, [groupId, clearing, caixaSubTab, loadCaixaMes, loadCaixaGeral, confirm]);
 
     useEffect(() => { if (isAdmin && tab === 'monthly') loadMonthly(); }, [isAdmin, tab, loadMonthly]);
     useEffect(() => { if (isAdmin && tab === 'extra')   loadExtra();   }, [isAdmin, tab, loadExtra]);
@@ -356,7 +481,7 @@ export default function PaymentsPage() {
     const mensalistas = grid?.players.map(p => ({ id: p.playerId, name: p.playerName })) ?? [];
 
     async function cancelCharge(chargeId: string) {
-        if (!confirm('Cancelar esta cobrança?')) return;
+        if (!(await confirm({ title: 'Cancelar cobrança', message: 'Cancelar esta cobrança? Ela ficará marcada como cancelada e poderá ser reativada depois.', confirmLabel: 'Cancelar cobrança', danger: true }))) return;
         try {
             const res = await PaymentsApi.cancelExtraCharge(groupId, chargeId);
             if (res.data.message) toast.success(res.data.message);
@@ -364,43 +489,46 @@ export default function PaymentsPage() {
         } catch (e) { toast.error(getResponseMessage(e, 'Erro ao cancelar')); }
     }
 
+    async function reactivateCharge(chargeId: string) {
+        try {
+            const res = await PaymentsApi.reactivateExtraCharge(groupId, chargeId);
+            const msg = (res.data as any)?.message ?? 'Cobrança reativada.';
+            toast.success(msg);
+            loadExtra();
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao reativar')); }
+    }
+
+    async function editChargeDetails(chargeId: string, dto: { name?: string; description?: string | null; amount?: number | null }) {
+        const res = await PaymentsApi.updateExtraChargeDetails(groupId, chargeId, dto);
+        const msg = (res.data as any)?.message ?? 'Cobrança atualizada.';
+        toast.success(msg);
+        loadExtra();
+    }
+
     // ── Helpers para cobranças extras mensais ─────────────────────────────────
-    const cYear  = (c: ExtraCharge) => new Date(c.createdAt).getFullYear();
-    const cMonth = (c: ExtraCharge) => new Date(c.createdAt).getMonth() + 1;
     const isFinalizada = (c: ExtraCharge) =>
         !c.isCancelled && c.payments.length > 0 && c.payments.every(p => p.status === 1);
 
-    // Status de cada mês para o seletor (admin)
-    const extraMonthsStatus = Array.from({ length: 12 }, (_, i) => {
+    // Status de cada mês para o seletor — vem do endpoint de summary (badges)
+    const monthsStatusFromSummary = Array.from({ length: 12 }, (_, i) => {
         const m = i + 1;
-        const mc = charges.filter(c => cYear(c) === extraYear && cMonth(c) === m);
-        const active = mc.filter(c => !c.isCancelled);
+        const s = monthsSummary.find(x => x.month === m);
         return {
             month: m,
-            count: mc.length,
-            allPaid: active.length > 0 && active.every(isFinalizada),
-            hasPending: active.some(c => !isFinalizada(c)),
+            count: s?.count ?? 0,
+            allPaid: s?.allPaid ?? false,
+            hasPending: s?.hasPending ?? false,
         };
     });
-    const selectedCharges    = charges.filter(c => cYear(c) === extraYear && cMonth(c) === extraMonth);
-    const currentAdminCharges  = selectedCharges.filter(c => !isFinalizada(c));
-    const finalizedAdminCharges = selectedCharges.filter(isFinalizada);
+    const extraMonthsStatus   = monthsStatusFromSummary;
+    const myExtraMonthsStatus = monthsStatusFromSummary;
 
-    // Status de cada mês para o seletor (non-admin)
-    const myExtraMonthsStatus = Array.from({ length: 12 }, (_, i) => {
-        const m = i + 1;
-        const mc = myCharges.filter(c => cYear(c) === extraYear && cMonth(c) === m);
-        const active = mc.filter(c => !c.isCancelled);
-        return {
-            month: m,
-            count: mc.length,
-            allPaid: active.length > 0 && active.every(c => { const p = c.payments[0]; return !!p && p.status === 1; }),
-            hasPending: active.some(c => { const p = c.payments[0]; return !p || p.status !== 1; }),
-        };
-    });
-    const mySelectedCharges    = myCharges.filter(c => cYear(c) === extraYear && cMonth(c) === extraMonth);
-    const myCurrentCharges     = mySelectedCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && (!p || p.status !== 1); });
-    const myFinalizedCharges   = mySelectedCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && !!p && p.status === 1; });
+    // A lista já vem filtrada por ano/mês do servidor
+    const currentAdminCharges   = charges.filter(c => !isFinalizada(c));
+    const finalizedAdminCharges = charges.filter(isFinalizada);
+
+    const myCurrentCharges   = myCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && (!p || p.status !== 1); });
+    const myFinalizedCharges = myCharges.filter(c => { const p = c.payments[0]; return !c.isCancelled && !!p && p.status === 1; });
 
     // Total de débitos pendentes
     const pendingTotal = useMemo(() => {
@@ -419,16 +547,12 @@ export default function PaymentsPage() {
                 .forEach(cell => { total += Math.max(0, cell.amount - cell.discount); });
         }
 
-        // Cobranças extras pendentes
-        myCharges
-            .filter(c => !c.isCancelled)
-            .forEach(c => {
-                const p = c.payments[0];
-                if (p && p.status !== 1) total += p.finalAmount;
-            });
+        // Cobranças extras pendentes — vem do summary (independe do mês selecionado)
+        const pendingExtras: any[] = mySummary?.pendingExtraCharges ?? [];
+        pendingExtras.forEach(p => { total += p.finalAmount ?? 0; });
 
         return total;
-    }, [paymentMode, myRow, year, myCharges]);
+    }, [paymentMode, myRow, year, mySummary]);
 
     if (!groupId) {
         return (
@@ -520,7 +644,7 @@ export default function PaymentsPage() {
                                                     onClick={() => setMonthModal({ row: myRow, month: cell.month })}
                                                     className={cls(
                                                         'rounded-xl border p-3 text-center transition hover:shadow-sm',
-                                                        paid ? 'border-green-200 bg-green-50' : 'border-red-100 bg-red-50/60'
+                                                        paid ? 'border-green-200 bg-green-50 dark:border-green-800/50 dark:bg-green-900/10' : 'border-red-100 bg-red-50/60 dark:border-red-900/40 dark:bg-red-900/10'
                                                     )}>
                                                     <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">{MONTHS[cell.month - 1]}</div>
                                                     {paid
@@ -636,7 +760,7 @@ export default function PaymentsPage() {
                                                                     <Download size={14} />
                                                                 </button>
                                                             )}
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                                                                 <CheckCircle2 size={11}/> Pago
                                                             </span>
                                                             <button onClick={() => setExtraModal({ charge, payment })}
@@ -650,6 +774,9 @@ export default function PaymentsPage() {
                                         </div>
                                     </div>
                                 )}
+
+                                <LoadMoreButton loaded={myCharges.length} total={myChargesTotal}
+                                    loading={loadingMoreMyCharges} onClick={loadMoreMyCharges} />
                             </div>
                         )}
                         </div>
@@ -815,6 +942,8 @@ export default function PaymentsPage() {
                                                     onBulkDiscount={() => setBulkDiscountCharge(charge)}
                                                     onCancel={() => cancelCharge(charge.id)}
                                                     onEditPayment={(payment) => setExtraModal({ charge, payment })}
+                                                    onReactivate={() => reactivateCharge(charge.id)}
+                                                    onEditDetails={(dto) => editChargeDetails(charge.id, dto)}
                                                     groupId={groupId} />;
                                             })}
                                         </div>
@@ -834,11 +963,16 @@ export default function PaymentsPage() {
                                                     onBulkDiscount={() => setBulkDiscountCharge(charge)}
                                                     onCancel={() => cancelCharge(charge.id)}
                                                     onEditPayment={(payment) => setExtraModal({ charge, payment })}
+                                                    onReactivate={() => reactivateCharge(charge.id)}
+                                                    onEditDetails={(dto) => editChargeDetails(charge.id, dto)}
                                                     groupId={groupId} />;
                                             })}
                                         </div>
                                     </div>
                                 )}
+
+                                <LoadMoreButton loaded={charges.length} total={chargesTotal}
+                                    loading={loadingMoreCharges} onClick={loadMoreExtra} />
                             </div>
                         )}
                     </div>
@@ -975,7 +1109,7 @@ export default function PaymentsPage() {
                                                     {!tx.isAutomatic && (
                                                         <button
                                                             onClick={async () => {
-                                                                if (!confirm('Excluir este lançamento?')) return;
+                                                                if (!(await confirm({ title: 'Excluir lançamento', message: 'Excluir este lançamento do caixa?', confirmLabel: 'Excluir', danger: true }))) return;
                                                                 try {
                                                                     await TransactionsApi.deleteTransaction(groupId, tx.id);
                                                                     toast.success('Lançamento excluído');
@@ -1274,6 +1408,8 @@ export default function PaymentsPage() {
                     </div>
                 </div>
             )}
+
+            {confirmDialog}
         </div>
     );
 }

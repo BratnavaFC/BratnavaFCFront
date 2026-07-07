@@ -1,4 +1,4 @@
-// src/pages/GroupsPage.tsx
+﻿// src/pages/GroupsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getResponseMessage } from "../api/apiResponse";
@@ -186,10 +186,11 @@ export default function GroupsPage() {
         try {
             const [gridRes, extraRes] = await Promise.all([
                 PaymentsApi.getMonthlyGrid(expandedGroupId, year),
-                PaymentsApi.getExtraCharges(expandedGroupId),
+                PaymentsApi.getExtraCharges(expandedGroupId, { year, page: 1, pageSize: 100 }),
             ]);
             const grid: any = gridRes.data.data;
-            const extras: any[] = extraRes.data.data! ?? [];
+            const extraData: any = extraRes.data.data;
+            const extras: any[] = extraData?.items ?? extraData ?? [];
             const hasMonthlyFee = !!(grid?.monthlyFee && grid.monthlyFee > 0);
             const now = new Date();
             const currentMonth = now.getMonth() + 1;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
     Coins, Trophy, Target, TrendingUp, TrendingDown,
@@ -12,6 +12,7 @@ import { isGroupAdmin } from "../auth/guards";
 import { getResponseMessage } from "../api/apiResponse";
 import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
+import Pager, { usePageSize } from "../components/Pager";
 import { resolveIcon } from "../lib/groupIcons";
 import type {
     CurrentMatchBetContextDto,
@@ -1213,8 +1214,12 @@ function HistoryTab({ groupId }: { groupId: string }) {
     const _icons  = useGroupIcons(groupId);
     const admin   = isGroupAdmin(groupId);
     const [history,       setHistory]       = useState<MatchBetHistoryDto[]>([]);
+    const [histTotal,     setHistTotal]     = useState(0);
+    const [histPage,      setHistPage]      = useState(1);
+    const [pageSize,      setPageSize]      = usePageSize("bet_history_page_size");
     const [leaderboard,   setLeaderboard]   = useState<BetLeaderboardEntryDto[]>([]);
     const [loading,       setLoading]       = useState(true);
+    const [paging,        setPaging]        = useState(false);
     const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
     const [expandedUser,  setExpandedUser]  = useState<string | null>(null);
 
@@ -1222,14 +1227,18 @@ function HistoryTab({ groupId }: { groupId: string }) {
         (s) => s.accounts.find((a) => a.userId === s.activeAccountId)?.userId
     );
 
-    async function load() {
+    // Carga inicial / refresh: histórico (página atual) + ranking.
+    async function load(pageNum: number = histPage, size: number = pageSize) {
         setLoading(true);
         try {
             const [histRes, lbRes] = await Promise.all([
-                BetApi.getHistory(groupId),
+                BetApi.getHistory(groupId, pageNum, size),
                 BetApi.getLeaderboard(groupId),
             ]);
-            setHistory((histRes.data as any) as MatchBetHistoryDto[]);
+            const paged = histRes.data as any as { items: MatchBetHistoryDto[]; total: number };
+            setHistory(paged?.items ?? []);
+            setHistTotal(paged?.total ?? 0);
+            setHistPage(pageNum);
             setLeaderboard((lbRes.data as any) as BetLeaderboardEntryDto[]);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar histórico."));
@@ -1238,7 +1247,25 @@ function HistoryTab({ groupId }: { groupId: string }) {
         }
     }
 
-    useEffect(() => { load(); }, [groupId]);
+    // Navegar página: só o histórico, mantendo a tela visível (sem spinner cheio).
+    async function goPage(p: number, size: number = pageSize) {
+        const pageNum = Math.max(1, p);
+        setPaging(true);
+        try {
+            const res = await BetApi.getHistory(groupId, pageNum, size);
+            const paged = res.data as any as { items: MatchBetHistoryDto[]; total: number };
+            setHistory(paged?.items ?? []);
+            setHistTotal(paged?.total ?? 0);
+            setHistPage(pageNum);
+        } catch (e) {
+            toast.error(getResponseMessage(e, "Falha ao carregar página."));
+        } finally {
+            setPaging(false);
+        }
+    }
+    function changePageSize(size: number) { setPageSize(size); goPage(1, size); }
+
+    useEffect(() => { load(1); /* eslint-disable-next-line */ }, [groupId]);
 
     if (loading) {
         return (
@@ -1281,7 +1308,7 @@ function HistoryTab({ groupId }: { groupId: string }) {
                     <p className="text-xs mt-1 opacity-60">O histórico aparece após partidas serem finalizadas.</p>
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className={`space-y-3 ${paging ? "opacity-60 transition-opacity" : ""}`}>
                     {history.map((match) => {
                         const isMatchOpen = expandedMatch === match.matchId;
                         const matchDate   = new Date(match.playedAt).toLocaleDateString("pt-BR", {
@@ -1416,8 +1443,11 @@ function HistoryTab({ groupId }: { groupId: string }) {
                 </div>
             )}
 
+            <Pager page={histPage} pageSize={pageSize} total={histTotal} loading={loading || paging}
+                onPageChange={goPage} onPageSizeChange={changePageSize} />
+
             <div className="flex justify-center pt-1">
-                <button type="button" onClick={load}
+                <button type="button" onClick={() => load()}
                     className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                     <RefreshCw size={12} /> Atualizar
                 </button>
@@ -1672,15 +1702,15 @@ export default function BetPage() {
             {showInfo && <BetInfoModal onClose={() => setShowInfo(false)} />}
 
             {/* Header */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.05]"
+            <div className="page-header">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
-                <div className="relative flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                        <Coins size={26} />
+                <div className="relative flex items-center gap-3">
+                    <div className="page-header-icon">
+                        <Coins size={18} />
                     </div>
                     <div className="flex-1">
-                        <h1 className="text-2xl font-black leading-tight">Bet</h1>
+                        <h1 className="text-xl font-black leading-tight">Bet</h1>
                     </div>
                     <button
                         type="button"

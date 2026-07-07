@@ -791,15 +791,15 @@ export default function AdminUsersPage() {
                             </div>
                         </div>
 
-                        {/* User list */}
-                        {loading ? (
+                        {/* User list — mantém a lista visível (esmaecida) ao recarregar/paginar */}
+                        {loading && !result ? (
                             <div className="p-10 flex items-center justify-center gap-2 text-slate-400">
                                 <Loader2 size={16} className="animate-spin" /> Carregando...
                             </div>
                         ) : (result?.items?.length ?? 0) === 0 ? (
                             <div className="p-10 text-center text-sm text-slate-400">Nenhum usuário encontrado.</div>
                         ) : (
-                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                            <div className={`p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 ${loading ? "opacity-60 transition-opacity" : ""}`}>
                                 {result!.items.map((u) => {
                                     const isMe = u.id === myUserId;
                                     const isInativo = u.status === 2;

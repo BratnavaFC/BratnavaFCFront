@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarOff, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { CalendarOff, ChevronDown, ChevronUp, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { AbsencesApi, type AbsenceDto, type CreateAbsenceDto } from '../api/endpoints';
 import { getResponseMessage } from '../api/apiResponse';
 import { IconRenderer } from '../components/IconRenderer';
 import { ABSENCE_TYPE_OPTIONS, resolveAbsenceIcon } from '../lib/absenceIcons';
 import ModalBackdrop from '../components/modals/ModalBackdrop';
+import LoadMoreButton from '../components/LoadMoreButton';
+import { useConfirm } from '../components/ConfirmDialog';
 import useAccountStore from '../auth/accountStore';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -152,10 +154,30 @@ function AbsenceFormModal({
     );
 }
 
-interface GroupMemberAbsenceDto {
+interface FlatAbsence extends AbsenceDto {
     playerId:   string;
     playerName: string;
-    absences:   AbsenceDto[];
+}
+
+interface PagedAbsences {
+    items: FlatAbsence[];
+    total: number;
+    page:  number;
+}
+
+const EMPTY_PAGE: PagedAbsences = { items: [], total: 0, page: 1 };
+const PAGE_SIZE = 20;
+
+const MONTH_LABELS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function monthLabel(iso: string) {
+    const [y, m] = iso.split('-');
+    return `${MONTH_LABELS[parseInt(m, 10) - 1]} ${y}`;
+}
+
+function todayIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // ── AbsencesPage ──────────────────────────────────────────────────────────────
@@ -163,25 +185,68 @@ interface GroupMemberAbsenceDto {
 export default function AbsencesPage() {
     const groupId        = useAccountStore(s => s.getActive()?.activeGroupId);
     const activePlayerId = useAccountStore(s => s.getActive()?.activePlayerId);
+    const { confirm, confirmDialog } = useConfirm();
 
-    const [members, setMembers]       = useState<GroupMemberAbsenceDto[]>([]);
-    const [loading, setLoading]       = useState(false);
-    const [modalOpen, setModalOpen]   = useState(false);
-    const [editTarget, setEditTarget] = useState<AbsenceDto | null>(null);
+    const [upcomingPage, setUpcomingPage] = useState<PagedAbsences>(EMPTY_PAGE);
+    const [pastPage, setPastPage]         = useState<PagedAbsences>(EMPTY_PAGE);
+    const [pastLoaded, setPastLoaded]     = useState(false);
+    const [loading, setLoading]           = useState(false);
+    const [loadingMore, setLoadingMore]   = useState(false);
+    const [loadingPast, setLoadingPast]   = useState(false);
+    const [modalOpen, setModalOpen]       = useState(false);
+    const [editTarget, setEditTarget]     = useState<AbsenceDto | null>(null);
+    const [showPast, setShowPast]         = useState(false);
 
     useEffect(() => { if (groupId) fetchAll(); }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    async function fetchAll() {
+    async function fetchUpcoming(pageNum = 1, append = false) {
         if (!groupId) return;
-        setLoading(true);
+        append ? setLoadingMore(true) : setLoading(true);
         try {
-            const res = await AbsencesApi.byGroup(groupId);
-            setMembers((res.data as any)?.data ?? []);
+            const res = await AbsencesApi.byGroup(groupId, { status: 'upcoming', page: pageNum, pageSize: PAGE_SIZE });
+            const data = (res.data as any)?.data as { items: FlatAbsence[]; total: number } | undefined;
+            setUpcomingPage(prev => ({
+                items: append ? [...prev.items, ...(data?.items ?? [])] : (data?.items ?? []),
+                total: data?.total ?? 0,
+                page:  pageNum,
+            }));
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao carregar ausências.'));
         } finally {
-            setLoading(false);
+            append ? setLoadingMore(false) : setLoading(false);
         }
+    }
+
+    async function fetchPast(pageNum = 1, append = false) {
+        if (!groupId) return;
+        setLoadingPast(true);
+        try {
+            const res = await AbsencesApi.byGroup(groupId, { status: 'past', page: pageNum, pageSize: PAGE_SIZE });
+            const data = (res.data as any)?.data as { items: FlatAbsence[]; total: number } | undefined;
+            setPastPage(prev => ({
+                items: append ? [...prev.items, ...(data?.items ?? [])] : (data?.items ?? []),
+                total: data?.total ?? 0,
+                page:  pageNum,
+            }));
+            setPastLoaded(true);
+        } catch (e) {
+            toast.error(getResponseMessage(e, 'Erro ao carregar ausências encerradas.'));
+        } finally {
+            setLoadingPast(false);
+        }
+    }
+
+    async function fetchAll() {
+        setPastLoaded(false);
+        setPastPage(EMPTY_PAGE);
+        await fetchUpcoming();
+        if (showPast) await fetchPast();
+    }
+
+    function togglePast() {
+        const next = !showPast;
+        setShowPast(next);
+        if (next && !pastLoaded) fetchPast();
     }
 
     function openCreate() { setEditTarget(null); setModalOpen(true); }
@@ -191,11 +256,11 @@ export default function AbsencesPage() {
     async function handleSave(dto: CreateAbsenceDto) {
         try {
             if (editTarget) {
-                await AbsencesApi.update(editTarget.id, dto);
-                toast.success('Ausência atualizada.');
+                const res = await AbsencesApi.update(editTarget.id, dto);
+                toast.success((res.data as any)?.message ?? 'Ausência atualizada.');
             } else {
-                await AbsencesApi.create(dto);
-                toast.success('Ausência cadastrada.');
+                const res = await AbsencesApi.create(dto);
+                toast.success((res.data as any)?.message ?? 'Ausência cadastrada.');
             }
             closeModal();
             await fetchAll();
@@ -206,7 +271,7 @@ export default function AbsencesPage() {
     }
 
     async function handleDelete(id: string) {
-        if (!confirm('Deseja excluir esta ausência?')) return;
+        if (!(await confirm({ title: 'Excluir ausência', message: 'Deseja excluir esta ausência? Os convites recusados automaticamente por ela voltarão a ficar pendentes.', confirmLabel: 'Excluir', danger: true }))) return;
         try {
             await AbsencesApi.delete(id);
             toast.success('Ausência removida.');
@@ -216,12 +281,96 @@ export default function AbsencesPage() {
         }
     }
 
-    const withAbsences = members.filter(m => m.absences.length > 0);
-    const totalAbsences = withAbsences.reduce((sum, m) => sum + m.absences.length, 0);
+    const today = todayIso();
+    // O backend devolve upcoming = em andamento + futuras, em ordem cronológica
+    const ongoing  = useMemo(() =>
+        upcomingPage.items.filter(a => a.startDate <= today),
+    [upcomingPage.items, today]);
+    const upcoming = useMemo(() =>
+        upcomingPage.items.filter(a => a.startDate > today),
+    [upcomingPage.items, today]);
+    const past = pastPage.items;
+
+    // Agrupa as próximas por mês da data inicial
+    const upcomingByMonth = useMemo(() => {
+        const groups: { label: string; items: FlatAbsence[] }[] = [];
+        for (const a of upcoming) {
+            const label = monthLabel(a.startDate);
+            const last = groups[groups.length - 1];
+            if (last && last.label === label) last.items.push(a);
+            else groups.push({ label, items: [a] });
+        }
+        return groups;
+    }, [upcoming]);
+
+    const totalAbsences = upcomingPage.total;
 
     const initialForm: CreateAbsenceDto = editTarget
         ? { startDate: editTarget.startDate, endDate: editTarget.endDate, absenceType: editTarget.absenceType, description: editTarget.description ?? '' }
         : EMPTY_FORM;
+
+    function renderCard(a: FlatAbsence, active: boolean) {
+        const isSelf = a.playerId === activePlayerId;
+        return (
+            <div
+                key={a.id}
+                className={[
+                    'flex items-center gap-3 bg-white dark:bg-slate-900 border rounded-2xl px-4 py-3 shadow-sm',
+                    active ? 'border-red-200 dark:border-red-900/50' : 'border-slate-200 dark:border-slate-700',
+                ].join(' ')}
+            >
+                <div className={[
+                    'h-9 w-9 rounded-xl flex items-center justify-center shrink-0',
+                    a.absenceType === 2
+                        ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
+                ].join(' ')}>
+                    <IconRenderer value={resolveAbsenceIcon(a.absenceType)} size={16} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">
+                            {a.playerName}
+                        </span>
+                        {isSelf && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 shrink-0">
+                                você
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {a.absenceTypeName} · {formatDate(a.startDate)}
+                        {a.startDate !== a.endDate && <> até {formatDate(a.endDate)}</>}
+                    </div>
+                    {a.description && (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate" title={a.description}>
+                            {a.description}
+                        </div>
+                    )}
+                </div>
+
+                {isSelf && (
+                    <div className="flex gap-1 shrink-0">
+                        <button
+                            title="Editar"
+                            onClick={() => openEdit(a)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition"
+                        >
+                            <Pencil size={13} />
+                        </button>
+                        <button
+                            title="Excluir"
+                            onClick={() => handleDelete(a.id)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-red-200 dark:border-red-800/60 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"
+                        >
+                            <Trash2 size={13} />
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-5">
@@ -240,7 +389,7 @@ export default function AbsencesPage() {
                             <p className="text-xs text-white/60 mt-0.5">
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
-                                    : `${totalAbsences} ausência${totalAbsences !== 1 ? 's' : ''} na patota`}
+                                    : `${totalAbsences} ausência${totalAbsences !== 1 ? 's' : ''} ativa${totalAbsences !== 1 ? 's' : ''} ou futura${totalAbsences !== 1 ? 's' : ''}`}
                             </p>
                         </div>
                     </div>
@@ -260,87 +409,70 @@ export default function AbsencesPage() {
                 </div>
             )}
 
-            {/* ── Lista ── */}
+            {/* ── Lista (por data) ── */}
             {!loading && (
-                <div className="flex flex-col gap-4">
-                    {withAbsences.length === 0 && (
+                <div className="flex flex-col gap-5">
+                    {upcomingPage.items.length === 0 && (
                         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-12 flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500 shadow-sm">
                             <CalendarOff size={36} className="opacity-30" />
-                            <p className="text-sm">Nenhuma ausência registrada.</p>
+                            <p className="text-sm">Nenhuma ausência ativa ou futura.</p>
                         </div>
                     )}
 
-                    {withAbsences.map(m => {
-                        const isSelf = m.playerId === activePlayerId;
-                        return (
-                            <div key={m.playerId}>
-                                {/* nome do jogador */}
-                                <div className="flex items-center gap-2 mb-2 px-1">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                        {m.playerName}
-                                    </span>
-                                    {isSelf && (
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-                                            você
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* ausências do jogador */}
-                                <div className="flex flex-col gap-2">
-                                    {m.absences.map(a => (
-                                        <div
-                                            key={a.id}
-                                            className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 shadow-sm"
-                                        >
-                                            <div className={[
-                                                'h-9 w-9 rounded-xl flex items-center justify-center shrink-0',
-                                                a.absenceType === 2
-                                                    ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
-                                            ].join(' ')}>
-                                                <IconRenderer value={resolveAbsenceIcon(a.absenceType)} size={16} />
-                                            </div>
-
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm text-slate-900 dark:text-white">
-                                                    {a.absenceTypeName}
-                                                </div>
-                                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                    {formatDate(a.startDate)}
-                                                    {a.startDate !== a.endDate && <> até {formatDate(a.endDate)}</>}
-                                                </div>
-                                                {a.description && (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate" title={a.description}>
-                                                        {a.description}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {isSelf && (
-                                                <div className="flex gap-1 shrink-0">
-                                                    <button
-                                                        title="Editar"
-                                                        onClick={() => openEdit(a)}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition"
-                                                    >
-                                                        <Pencil size={13} />
-                                                    </button>
-                                                    <button
-                                                        title="Excluir"
-                                                        onClick={() => handleDelete(a.id)}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-red-200 dark:border-red-800/60 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"
-                                                    >
-                                                        <Trash2 size={13} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                    {/* Em andamento */}
+                    {ongoing.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2 px-1">
+                                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    Fora agora · {ongoing.length}
+                                </span>
                             </div>
-                        );
-                    })}
+                            <div className="flex flex-col gap-2">
+                                {ongoing.map(a => renderCard(a, true))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Próximas, agrupadas por mês */}
+                    {upcomingByMonth.map(group => (
+                        <div key={group.label}>
+                            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 px-1">
+                                {group.label}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                {group.items.map(a => renderCard(a, false))}
+                            </div>
+                        </div>
+                    ))}
+
+                    <LoadMoreButton loaded={upcomingPage.items.length} total={upcomingPage.total}
+                        loading={loadingMore} onClick={() => fetchUpcoming(upcomingPage.page + 1, true)} />
+
+                    {/* Encerradas (busca sob demanda ao expandir) */}
+                    <div>
+                        <button
+                            onClick={togglePast}
+                            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition mb-2 px-1"
+                        >
+                            Encerradas{pastLoaded ? ` · ${pastPage.total}` : ''}
+                            {loadingPast && !pastLoaded
+                                ? <Loader2 size={13} className="animate-spin" />
+                                : showPast ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+                        {showPast && pastLoaded && (
+                            <div className="flex flex-col gap-3">
+                                {past.length === 0 && (
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 px-1">Nenhuma ausência encerrada.</p>
+                                )}
+                                <div className="flex flex-col gap-2 opacity-60">
+                                    {past.map(a => renderCard(a, false))}
+                                </div>
+                                <LoadMoreButton loaded={past.length} total={pastPage.total}
+                                    loading={loadingPast} onClick={() => fetchPast(pastPage.page + 1, true)} />
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -353,6 +485,8 @@ export default function AbsencesPage() {
                     onClose={closeModal}
                 />
             )}
+
+            {confirmDialog}
         </div>
     );
 }

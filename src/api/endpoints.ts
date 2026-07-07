@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { http, apiBaseUrl } from './http';
 import type { ApiResponse } from './apiResponse';
+import type { PagedResult } from './paged';
 import type { PublicClipDto, PublicMatchReplaysDto } from '../domains/matches/matchTypes';
 import type {
   CreateUserDto, LoginDto, RefreshTokenDto,
@@ -46,7 +47,7 @@ export const UsersApi = {
 
 export const GroupsApi = {
   create: (dto: CreateGroupDto) => http.post<ApiResponse<unknown>>('/api/Groups', dto),
-  listAll: () => http.get<ApiResponse<unknown[]>>('/api/Groups'),
+  listAll: (page = 1, pageSize = 20) => http.get<ApiResponse<PagedResult<unknown>>>('/api/Groups', { params: { page, pageSize } }),
   listByAdmin: (adminId: string) => http.get<ApiResponse<unknown[]>>(`/api/Groups/admin/${adminId}`),
   get: (groupId: string) => http.get<ApiResponse<unknown>>(`/api/Groups/${groupId}`),
   update: (groupId: string, dto: UpdateGroupDto) => http.put<ApiResponse<unknown>>(`/api/Groups/${groupId}`, dto),
@@ -128,7 +129,7 @@ export const MatchesApi = {
   acceptationSummary: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/acceptation/summary`),
   matchmaking: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/matchmaking`),
   postgame: (groupId: string, matchId: string) => http.get<ApiResponse<unknown>>(`/api/matches/group/${groupId}/${matchId}/postgame`),
-  history: (groupId: string, take: number, playerId?: string, skip?: number) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/history`, { params: { take, skip: skip ?? 0, ...(playerId ? { playerId } : {}) } }),
+  history: (groupId: string, take: number, playerId?: string, skip?: number) => http.get<ApiResponse<PagedResult<MatchDetailsDto>>>(`/api/Matches/group/${groupId}/history`, { params: { take, skip: skip ?? 0, ...(playerId ? { playerId } : {}) } }),
   playerRecent: (groupId: string, playerId: string, take = 3) => http.get<ApiResponse<MatchDetailsDto[]>>(`/api/Matches/group/${groupId}/player-recent`, { params: { playerId, take } }),
   playerHistory: (groupId: string, playerId: string, year?: number) => http.get<ApiResponse<unknown[]>>(`/api/Matches/group/${groupId}/player-history`, { params: { playerId, ...(year ? { year } : {}) } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
@@ -153,14 +154,14 @@ export const MatchesApi = {
     http.get<ApiResponse<ClipLikerDto[]>>(`/api/Matches/group/${groupId}/replays/${clipId}/likers`),
   toggleFavorite: (groupId: string, clipId: string) =>
     http.post<{ isFavorited: boolean }>(`/api/Matches/group/${groupId}/replays/${clipId}/favorite`),
-  allReplays: (groupId: string) =>
-    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/all`),
-  likedReplays: (groupId: string) =>
-    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/liked`),
-  myLikes: (groupId: string) =>
-    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-likes`),
-  myFavorites: (groupId: string) =>
-    http.get<ApiResponse<LikedReplayClipDto[]>>(`/api/Matches/group/${groupId}/replays/my-favorites`),
+  allReplays: (groupId: string, page = 1, pageSize = 20) =>
+    http.get<ApiResponse<PagedResult<LikedReplayClipDto>>>(`/api/Matches/group/${groupId}/replays/all`, { params: { page, pageSize } }),
+  likedReplays: (groupId: string, page = 1, pageSize = 20) =>
+    http.get<ApiResponse<PagedResult<LikedReplayClipDto>>>(`/api/Matches/group/${groupId}/replays/liked`, { params: { page, pageSize } }),
+  myLikes: (groupId: string, page = 1, pageSize = 20) =>
+    http.get<ApiResponse<PagedResult<LikedReplayClipDto>>>(`/api/Matches/group/${groupId}/replays/my-likes`, { params: { page, pageSize } }),
+  myFavorites: (groupId: string, page = 1, pageSize = 20) =>
+    http.get<ApiResponse<PagedResult<LikedReplayClipDto>>>(`/api/Matches/group/${groupId}/replays/my-favorites`, { params: { page, pageSize } }),
   deleteReplay: (groupId: string, clipId: string) =>
     http.delete(`/api/Matches/group/${groupId}/replays/${clipId}`),
   setLinkedPoll: (groupId: string, matchId: string, pollId: string | null) =>
@@ -201,8 +202,8 @@ export const BetApi = {
         http.get(`/api/Bet/group/${groupId}/leaderboard`),
     getMyBalance: (groupId: string) =>
         http.get<{ balance: number }>(`/api/Bet/group/${groupId}/balance`),
-    getHistory: (groupId: string) =>
-        http.get(`/api/Bet/group/${groupId}/history`),
+    getHistory: (groupId: string, page = 1, pageSize = 20) =>
+        http.get<PagedResult<unknown>>(`/api/Bet/group/${groupId}/history`, { params: { page, pageSize } }),
     deleteBet: (groupId: string, matchId: string) =>
         http.delete(`/api/Bet/group/${groupId}/match/${matchId}`),
     getPreview: (groupId: string, matchId: string) =>
@@ -277,8 +278,8 @@ export const AbsencesApi = {
   delete: (id: string) =>
     http.delete<ApiResponse<null>>(`/api/absences/${id}`),
 
-  byGroup: (groupId: string) =>
-    http.get<ApiResponse<unknown[]>>(`/api/absences/group/${groupId}`),
+  byGroup: (groupId: string, params?: { status?: 'upcoming' | 'past'; page?: number; pageSize?: number }) =>
+    http.get<ApiResponse<PagedResult<unknown>>>(`/api/absences/group/${groupId}`, { params }),
 };
 
 export const CalendarApi = {
@@ -301,8 +302,8 @@ export const CalendarApi = {
 };
 
 export const PollsApi = {
-  getPolls:              (groupId: string) =>
-                           http.get(`/api/Polls/group/${groupId}`),
+  getPolls:              (groupId: string, params?: { page?: number; pageSize?: number; type?: 'poll' | 'event'; status?: 'open' | 'closed' }) =>
+                           http.get(`/api/Polls/group/${groupId}`, { params }),
   getPoll:               (groupId: string, pollId: string) =>
                            http.get(`/api/Polls/group/${groupId}/${pollId}`),
   createPoll:            (groupId: string, dto: any) =>
@@ -331,6 +332,8 @@ export const PollsApi = {
                            http.post(`/api/Polls/group/${groupId}/${pollId}/admin-vote`, dto),
   updateDeadline:        (groupId: string, pollId: string, dto: { deadlineDate?: string | null; deadlineTime?: string | null; clearDeadline?: boolean }) =>
                            http.patch(`/api/Polls/group/${groupId}/${pollId}/deadline`, dto),
+  updatePollDetails:     (groupId: string, pollId: string, dto: { description?: string | null; costAmount?: number | null; costType?: string | null }) =>
+                           http.patch(`/api/Polls/group/${groupId}/${pollId}/details`, dto),
   setAllowGuests:        (groupId: string, pollId: string, allowGuests: boolean) =>
                            http.patch(`/api/Polls/group/${groupId}/${pollId}/allow-guests`, { allowGuests }),
   addGuest:              (groupId: string, pollId: string, dto: { guestName: string; isAdult: boolean }) =>
@@ -353,12 +356,18 @@ export const PaymentsApi = {
                         http.get<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/monthly/${year}/${month}/${playerId}/proof`),
 
   // Cobranças extras
-  getExtraCharges:           (groupId: string) =>
-                               http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/extra-charges`),
+  getExtraCharges:           (groupId: string, params?: { year?: number; month?: number; page?: number; pageSize?: number }) =>
+                               http.get<ApiResponse<PagedResult<unknown>>>(`/api/groups/${groupId}/payments/extra-charges`, { params }),
+  getExtraChargesSummary:    (groupId: string, year: number) =>
+                               http.get<ApiResponse<{ month: number; count: number; allPaid: boolean; hasPending: boolean }[]>>(`/api/groups/${groupId}/payments/extra-charges/summary`, { params: { year } }),
   createExtraCharge:         (groupId: string, dto: any) =>
                                http.post<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/extra-charges`, dto),
   cancelExtraCharge:         (groupId: string, chargeId: string) =>
                                http.delete<ApiResponse<null>>(`/api/groups/${groupId}/payments/extra-charges/${chargeId}`),
+  reactivateExtraCharge:     (groupId: string, chargeId: string) =>
+                               http.put<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/extra-charges/${chargeId}/reactivate`),
+  updateExtraChargeDetails:  (groupId: string, chargeId: string, dto: { name?: string; description?: string | null; amount?: number | null }) =>
+                               http.patch<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/extra-charges/${chargeId}/details`, dto),
   bulkDiscountExtraCharge:   (groupId: string, chargeId: string, dto: any) =>
                                http.post<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/extra-charges/${chargeId}/bulk-discount`, dto),
   upsertExtraChargePayment:  (groupId: string, chargeId: string, playerId: string, dto: any) =>
@@ -373,8 +382,8 @@ export const PaymentsApi = {
                           http.get<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/summary/${playerId}`),
   getMyMonthlyRow:      (groupId: string, year: number) =>
                           http.get<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/monthly/${year}/me`),
-  getMyExtraCharges:    (groupId: string) =>
-                          http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/extra-charges/me`),
+  getMyExtraCharges:    (groupId: string, params?: { year?: number; month?: number; page?: number; pageSize?: number }) =>
+                          http.get<ApiResponse<PagedResult<unknown>>>(`/api/groups/${groupId}/payments/extra-charges/me`, { params }),
 
   // Pagar pendências em lote
   getMyPendingItems:    (groupId: string) =>

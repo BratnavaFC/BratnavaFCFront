@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     LogOut,
@@ -282,9 +282,10 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
 
         // GodMode: carregar todas as patotas para o seletor
         if (god) {
-            GroupsApi.listAll()
+            GroupsApi.listAll(1, 100)
                 .then((res) => {
-                    const all = ((res.data?.data ?? []) as any[])
+                    const paged: any = res.data?.data;
+                    const all = ((paged?.items ?? paged ?? []) as any[])
                         .map((g) => ({ groupId: g.id ?? g.groupId ?? '', groupName: g.name ?? g.groupName ?? 'Patota' }))
                         .filter((g) => g.groupId);
                     setGodGroups(all);

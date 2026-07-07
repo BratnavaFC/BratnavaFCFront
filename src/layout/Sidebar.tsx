@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+﻿import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, User, ShieldAlert,
@@ -45,9 +45,10 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
 
     useEffect(() => {
         if (!activeGrpId) { setPendingPollsCount(0); return; }
-        PollsApi.getPolls(activeGrpId)
+        PollsApi.getPolls(activeGrpId, { page: 1, pageSize: 100 })
             .then((res) => {
-                const list: any[] = (res.data as any)?.data ?? [];
+                const data = (res.data as any)?.data;
+                const list: any[] = data?.items ?? data ?? [];
                 const now = Date.now();
                 const count = list.filter((p: any) => {
                     if (p.status !== 'open' || p.hasVoted) return false;

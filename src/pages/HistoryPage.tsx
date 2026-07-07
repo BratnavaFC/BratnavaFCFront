@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Section } from "../components/Section";
 import { MatchesApi } from "../api/endpoints";
@@ -53,19 +53,19 @@ function getScore(m: any) {
 }
 
 const STATUS_META: Record<string, { cls: string; accent: string }> = {
-    final:       { cls: "bg-emerald-50 text-emerald-700 border-emerald-200", accent: "#10b981" },
-    finalizado:  { cls: "bg-emerald-50 text-emerald-700 border-emerald-200", accent: "#10b981" },
-    done:        { cls: "bg-emerald-50 text-emerald-700 border-emerald-200", accent: "#10b981" },
-    "pós-jogo":  { cls: "bg-orange-50 text-orange-700 border-orange-200",   accent: "#f97316" },
-    postgame:    { cls: "bg-orange-50 text-orange-700 border-orange-200",   accent: "#f97316" },
-    post:        { cls: "bg-orange-50 text-orange-700 border-orange-200",   accent: "#f97316" },
-    playing:     { cls: "bg-blue-50 text-blue-700 border-blue-200",         accent: "#3b82f6" },
-    started:     { cls: "bg-blue-50 text-blue-700 border-blue-200",         accent: "#3b82f6" },
-    live:        { cls: "bg-blue-50 text-blue-700 border-blue-200",         accent: "#3b82f6" },
-    teams:       { cls: "bg-violet-50 text-violet-700 border-violet-200",   accent: "#9333ea" },
-    matchmaking: { cls: "bg-violet-50 text-violet-700 border-violet-200",   accent: "#9333ea" },
-    accept:      { cls: "bg-amber-50 text-amber-700 border-amber-200",      accent: "#f59e0b" },
-    aceitação:   { cls: "bg-amber-50 text-amber-700 border-amber-200",      accent: "#f59e0b" },
+    final:       { cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50", accent: "#10b981" },
+    finalizado:  { cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50", accent: "#10b981" },
+    done:        { cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50", accent: "#10b981" },
+    "pós-jogo":  { cls: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/50",   accent: "#f97316" },
+    postgame:    { cls: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/50",   accent: "#f97316" },
+    post:        { cls: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/50",   accent: "#f97316" },
+    playing:     { cls: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50",         accent: "#3b82f6" },
+    started:     { cls: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50",         accent: "#3b82f6" },
+    live:        { cls: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50",         accent: "#3b82f6" },
+    teams:       { cls: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800/50",   accent: "#9333ea" },
+    matchmaking: { cls: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800/50",   accent: "#9333ea" },
+    accept:      { cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50",      accent: "#f59e0b" },
+    aceitação:   { cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50",      accent: "#f59e0b" },
 };
 
 function statusMeta(raw?: string) {
@@ -76,7 +76,7 @@ function statusMeta(raw?: string) {
     for (const [key, val] of Object.entries(STATUS_META)) {
         if (s.includes(key)) return val;
     }
-    return { cls: "bg-slate-50 text-slate-600 border-slate-200", accent: "#94a3b8" };
+    return { cls: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700", accent: "#94a3b8" };
 }
 
 function TeamDot({ hex }: { hex?: string | null }) {
@@ -98,7 +98,13 @@ function clamp(n: number, min: number, max: number) {
     return Math.max(min, Math.min(max, n));
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
+const PAGE_SIZE_KEY = "history_page_size";
+
+function loadPageSize(): number {
+    const n = parseInt(localStorage.getItem(PAGE_SIZE_KEY) ?? "", 10);
+    return PAGE_SIZE_OPTIONS.includes(n as typeof PAGE_SIZE_OPTIONS[number]) ? n : 5;
+}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -108,28 +114,43 @@ export default function HistoryPage() {
     const activePlayerId = useAccountStore((s) => s.getActive()?.activePlayerId);
 
     const [items, setItems]     = useState<any[]>([]);
+    const [total, setTotal]     = useState(0);
     const [loading, setLoading] = useState(false);
     const [page, setPage]       = useState(1);
+    const [pageSize, setPageSize] = useState<number>(loadPageSize);
     const [hasMore, setHasMore] = useState(false);
+    const [paging, setPaging]   = useState(false);
     const [onlyMine, setOnlyMine] = useState(false);
 
     const topRef = useRef<HTMLDivElement | null>(null);
 
-    async function loadHistory(pageNum: number = 1) {
+    // silent=true (navegar página / trocar tamanho): mantém a lista atual visível
+    // e só troca quando a nova chega — sem skeleton de página inteira.
+    async function loadHistory(pageNum: number = 1, size: number = pageSize, silent = false) {
         if (!groupId) return;
-        setLoading(true);
+        silent ? setPaging(true) : setLoading(true);
         try {
             const playerId = onlyMine && activePlayerId ? activePlayerId : undefined;
-            const skip     = (pageNum - 1) * PAGE_SIZE;
-            const histRes  = await MatchesApi.history(groupId, PAGE_SIZE, playerId, skip);
-            const list: any[] = Array.isArray(histRes.data.data) ? histRes.data.data : [];
+            const skip     = (pageNum - 1) * size;
+            const histRes  = await MatchesApi.history(groupId, size, playerId, skip);
+            const paged: any  = histRes.data.data;
+            const list: any[] = paged?.items ?? [];
+            const totalCount  = paged?.total ?? list.length;
             setItems(list);
-            setHasMore(list.length === PAGE_SIZE);
+            setTotal(totalCount);
+            setHasMore(skip + list.length < totalCount);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar histórico."));
         } finally {
-            setLoading(false);
+            silent ? setPaging(false) : setLoading(false);
         }
+    }
+
+    function changePageSize(size: number) {
+        setPageSize(size);
+        localStorage.setItem(PAGE_SIZE_KEY, String(size));
+        setPage(1);
+        loadHistory(1, size, true);
     }
 
     useEffect(() => {
@@ -143,7 +164,7 @@ export default function HistoryPage() {
     function goPage(next: number) {
         const p = Math.max(1, next);
         setPage(p);
-        loadHistory(p);
+        loadHistory(p, pageSize, true);
         requestAnimationFrame(() =>
             topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
         );
@@ -167,7 +188,8 @@ export default function HistoryPage() {
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
                                     : !groupId ? 'Selecione um grupo'
-                                    : `Página ${page}${!hasMore && paged.length === 0 ? ' · sem partidas' : !hasMore ? ' · última' : ''}`}
+                                    : total === 0 ? 'Sem partidas'
+                                    : `Página ${page} de ${Math.max(1, Math.ceil(total / pageSize))} · ${total} partida${total !== 1 ? 's' : ''}`}
                             </p>
                         </div>
                     </div>
@@ -187,6 +209,20 @@ export default function HistoryPage() {
                                     Apenas meus jogos
                                 </button>
                             )}
+                            {/* Itens por página (persistido no navegador) */}
+                            <label className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white">
+                                <span className="hidden sm:inline text-white/70">Por página</span>
+                                <select
+                                    value={pageSize}
+                                    onChange={(e) => changePageSize(Number(e.target.value))}
+                                    disabled={loading || paging}
+                                    className="bg-transparent text-white font-semibold outline-none cursor-pointer disabled:opacity-50"
+                                >
+                                    {PAGE_SIZE_OPTIONS.map((n) => (
+                                        <option key={n} value={n} className="bg-slate-800 text-white">{n}</option>
+                                    ))}
+                                </select>
+                            </label>
                             <button
                                 type="button"
                                 onClick={() => loadHistory(page)}
@@ -236,7 +272,7 @@ export default function HistoryPage() {
 
                         {/* ── Match list ───────────────────────────── */}
                         {!loading && paged.length > 0 && (
-                            <div className="grid gap-2">
+                            <div className={`grid gap-2 ${paging ? "opacity-60 transition-opacity" : ""}`}>
                                 {paged.map((m) => {
                                     const matchId = getMatchId(m);
                                     if (!matchId) return null;
@@ -369,7 +405,7 @@ export default function HistoryPage() {
                                 <button
                                     type="button"
                                     onClick={() => goPage(page - 1)}
-                                    disabled={page <= 1 || loading}
+                                    disabled={page <= 1 || loading || paging}
                                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <ChevronLeft size={14} />
@@ -379,12 +415,14 @@ export default function HistoryPage() {
                                 <div className="text-xs text-slate-500 dark:text-slate-400">
                                     Página{" "}
                                     <span className="font-semibold text-slate-800 dark:text-slate-100">{page}</span>
+                                    {" "}de{" "}
+                                    <span className="font-semibold text-slate-800 dark:text-slate-100">{Math.max(1, Math.ceil(total / pageSize))}</span>
                                 </div>
 
                                 <button
                                     type="button"
                                     onClick={() => goPage(page + 1)}
-                                    disabled={!hasMore || loading}
+                                    disabled={!hasMore || loading || paging}
                                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     Próxima

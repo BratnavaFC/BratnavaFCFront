@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -13,6 +13,7 @@ import { PollsApi, MatchesApi } from '../api/endpoints';
 import type { MatchHeaderDto } from '../domains/matches/matchTypes';
 import { usePollStore } from '../stores/pollStore';
 import { extractApiError } from '../lib/apiError';
+import { usePageSize, PageSizeSelect, PagerNav } from '../components/Pager';
 import PollEventDetailModal from '../components/modals/PollEventDetailModal';
 import PollCreateEventModal from '../components/modals/PollCreateEventModal';
 import PollDetailModal from '../components/modals/PollDetailModal';
@@ -491,8 +492,17 @@ export default function PollsPage() {
     const [searchParams] = useSearchParams();
     const hasAutoOpened = useRef(false);
 
-    const [polls, setPolls] = useState<PollSummary[]>([]);
+    interface SecState { items: PollSummary[]; total: number; page: number }
+    const emptySec: SecState = { items: [], total: 0, page: 1 };
+    // 4 cards independentes: evento/votação × aberto/fechado.
+    type SecKey = 'event-open' | 'event-closed' | 'poll-open' | 'poll-closed';
+
+    const [pageSize, setPageSize] = usePageSize("polls_page_size");
+    const [sections, setSections] = useState<Record<SecKey, SecState>>({
+        'event-open': emptySec, 'event-closed': emptySec, 'poll-open': emptySec, 'poll-closed': emptySec,
+    });
     const [loading, setLoading] = useState(false);
+    const [pagingKey, setPagingKey] = useState<SecKey | null>(null);
     const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
     const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
     const [showCreate, setShowCreate] = useState(false);
@@ -500,22 +510,45 @@ export default function PollsPage() {
     const [activeTab, setActiveTab] = useState<'events' | 'polls'>('events');
     const [linkingPollToMatch, setLinkingPollToMatch] = useState<PollSummary | null>(null);
 
-    const eventPolls = polls.filter(p => p.type === 'event');
-    const votePolls = polls.filter(p => p.type === 'poll' || !p.type);
-    const tabPolls = activeTab === 'events' ? eventPolls : votePolls;
+    // Lista combinada só para o auto-open via ?poll= e para o subtítulo do header.
+    const polls = useMemo(
+        () => Object.values(sections).flatMap(s => s.items),
+        [sections],
+    );
 
-    const openCount = tabPolls.filter(p => p.status === 'open').length;
-    const closedCount = tabPolls.filter(p => p.status === 'closed').length;
+    const evOpen   = sections['event-open'];
+    const evClosed = sections['event-closed'];
+    const voOpen   = sections['poll-open'];
+    const voClosed = sections['poll-closed'];
 
-    const load = useCallback(async () => {
+    function parseSec(res: any): { items: PollSummary[]; total: number } {
+        const data = (res.data.data ?? { items: [], total: 0 }) as { items: PollSummary[]; total: number };
+        return { items: data.items ?? [], total: data.total ?? 0 };
+    }
+
+    // Carrega a página 1 dos 4 cards (load inicial e ao mudar tamanho).
+    const load = useCallback(async (size: number) => {
         if (!groupId) return;
         setLoading(true);
         try {
-            const res = await PollsApi.getPolls(groupId);
-            const list: PollSummary[] = res.data.data ?? [];
-            setPolls(list);
+            const [eo, ec, vo, vc] = await Promise.all([
+                PollsApi.getPolls(groupId, { page: 1, pageSize: size, type: 'event', status: 'open' }),
+                PollsApi.getPolls(groupId, { page: 1, pageSize: size, type: 'event', status: 'closed' }),
+                PollsApi.getPolls(groupId, { page: 1, pageSize: size, type: 'poll',  status: 'open' }),
+                PollsApi.getPolls(groupId, { page: 1, pageSize: size, type: 'poll',  status: 'closed' }),
+            ]);
+            const eoP = parseSec(eo), ecP = parseSec(ec), voP = parseSec(vo), vcP = parseSec(vc);
+            setSections({
+                'event-open':   { ...eoP, page: 1 },
+                'event-closed': { ...ecP, page: 1 },
+                'poll-open':    { ...voP, page: 1 },
+                'poll-closed':  { ...vcP, page: 1 },
+            });
+
+            // Badge do sidebar: pendências entre os abertos carregados.
+            const openItems = [...eoP.items, ...voP.items];
             const now = Date.now();
-            setPendingPollsCount(list.filter(p => {
+            setPendingPollsCount(openItems.filter(p => {
                 if (p.status !== 'open' || p.hasVoted) return false;
                 if (p.deadlineDate) {
                     const deadline = new Date(`${p.deadlineDate}T${p.deadlineTime ?? '23:59'}:00`);
@@ -528,7 +561,63 @@ export default function PollsPage() {
         } finally { setLoading(false); }
     }, [groupId, setPendingPollsCount]);
 
-    useEffect(() => { load(); }, [load]);
+    // Navega uma página de UM card específico — mantém o restante visível (sem skeleton).
+    const goPage = useCallback(async (key: SecKey, p: number) => {
+        if (!groupId) return;
+        const [type, status] = key.split('-') as ['event' | 'poll', 'open' | 'closed'];
+        const page = Math.max(1, p);
+        setPagingKey(key);
+        try {
+            const res = await PollsApi.getPolls(groupId, { page, pageSize, type, status });
+            const parsed = parseSec(res);
+            setSections(prev => ({ ...prev, [key]: { ...parsed, page } }));
+        } catch (e) {
+            toast.error(extractApiError(e, 'Erro ao carregar página.'));
+        } finally { setPagingKey(null); }
+    }, [groupId, pageSize]);
+
+    // Muda o tamanho — o effect abaixo recarrega a página 1 dos 4 cards.
+    function changePageSize(size: number) { setPageSize(size); }
+
+    // Recarrega ao trocar de grupo ou tamanho de página.
+    useEffect(() => { if (groupId) load(pageSize); }, [groupId, pageSize, load]);
+
+    // Card independente (paginado) de uma seção: "Por página" no cabeçalho,
+    // navegação Anterior/Próxima no rodapé ocupando a largura do card.
+    function renderPollSection(key: SecKey, label: string) {
+        const sec = sections[key];
+        if (sec.total === 0) return null;
+        const isEvent = key.startsWith('event');
+        const isPaging = pagingKey === key;
+        return (
+            <div className="card p-0 overflow-hidden shadow-sm">
+                <div className="px-5 py-3 border-b bg-slate-50/80 dark:bg-slate-800/80 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">· {sec.total}</span>
+                    </div>
+                    <PageSizeSelect pageSize={pageSize} loading={loading || pagingKey !== null} onChange={changePageSize} />
+                </div>
+                <div className={`divide-y divide-slate-100 ${isPaging ? "opacity-60 transition-opacity" : ""}`}>
+                    {sec.items.map(poll =>
+                        isEvent
+                            ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
+                            : <PollCard  key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
+                    )}
+                </div>
+                {sec.total > pageSize && (
+                    <div className="px-5 py-3 border-t bg-slate-50/60 dark:bg-slate-800/60">
+                        <PagerNav page={sec.page} pageSize={pageSize} total={sec.total} loading={isPaging}
+                            onPageChange={(p) => goPage(key, p)} />
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    const tabTotal = activeTab === 'events'
+        ? evOpen.total + evClosed.total
+        : voOpen.total + voClosed.total;
 
     // Auto-abre a votação indicada por ?poll=<pollId> na URL
     useEffect(() => {
@@ -558,12 +647,12 @@ export default function PollsPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function handlePollUpdated(updated: any) {
         setSelectedPoll(updated as Poll);
-        load();
+        load(pageSize);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function handlePollCreated(poll: any) {
-        load();
+        load(pageSize);
         setSelectedPoll(poll as Poll);
     }
 
@@ -584,7 +673,7 @@ export default function PollsPage() {
                                 {loading
                                     ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
                                     : !groupId ? 'Selecione um grupo'
-                                    : (() => { const ae = eventPolls.filter(p => p.status === 'open').length; const av = votePolls.filter(p => p.status === 'open').length; return `${ae} evento${ae !== 1 ? 's' : ''} aberto${ae !== 1 ? 's' : ''} · ${av} votaç${av !== 1 ? 'ões' : 'ão'} aberta${av !== 1 ? 's' : ''}`; })()
+                                    : (() => { const ae = evOpen.total; const av = voOpen.total; return `${ae} evento${ae !== 1 ? 's' : ''} aberto${ae !== 1 ? 's' : ''} · ${av} votaç${av !== 1 ? 'ões' : 'ão'} aberta${av !== 1 ? 's' : ''}`; })()
                                 }
                             </p>
                         </div>
@@ -593,7 +682,7 @@ export default function PollsPage() {
                         {groupId && (
                             <button
                                 type="button"
-                                onClick={load}
+                                onClick={() => load(pageSize)}
                                 disabled={loading}
                                 className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors disabled:opacity-50"
                             >
@@ -626,9 +715,9 @@ export default function PollsPage() {
                             }`}
                         >
                             <CalendarDays size={14} /> Eventos
-                            {eventPolls.filter(p => p.status === 'open').length > 0 && (
+                            {evOpen.total > 0 && (
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'events' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
-                                    {eventPolls.filter(p => p.status === 'open').length}
+                                    {evOpen.total}
                                 </span>
                             )}
                         </button>
@@ -642,9 +731,9 @@ export default function PollsPage() {
                             }`}
                         >
                             <Vote size={14} /> Votações
-                            {votePolls.filter(p => p.status === 'open').length > 0 && (
+                            {voOpen.total > 0 && (
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'polls' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
-                                    {votePolls.filter(p => p.status === 'open').length}
+                                    {voOpen.total}
                                 </span>
                             )}
                         </button>
@@ -670,7 +759,7 @@ export default function PollsPage() {
             )}
 
             {/* ── Empty ── */}
-            {groupId && !loading && tabPolls.length === 0 && (
+            {groupId && !loading && tabTotal === 0 && (
                 <div className="card p-12 flex flex-col items-center gap-3 text-slate-400 shadow-sm">
                     {activeTab === 'events' ? <CalendarDays size={40} className="opacity-20" /> : <Vote size={40} className="opacity-20" />}
                     <div className="text-center">
@@ -686,41 +775,19 @@ export default function PollsPage() {
                 </div>
             )}
 
-            {/* ── List ── */}
-            {groupId && !loading && tabPolls.length > 0 && (
+            {/* ── List: cada card (aberto/fechado) pagina de forma independente ── */}
+            {groupId && !loading && tabTotal > 0 && (
                 <div className="space-y-4">
-                    {/* Open */}
-                    {tabPolls.filter(p => p.status === 'open').length > 0 && (
-                        <div className="card p-0 overflow-hidden shadow-sm">
-                            <div className="px-5 py-3 border-b bg-slate-50/80 dark:bg-slate-800/80 flex items-center gap-1.5">
-                                <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">{activeTab === 'events' ? 'Abertos' : 'Abertas'}</span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500">· {openCount}</span>
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {tabPolls.filter(p => p.status === 'open').map(poll =>
-                                    activeTab === 'events'
-                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
-                                        : <PollCard  key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Closed */}
-                    {tabPolls.filter(p => p.status === 'closed').length > 0 && (
-                        <div className="card p-0 overflow-hidden shadow-sm">
-                            <div className="px-5 py-3 border-b bg-slate-50/80 dark:bg-slate-800/80 flex items-center gap-1.5">
-                                <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">{activeTab === 'events' ? 'Encerrados' : 'Encerradas'}</span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500">· {closedCount}</span>
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {tabPolls.filter(p => p.status === 'closed').map(poll =>
-                                    activeTab === 'events'
-                                        ? <EventCard key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
-                                        : <PollCard  key={poll.id} poll={poll} onClick={() => openPollDetail(poll)} loadingId={loadingDetailId === poll.id ? poll.id : null} onLinkToMatch={isAdmin ? () => setLinkingPollToMatch(poll) : undefined} />
-                                )}
-                            </div>
-                        </div>
+                    {activeTab === 'events' ? (
+                        <>
+                            {renderPollSection('event-open', 'Abertos')}
+                            {renderPollSection('event-closed', 'Encerrados')}
+                        </>
+                    ) : (
+                        <>
+                            {renderPollSection('poll-open', 'Abertas')}
+                            {renderPollSection('poll-closed', 'Encerradas')}
+                        </>
                     )}
                 </div>
             )}
@@ -732,7 +799,7 @@ export default function PollsPage() {
                     pollId={linkingPollToMatch.id}
                     currentMatchId={linkingPollToMatch.linkedMatchId}
                     onClose={() => setLinkingPollToMatch(null)}
-                    onLinked={() => { setLinkingPollToMatch(null); load(); }}
+                    onLinked={() => { setLinkingPollToMatch(null); load(pageSize); }}
                 />
             )}
 
@@ -743,7 +810,7 @@ export default function PollsPage() {
                     groupId={groupId}
                     isAdmin={isAdmin}
                     myPlayerId={active?.activePlayerId ?? undefined}
-                    onClose={() => { setSelectedPoll(null); load(); }}
+                    onClose={() => { setSelectedPoll(null); load(pageSize); }}
                     onUpdated={handlePollUpdated}
                 />
             )}
@@ -752,7 +819,7 @@ export default function PollsPage() {
                     poll={selectedPoll}
                     groupId={groupId}
                     isAdmin={isAdmin}
-                    onClose={() => { setSelectedPoll(null); load(); }}
+                    onClose={() => { setSelectedPoll(null); load(pageSize); }}
                     onUpdated={handlePollUpdated}
                 />
             )}

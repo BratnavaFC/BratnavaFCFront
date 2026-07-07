@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
     Loader2, Search, Trash2, AlertTriangle, ChevronDown, ChevronRight,
     Users, CalendarDays, Palette, Edit2, Check, X,
@@ -176,6 +176,9 @@ export default function GodModeAdminPage() {
     // Groups
     const [groups, setGroups]               = useState<GroupRow[]>([]);
     const [groupsLoading, setGroupsLoading] = useState(true);
+    const [groupsPaging, setGroupsPaging]   = useState(false);
+    const [groupsPage, setGroupsPage]       = useState(1);
+    const [groupsTotal, setGroupsTotal]     = useState(0);
     const [groupSearch, setGroupSearch]     = useState("");
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
     const [subTabs, setSubTabs]             = useState<Record<string, SubTab>>({});
@@ -222,11 +225,24 @@ export default function GodModeAdminPage() {
             .finally(() => setUsersLoading(false));
 
         // Groups — eager
-        GroupsApi.listAll()
-            .then(res => setGroups((res.data.data ?? []) as GroupRow[]))
-            .catch(() => setGlobalError("Erro ao carregar patotas."))
-            .finally(() => setGroupsLoading(false));
+        loadGroupsPage(1);
     }, []);
+
+    const GROUPS_PAGE_SIZE = 20;
+
+    // silent=true (navegar página): mantém a lista visível, sem skeleton.
+    function loadGroupsPage(page: number, silent = false) {
+        silent ? setGroupsPaging(true) : setGroupsLoading(true);
+        GroupsApi.listAll(page, GROUPS_PAGE_SIZE)
+            .then(res => {
+                const paged: any = res.data.data;
+                setGroups((paged?.items ?? []) as GroupRow[]);
+                setGroupsTotal(paged?.total ?? 0);
+                setGroupsPage(page);
+            })
+            .catch(() => setGlobalError("Erro ao carregar patotas."))
+            .finally(() => silent ? setGroupsPaging(false) : setGroupsLoading(false));
+    }
 
     // ── Lazy load sub-tabs ────────────────────────────────────────────────────
 
@@ -258,8 +274,9 @@ export default function GodModeAdminPage() {
                 setLazy(prev => ({ ...prev, [groupId]: { ...prev[groupId], matches: (res.data.data ?? []) as MatchRow[], loadingMatches: false } }));
             }
             if (tab === "polls") {
-                const res = await PollsApi.getPolls(groupId);
-                setLazy(prev => ({ ...prev, [groupId]: { ...prev[groupId], polls: ((res.data as any)?.data ?? []) as PollRow[], loadingPolls: false } }));
+                const res = await PollsApi.getPolls(groupId, { page: 1, pageSize: 100 });
+                const pollData = (res.data as any)?.data;
+                setLazy(prev => ({ ...prev, [groupId]: { ...prev[groupId], polls: (pollData?.items ?? pollData ?? []) as PollRow[], loadingPolls: false } }));
             }
             if (tab === "calendar") {
                 const res = await CalendarApi.events(groupId, "2020-01-01", "2030-12-31");
@@ -270,8 +287,9 @@ export default function GodModeAdminPage() {
                 setLazy(prev => ({ ...prev, [groupId]: { ...prev[groupId], colors: (res.data.data ?? []) as ColorRow[], loadingColors: false } }));
             }
             if (tab === "payments") {
-                const res = await PaymentsApi.getExtraCharges(groupId);
-                const raw = (res.data.data ?? []) as any[];
+                const res = await PaymentsApi.getExtraCharges(groupId, { page: 1, pageSize: 100 });
+                const chargeData = res.data.data as any;
+                const raw = (chargeData?.items ?? chargeData ?? []) as any[];
                 const mapped: ExtraChargeRow[] = raw.map(c => ({
                     id: c.id,
                     name: c.name,
@@ -623,7 +641,7 @@ export default function GodModeAdminPage() {
                         {([
                             { key: "overview", label: "Visão Geral", icon: <BarChart3 size={14} /> },
                             { key: "users",    label: "Usuários",    icon: <Users    size={14} />, count: usersLoaded ? users.length : undefined },
-                            { key: "groups",   label: "Patotas",     icon: <Shield   size={14} />, count: groups.length || undefined },
+                            { key: "groups",   label: "Patotas",     icon: <Shield   size={14} />, count: groupsTotal || groups.length || undefined },
                         ] as { key: MainTab; label: string; icon: React.ReactNode; count?: number }[]).map(t => (
                             <button
                                 key={t.key}
@@ -821,7 +839,7 @@ export default function GodModeAdminPage() {
                             : filteredGroups.length === 0
                                 ? renderEmpty("Nenhuma patota encontrada.")
                                 : (
-                                    <div className="space-y-2">
+                                    <div className={`space-y-2 ${groupsPaging ? "opacity-60 transition-opacity" : ""}`}>
                                         {filteredGroups.map(group => {
                                             const isOpen = expandedGroup === group.id;
                                             const subTab = subTabs[group.id] ?? "players";
@@ -1185,6 +1203,26 @@ export default function GodModeAdminPage() {
                                     </div>
                                 )
                         }
+
+                        {!groupsLoading && groupsTotal > GROUPS_PAGE_SIZE && (
+                            <div className="flex items-center justify-between pt-1">
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                    Pág. {groupsPage} de {Math.max(1, Math.ceil(groupsTotal / GROUPS_PAGE_SIZE))} · {groupsTotal} patotas
+                                </span>
+                                <div className="flex gap-2">
+                                    <button type="button" disabled={groupsPage <= 1 || groupsLoading || groupsPaging}
+                                        onClick={() => loadGroupsPage(groupsPage - 1, true)}
+                                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-40">
+                                        Anterior
+                                    </button>
+                                    <button type="button" disabled={groupsPage >= Math.ceil(groupsTotal / GROUPS_PAGE_SIZE) || groupsLoading || groupsPaging}
+                                        onClick={() => loadGroupsPage(groupsPage + 1, true)}
+                                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-40">
+                                        Próxima
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
