@@ -81,3 +81,29 @@
   .page-header { @apply relative rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-5 py-4 overflow-hidden shadow-lg; }
   .page-header-icon { @apply h-9 w-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0; }
 }
+
+/* ReplayPlayer em tela cheia: o container do player vira o elemento fullscreen
+   (promovido ao top layer), então preenche o viewport ignorando o max-width do
+   Lightbox. Aqui o vídeo cresce para ocupar toda a tela (com letterbox).
+
+   IMPORTANTE: cada pseudo-seletor de fullscreen fica em sua PRÓPRIA regra —
+   uma lista combinada (`:fullscreen, :-webkit-full-screen`) é descartada
+   inteira pelo motor que não reconhece um dos vendors. */
+.replay-player:fullscreen {
+  width: 100vw; height: 100vh;
+  display: flex; flex-direction: column;
+  border-radius: 0; background: #000;
+}
+.replay-player:-webkit-full-screen {
+  width: 100vw; height: 100vh;
+  display: flex; flex-direction: column;
+  border-radius: 0; background: #000;
+}
+.replay-player:fullscreen .replay-surface { flex: 1 1 auto; min-height: 0; }
+.replay-player:-webkit-full-screen .replay-surface { flex: 1 1 auto; min-height: 0; }
+.replay-player:fullscreen .replay-surface video {
+  width: 100%; height: 100%; max-height: none !important; object-fit: contain;
+}
+.replay-player:-webkit-full-screen .replay-surface video {
+  width: 100%; height: 100%; max-height: none !important; object-fit: contain;
+}

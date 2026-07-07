@@ -8,6 +8,7 @@ import { Bookmark, ChevronLeft, ChevronRight, Download, Heart, Link, Loader2, Ma
 import { toast } from "sonner";
 import type { ReplayClipDto, ClipLikerDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
+import ReplayPlayer, { type ReplayPlayerHandle } from "./ReplayPlayer";
 
 // ── Stream URL helper ──────────────────────────────────────────────────────────
 // Usa a URL presignada direta do R2. Se o iOS Safari voltar a dar problema
@@ -23,9 +24,7 @@ function useStreamUrl(_groupId: string, _clipId: string, videoUrl: string): stri
 export type ClipState    = { likeCount: number; isLikedByMe: boolean; isFavoritedByMe: boolean };
 export type ClipStateMap = Record<string, ClipState>;
 export type LikersData   = ClipLikerDto[] | "loading";
-
-export const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
-export type Speed   = (typeof SPEEDS)[number];
+// SPEEDS/Speed migraram para ReplayPlayer.tsx (dono dos controles de velocidade).
 
 // ── Likers popover ────────────────────────────────────────────────────────────
 
@@ -375,9 +374,10 @@ export function Lightbox({
     const state     = clipStates[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false };
     const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
     const touchStartX    = useRef<number>(0);
-    const videoRef       = useRef<HTMLVideoElement>(null);
+    const playerRef      = useRef<ReplayPlayerHandle>(null);
     const containerRef   = useRef<HTMLDivElement>(null);
     const videoWrapperRef= useRef<HTMLDivElement>(null);
+    const getVideo       = () => playerRef.current?.video ?? null;
     // Pinch-to-zoom: use refs to avoid re-renders on every touchmove
     const zoomRef        = useRef(1);
     const panRef         = useRef({ x: 0, y: 0 });
@@ -386,57 +386,16 @@ export function Lightbox({
 
     const [confirmDelete, setConfirmDelete] = useState(false);
 
-    const [speed, setSpeed] = useState<Speed>(() => {
-        const saved = localStorage.getItem("replay_speed");
-        const n = saved ? parseFloat(saved) : 1;
-        return (SPEEDS.includes(n as Speed) ? n : 1) as Speed;
-    });
-
-    function applySpeed(s: Speed) {
-        setSpeed(s);
-        localStorage.setItem("replay_speed", String(s));
-        if (videoRef.current) videoRef.current.playbackRate = s;
-    }
-
-    useEffect(() => {
-        if (videoRef.current) videoRef.current.playbackRate = speed;
-    }, [speed]);
-
-    // Ao mudar de clip: troca src, recarrega e dá play — sem remontar o elemento,
-    // para que o fullscreen do browser seja mantido naturalmente.
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.load();
-        video.play().catch(() => {});
-    }, [clip.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    function toggleFullscreen() {
-        const el    = containerRef.current;
-        const video = videoRef.current;
-        if (!el || !video) return;
-        // Exit fullscreen
-        if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
-            (document.exitFullscreen ?? (document as any).webkitExitFullscreen)?.call(document);
-            return;
-        }
-        // Enter fullscreen — try container first (works on Android/desktop),
-        // then fall back to video.webkitEnterFullscreen (iOS Safari)
-        if (el.requestFullscreen) {
-            el.requestFullscreen().catch(() => (video as any).webkitEnterFullscreen?.());
-        } else if ((el as any).webkitRequestFullscreen) {
-            (el as any).webkitRequestFullscreen();
-        } else {
-            (video as any).webkitEnterFullscreen?.();
-        }
-    }
+    // Tela cheia é do ReplayPlayer (fullscreen no container do player para preencher
+    // a tela). O Lightbox só encaminha via ref e reflete o estado no ícone da top bar.
+    const toggleFullscreen = () => playerRef.current?.toggleFullscreen();
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
+            // espaço, vírgula, ponto, L e F são tratados dentro do ReplayPlayer
             if (e.key === "Escape") onClose();
             if (e.key === "ArrowLeft"  && canPrev) onPrev();
             if (e.key === "ArrowRight" && canNext) onNext();
-            if (e.key === "f" || e.key === "F") toggleFullscreen();
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
@@ -449,8 +408,9 @@ export function Lightbox({
         zoomRef.current    = 1;
         panRef.current     = { x: 0, y: 0 };
         setZoom(1);
-        if (videoRef.current) videoRef.current.style.transform = "";
-    }, [clip.id]);
+        const v = getVideo();
+        if (v) v.style.transform = "";
+    }, [clip.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Pinch-to-zoom with passive:false (required for preventDefault to work)
     useEffect(() => {
@@ -464,7 +424,7 @@ export function Lightbox({
             return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
         }
         function applyTransform() {
-            const v = videoRef.current;
+            const v = getVideo();
             if (!v) return;
             const z = zoomRef.current;
             const { x, y } = panRef.current;
@@ -500,7 +460,8 @@ export function Lightbox({
                 zoomRef.current = 1;
                 panRef.current  = { x: 0, y: 0 };
                 setZoom(1);
-                if (videoRef.current) videoRef.current.style.transform = "";
+                const v = getVideo();
+                if (v) v.style.transform = "";
             }
         }
         wrapper.addEventListener("touchstart", onStart, { passive: false });
@@ -524,15 +485,16 @@ export function Lightbox({
         function onVideoFsBegin() { setIsFullscreen(true); }
         function onVideoFsEnd()   { setIsFullscreen(false); }
 
+        const video = getVideo();
         document.addEventListener("fullscreenchange",        onFsChange);
         document.addEventListener("webkitfullscreenchange",  onFsChange);
-        videoRef.current?.addEventListener("webkitbeginsFullscreen", onVideoFsBegin);
-        videoRef.current?.addEventListener("webkitendsFullscreen",   onVideoFsEnd);
+        video?.addEventListener("webkitbeginfullscreen", onVideoFsBegin);
+        video?.addEventListener("webkitendfullscreen",   onVideoFsEnd);
         return () => {
             document.removeEventListener("fullscreenchange",       onFsChange);
             document.removeEventListener("webkitfullscreenchange", onFsChange);
-            videoRef.current?.removeEventListener("webkitbeginsFullscreen", onVideoFsBegin); // eslint-disable-line react-hooks/exhaustive-deps
-            videoRef.current?.removeEventListener("webkitendsFullscreen",   onVideoFsEnd);   // eslint-disable-line react-hooks/exhaustive-deps
+            video?.removeEventListener("webkitbeginfullscreen", onVideoFsBegin);
+            video?.removeEventListener("webkitendfullscreen",   onVideoFsEnd);
         };
     }, []);
 
@@ -553,12 +515,13 @@ export function Lightbox({
                 className="relative w-full max-w-5xl"
                 onClick={(e) => e.stopPropagation()}
                 onTouchStart={(e) => {
-                    // Ignore multi-touch (pinch) — handled by videoWrapperRef listener
-                    if (e.touches.length !== 1 || zoom > 1) return;
+                    // Ignore multi-touch (pinch) e não navega em tela cheia
+                    // (lá o arraste posiciona o foco no modo preencher).
+                    if (e.touches.length !== 1 || zoom > 1 || isFullscreen) return;
                     touchStartX.current = e.touches[0].clientX;
                 }}
                 onTouchEnd={(e) => {
-                    if (e.changedTouches.length !== 1 || zoom > 1) return;
+                    if (e.changedTouches.length !== 1 || zoom > 1 || isFullscreen) return;
                     const dx = e.changedTouches[0].clientX - touchStartX.current;
                     if (Math.abs(dx) < 10) return;
                     if (dx > 50 && canPrev) onPrev();
@@ -595,23 +558,14 @@ export function Lightbox({
                     </div>
                 </div>
 
-                {/* Video player — sem key para que o elemento persista entre clips e o fullscreen seja mantido */}
+                {/* Player profissional — sem remontar entre clips (fullscreen persiste). */}
                 {/* videoWrapperRef: recebe os eventos de pinch-to-zoom com passive:false */}
-                <div ref={videoWrapperRef} className="relative overflow-hidden rounded-2xl shadow-2xl bg-black">
-                    <video
-                        ref={videoRef}
+                <div ref={videoWrapperRef} className="relative">
+                    <ReplayPlayer
+                        ref={playerRef}
                         src={streamUrl}
-                        className="w-full bg-black block"
-                        style={{
-                            maxHeight: isFullscreen
-                                ? "100dvh"
-                                : "min(calc(100svh - 260px), calc(100vh - 260px))",
-                            transformOrigin: "center center",
-                        }}
-                        controls
-                        autoPlay
-                        playsInline
-                        onLoadedMetadata={() => { if (videoRef.current) videoRef.current.playbackRate = speed; }}
+                        clipKey={clip.id}
+                        maxHeight="min(calc(100svh - 300px), calc(100vh - 300px))"
                         onEnded={canNext ? onNext : undefined}
                     />
                     {/* Zoom indicator */}
@@ -623,20 +577,8 @@ export function Lightbox({
                     )}
                 </div>
 
-                {/* Speed controls + ações desktop */}
-                <div className="flex items-center justify-between flex-wrap mt-3 px-1 gap-x-2 gap-y-2">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>×</span>
-                        <select
-                            value={speed}
-                            onChange={(e) => applySpeed(Number(e.target.value) as Speed)}
-                            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 8, padding: "4px 10px", fontSize: 13, fontWeight: 700, cursor: "pointer", outline: "none" }}
-                        >
-                            {SPEEDS.map((s) => (
-                                <option key={s} value={s} style={{ background: "#1e293b", color: "#fff" }}>{s}×</option>
-                            ))}
-                        </select>
-                    </div>
+                {/* Ações sociais */}
+                <div className="flex items-center justify-end flex-wrap mt-3 px-1 gap-x-2 gap-y-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                         {/* Like button — heart toggles, count opens likers */}
                         <div className="flex items-center rounded-xl"

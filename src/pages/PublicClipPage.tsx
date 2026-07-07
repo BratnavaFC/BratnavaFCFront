@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, AlertCircle, Play, Pause, Maximize2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { PublicApi } from "../api/endpoints";
 import type { PublicClipDto } from "../domains/matches/matchTypes";
+import ReplayPlayer from "../domains/matches/ui/ReplayPlayer";
 
 function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString("pt-BR", {
@@ -15,8 +16,6 @@ export default function PublicClipPage() {
     const [clip, setClip] = useState<PublicClipDto | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError]   = useState<string | null>(null);
-    const [playing, setPlaying] = useState(false);
-    const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
         if (!clipId) return;
@@ -25,15 +24,6 @@ export default function PublicClipPage() {
             .catch(() => setError("Vídeo não encontrado ou link inválido."))
             .finally(() => setLoading(false));
     }, [clipId]);
-
-    const togglePlay = () => {
-        const v = videoRef.current;
-        if (!v) return;
-        if (v.paused) { v.play(); setPlaying(true); }
-        else          { v.pause(); setPlaying(false); }
-    };
-
-    const fullscreen = () => videoRef.current?.requestFullscreen();
 
     if (loading) return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -80,39 +70,9 @@ export default function PublicClipPage() {
                     </span>
                 </div>
 
-                {/* Video */}
-                <div
-                    className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl cursor-pointer group"
-                    style={{ aspectRatio: "16/9" }}
-                    onClick={togglePlay}
-                >
-                    <video
-                        ref={videoRef}
-                        src={clip.videoUrl}
-                        className="w-full h-full object-contain"
-                        playsInline
-                        onPlay={() => setPlaying(true)}
-                        onPause={() => setPlaying(false)}
-                        onEnded={() => setPlaying(false)}
-                    />
-
-                    {/* Overlay play/pause */}
-                    {!playing && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                                <Play size={28} className="text-white ml-1" fill="white" />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Fullscreen button */}
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); fullscreen(); }}
-                        className="absolute bottom-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg bg-black/50 text-white opacity-0 group-hover:opacity-100 transition"
-                    >
-                        <Maximize2 size={14} />
-                    </button>
+                {/* Player */}
+                <div className="shadow-2xl rounded-2xl overflow-hidden">
+                    <ReplayPlayer src={clip.videoUrl} clipKey={clipId ?? clip.videoUrl} maxHeight="min(70svh, 70vh)" />
                 </div>
 
                 <p className="text-[11px] text-slate-600 text-center mt-4">

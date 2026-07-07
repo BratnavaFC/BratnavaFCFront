@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-    Loader2, AlertCircle, Play, Pause, Maximize2,
+    Loader2, AlertCircle, Play,
     ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 import { PublicApi } from "../api/endpoints";
 import type { PublicClipDto, PublicMatchReplaysDto } from "../domains/matches/matchTypes";
+import ReplayPlayer from "../domains/matches/ui/ReplayPlayer";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -45,14 +46,7 @@ function PublicLightbox({
     onNext: () => void;
 }) {
     const clip = clips[index];
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [playing, setPlaying] = useState(false);
     const isGol = clip.eventType === "Gol";
-
-    useEffect(() => {
-        videoRef.current?.load();
-        setPlaying(false);
-    }, [index]);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -63,13 +57,6 @@ function PublicLightbox({
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [onClose, onPrev, onNext]);
-
-    const togglePlay = () => {
-        const v = videoRef.current;
-        if (!v) return;
-        if (v.paused) { v.play(); setPlaying(true); }
-        else          { v.pause(); setPlaying(false); }
-    };
 
     return (
         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4">
@@ -102,35 +89,9 @@ function PublicLightbox({
                 </span>
             </div>
 
-            {/* Video */}
-            <div
-                className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden cursor-pointer"
-                style={{ aspectRatio: "16/9" }}
-                onClick={togglePlay}
-            >
-                <video
-                    ref={videoRef}
-                    src={clip.videoUrl}
-                    className="w-full h-full object-contain"
-                    playsInline
-                    onPlay={() => setPlaying(true)}
-                    onPause={() => setPlaying(false)}
-                    onEnded={() => setPlaying(false)}
-                />
-                {!playing && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                            <Play size={28} className="text-white ml-1" fill="white" />
-                        </div>
-                    </div>
-                )}
-                <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); videoRef.current?.requestFullscreen(); }}
-                    className="absolute bottom-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg bg-black/50 text-white opacity-0 hover:opacity-100 transition"
-                >
-                    <Maximize2 size={14} />
-                </button>
+            {/* Player */}
+            <div className="w-full max-w-3xl">
+                <ReplayPlayer src={clip.videoUrl} clipKey={String(index)} maxHeight="min(70svh, 70vh)" />
             </div>
 
             {/* Nav */}
