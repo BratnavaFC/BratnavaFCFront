@@ -1,14 +1,51 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
-    Bookmark, Film, Heart,
+    Bookmark, ChevronDown, Film, Heart,
     LayoutGrid, ListOrdered, Loader2, RefreshCw, Star, Gamepad2,
 } from "lucide-react";
 import { MatchesApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { getResponseMessage } from "../api/apiResponse";
+import type { PagedResult } from "../api/paged";
+import LoadMoreButton from "../components/LoadMoreButton";
 import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
 import { type ClipStateMap, type LikersData, VideoCard, Lightbox, LikersPopover } from "../domains/matches/ui/ReplayClipComponents";
+
+const PAGE_SIZE = 20;
+
+/** Conjunto de partidas expandidas (todas recolhidas por padrão). */
+function useExpandedSet() {
+    const [set, setSet] = useState<Set<string>>(new Set());
+    const toggle = (id: string) => setSet((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+    });
+    return [set, toggle] as const;
+}
+
+/** Cabeçalho de partida clicável (recolhe/expande) + conteúdo colapsável. */
+function MatchSection({ header, expanded, onToggle, children }: {
+    header: ReactNode;
+    expanded: boolean;
+    onToggle: () => void;
+    children: ReactNode;
+}) {
+    return (
+        <div>
+            <button type="button" onClick={onToggle}
+                className="w-full flex items-center gap-3 mb-3 focus:outline-none">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                {header}
+                <ChevronDown size={15}
+                    className={`text-slate-400 dark:text-slate-500 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            </button>
+            {expanded && children}
+        </div>
+    );
+}
 
 // ── Tab: Curtidos (admin = all, user = own likes) ─────────────────────────────
 
@@ -16,26 +53,33 @@ type SortMode = "likes" | "match";
 
 function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
     const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [total,       setTotal]       = useState(0);
+    const [page,        setPage]        = useState(1);
     const [loading,     setLoading]     = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [mode,        setMode]        = useState<SortMode>("match");
     const [lbIdx,       setLbIdx]       = useState<number | null>(null);
     const [states,      setStates]      = useState<ClipStateMap>({});
     const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
     const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
-    async function load() {
-        setLoading(true);
+    async function load(pageNum = 1, append = false) {
+        append ? setLoadingMore(true) : setLoading(true);
         try {
             const res  = isAdmin
-                ? await MatchesApi.likedReplays(groupId)
-                : await MatchesApi.myLikes(groupId);
-            const list = Array.isArray(res.data.data) ? res.data.data : [];
-            setClips(list);
-            setStates(Object.fromEntries(list.map((c) => [c.id, { likeCount: c.likeCount, isLikedByMe: c.isLikedByMe, isFavoritedByMe: c.isFavoritedByMe }])));
+                ? await MatchesApi.likedReplays(groupId, pageNum, PAGE_SIZE)
+                : await MatchesApi.myLikes(groupId, pageNum, PAGE_SIZE);
+            const paged = res.data.data as unknown as PagedResult<LikedReplayClipDto>;
+            const list  = paged?.items ?? [];
+            setTotal(paged?.total ?? list.length);
+            setPage(pageNum);
+            setClips(prev => append ? [...prev, ...list] : list);
+            const newStates = Object.fromEntries(list.map((c) => [c.id, { likeCount: c.likeCount, isLikedByMe: c.isLikedByMe, isFavoritedByMe: c.isFavoritedByMe }]));
+            setStates(prev => append ? { ...prev, ...newStates } : newStates);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar vídeos curtidos."));
         } finally {
-            setLoading(false);
+            append ? setLoadingMore(false) : setLoading(false);
         }
     }
 
@@ -92,6 +136,8 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
         }
     }
 
+    const [expanded, toggleMatch] = useExpandedSet();
+
     const byLikes = [...clips].sort((a, b) => (states[b.id]?.likeCount ?? 0) - (states[a.id]?.likeCount ?? 0));
     const byMatch = (() => {
         const map = new Map<string, LikedReplayClipDto[]>();
@@ -103,7 +149,8 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                 totalLikes: cs.reduce((s, c) => s + (states[c.id]?.likeCount ?? 0), 0),
                 date: cs[0]?.recordedAt ?? "",
             }))
-            .sort((a, b) => b.totalLikes - a.totalLikes);
+            // Mais recentes primeiro
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     })();
     const flatForLb = mode === "likes" ? byLikes : byMatch.flatMap((g) => g.clips);
 
@@ -114,7 +161,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                     {loading
                         ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
-                        : `${clips.length} vídeo${clips.length !== 1 ? "s" : ""} com curtida${clips.length !== 1 ? "s" : ""}`}
+                        : `${clips.length} de ${total} vídeo${total !== 1 ? "s" : ""} com curtida${total !== 1 ? "s" : ""}`}
                 </p>
                 <div className="flex items-center gap-2">
                     <div className="flex gap-1">
@@ -131,7 +178,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                             <ListOrdered size={13} /> Por curtidas
                         </button>
                     </div>
-                    <button type="button" onClick={load} disabled={loading}
+                    <button type="button" onClick={() => load()} disabled={loading}
                         className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
                         <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Atualizar
                     </button>
@@ -160,9 +207,10 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
             {!loading && clips.length > 0 && mode === "match" && (
                 <div className="space-y-6">
                     {byMatch.map((group) => (
-                        <div key={group.matchId}>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                        <MatchSection key={group.matchId}
+                            expanded={expanded.has(group.matchId)}
+                            onToggle={() => toggleMatch(group.matchId)}
+                            header={<>
                                 <div className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
                                     style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.2)", color: "#f43f5e" }}>
                                     <Heart size={11} style={{ fill: "#f43f5e" }} />
@@ -171,8 +219,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                                 <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                                     {new Date(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                 </span>
-                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                            </div>
+                            </>}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
                                 {group.clips.map((clip) => {
                                     const flatIdx = flatForLb.findIndex((c) => c.id === clip.id);
@@ -189,7 +236,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                                     );
                                 })}
                             </div>
-                        </div>
+                        </MatchSection>
                     ))}
                 </div>
             )}
@@ -209,6 +256,11 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                             onShowLikers={(rect) => openLikers(clip.id, rect)} />
                     ))}
                 </div>
+            )}
+
+            {!loading && (
+                <LoadMoreButton loaded={clips.length} total={total} loading={loadingMore}
+                    onClick={() => load(page + 1, true)} />
             )}
 
             {lbIdx !== null && (
@@ -237,23 +289,30 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
 
 function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
     const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [total,       setTotal]       = useState(0);
+    const [page,        setPage]        = useState(1);
     const [loading,     setLoading]     = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [lbIdx,       setLbIdx]       = useState<number | null>(null);
     const [states,      setStates]      = useState<ClipStateMap>({});
     const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
     const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
-    async function load() {
-        setLoading(true);
+    async function load(pageNum = 1, append = false) {
+        append ? setLoadingMore(true) : setLoading(true);
         try {
-            const res  = await MatchesApi.myFavorites(groupId);
-            const list = Array.isArray(res.data.data) ? res.data.data : [];
-            setClips(list);
-            setStates(Object.fromEntries(list.map((c) => [c.id, { likeCount: c.likeCount, isLikedByMe: c.isLikedByMe, isFavoritedByMe: c.isFavoritedByMe }])));
+            const res   = await MatchesApi.myFavorites(groupId, pageNum, PAGE_SIZE);
+            const paged = res.data.data as unknown as PagedResult<LikedReplayClipDto>;
+            const list  = paged?.items ?? [];
+            setTotal(paged?.total ?? list.length);
+            setPage(pageNum);
+            setClips(prev => append ? [...prev, ...list] : list);
+            const newStates = Object.fromEntries(list.map((c) => [c.id, { likeCount: c.likeCount, isLikedByMe: c.isLikedByMe, isFavoritedByMe: c.isFavoritedByMe }]));
+            setStates(prev => append ? { ...prev, ...newStates } : newStates);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar favoritos."));
         } finally {
-            setLoading(false);
+            append ? setLoadingMore(false) : setLoading(false);
         }
     }
 
@@ -312,6 +371,7 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
         }
     }
 
+    const [expanded, toggleMatch] = useExpandedSet();
     const byMatch = (() => {
         const map = new Map<string, LikedReplayClipDto[]>();
         clips.forEach((c) => { const arr = map.get(c.matchId) ?? []; arr.push(c); map.set(c.matchId, arr); });
@@ -328,9 +388,9 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                     {loading
                         ? <span className="flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Carregando...</span>
-                        : `${clips.length} vídeo${clips.length !== 1 ? "s" : ""} favoritado${clips.length !== 1 ? "s" : ""}`}
+                        : `${clips.length} de ${total} vídeo${total !== 1 ? "s" : ""} favoritado${total !== 1 ? "s" : ""}`}
                 </p>
-                <button type="button" onClick={load} disabled={loading}
+                <button type="button" onClick={() => load()} disabled={loading}
                     className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
                     <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Atualizar
                 </button>
@@ -357,9 +417,10 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
             {!loading && clips.length > 0 && (
                 <div className="space-y-6">
                     {byMatch.map((group) => (
-                        <div key={group.matchId}>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                        <MatchSection key={group.matchId}
+                            expanded={expanded.has(group.matchId)}
+                            onToggle={() => toggleMatch(group.matchId)}
+                            header={<>
                                 <div className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
                                     style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b" }}>
                                     <Bookmark size={11} style={{ fill: "#f59e0b" }} />
@@ -368,8 +429,7 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
                                 <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                                     {new Date(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                 </span>
-                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                            </div>
+                            </>}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
                                 {group.clips.map((clip) => {
                                     const flatIdx = flat.findIndex((c) => c.id === clip.id);
@@ -386,9 +446,14 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
                                     );
                                 })}
                             </div>
-                        </div>
+                        </MatchSection>
                     ))}
                 </div>
+            )}
+
+            {!loading && (
+                <LoadMoreButton loaded={clips.length} total={total} loading={loadingMore}
+                    onClick={() => load(page + 1, true)} />
             )}
 
             {lbIdx !== null && (
@@ -419,24 +484,31 @@ type EventFilter = "all" | "Gol" | "Jogada";
 
 function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
     const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
+    const [total,       setTotal]       = useState(0);
+    const [page,        setPage]        = useState(1);
     const [loading,     setLoading]     = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [lbIdx,       setLbIdx]       = useState<number | null>(null);
     const [states,      setStates]      = useState<ClipStateMap>({});
     const [filter,      setFilter]      = useState<EventFilter>("all");
     const [likersPanel, setLikersPanel] = useState<{ clipId: string; rect: DOMRect } | null>(null);
     const [likersCache, setLikersCache] = useState<Record<string, LikersData>>({});
 
-    async function load() {
-        setLoading(true);
+    async function load(pageNum = 1, append = false) {
+        append ? setLoadingMore(true) : setLoading(true);
         try {
-            const res  = await MatchesApi.allReplays(groupId);
-            const list = Array.isArray(res.data.data) ? res.data.data : [];
-            setClips(list);
-            setStates(Object.fromEntries(list.map((c) => [c.id, { likeCount: c.likeCount, isLikedByMe: c.isLikedByMe, isFavoritedByMe: c.isFavoritedByMe }])));
+            const res   = await MatchesApi.allReplays(groupId, pageNum, PAGE_SIZE);
+            const paged = res.data.data as unknown as PagedResult<LikedReplayClipDto>;
+            const list  = paged?.items ?? [];
+            setTotal(paged?.total ?? list.length);
+            setPage(pageNum);
+            setClips(prev => append ? [...prev, ...list] : list);
+            const newStates = Object.fromEntries(list.map((c) => [c.id, { likeCount: c.likeCount, isLikedByMe: c.isLikedByMe, isFavoritedByMe: c.isFavoritedByMe }]));
+            setStates(prev => append ? { ...prev, ...newStates } : newStates);
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao carregar vídeos."));
         } finally {
-            setLoading(false);
+            append ? setLoadingMore(false) : setLoading(false);
         }
     }
 
@@ -494,6 +566,7 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
 
     const filtered = filter === "all" ? clips : clips.filter((c) => c.eventType === filter);
 
+    const [expanded, toggleMatch] = useExpandedSet();
     const byMatch = (() => {
         const map = new Map<string, LikedReplayClipDto[]>();
         filtered.forEach((c) => { const arr = map.get(c.matchId) ?? []; arr.push(c); map.set(c.matchId, arr); });
@@ -534,7 +607,7 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                             </button>
                         ))}
                     </div>
-                    <button type="button" onClick={load} disabled={loading}
+                    <button type="button" onClick={() => load()} disabled={loading}
                         className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
                         <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Atualizar
                     </button>
@@ -568,9 +641,10 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
             {!loading && filtered.length > 0 && (
                 <div className="space-y-6">
                     {byMatch.map((group) => (
-                        <div key={group.matchId}>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                        <MatchSection key={group.matchId}
+                            expanded={expanded.has(group.matchId)}
+                            onToggle={() => toggleMatch(group.matchId)}
+                            header={<>
                                 <div className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
                                     style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#6366f1" }}>
                                     <Gamepad2 size={11} />
@@ -581,8 +655,7 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                                 <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                                     {new Date(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                 </span>
-                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                            </div>
+                            </>}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
                                 {group.clips.map((clip) => {
                                     const flatIdx = flat.findIndex((c) => c.id === clip.id);
@@ -599,9 +672,14 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                                     );
                                 })}
                             </div>
-                        </div>
+                        </MatchSection>
                     ))}
                 </div>
+            )}
+
+            {!loading && (
+                <LoadMoreButton loaded={clips.length} total={total} loading={loadingMore}
+                    onClick={() => load(page + 1, true)} />
             )}
 
             {lbIdx !== null && (
@@ -640,16 +718,16 @@ export default function ReplayVaultPage() {
     return (
         <div className="space-y-5">
             {/* Header banner */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-slate-900 text-white px-6 py-6 overflow-hidden shadow-lg">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
+            <div className="page-header">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                     style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
-                <div className="relative flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-                        <Film size={26} />
+                <div className="relative flex items-center gap-3">
+                    <div className="page-header-icon">
+                        <Film size={18} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black leading-tight">Replays</h1>
-                        <p className="text-sm text-white/50 mt-0.5">
+                        <h1 className="text-xl font-black leading-tight">Replays</h1>
+                        <p className="text-xs text-white/60 mt-0.5">
                             {!groupId ? "Selecione um grupo" : "Vídeos curtidos e favoritados"}
                         </p>
                     </div>
