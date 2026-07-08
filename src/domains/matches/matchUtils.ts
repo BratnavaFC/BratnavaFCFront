@@ -72,6 +72,46 @@ export function pickActiveMatch(list: any[]) {
     return notFinalized[0] ?? null;
 }
 
+export function matchStepLabel(stepOrStatus?: string | null) {
+    const raw = String(stepOrStatus ?? "").trim();
+    if (!raw) return "";
+    const key = raw
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\s_-]+/g, "")
+        .toLowerCase();
+
+    const labels: Record<string, string> = {
+        create: "Criação",
+        created: "Criação",
+        criacao: "Criação",
+        criar: "Criação",
+        accept: "Aceitação",
+        acceptation: "Aceitação",
+        acceptance: "Aceitação",
+        aceitacao: "Aceitação",
+        teams: "Times",
+        matchmaking: "Times",
+        formacao: "Times",
+        playing: "Em jogo",
+        live: "Em jogo",
+        started: "Em jogo",
+        emjogo: "Em jogo",
+        ended: "Encerrada",
+        encerrada: "Encerrada",
+        encerramento: "Encerrada",
+        post: "Pós-jogo",
+        postgame: "Pós-jogo",
+        posjogo: "Pós-jogo",
+        done: "Finalizada",
+        finished: "Finalizada",
+        finalized: "Finalizada",
+        finalizada: "Finalizada",
+    };
+
+    return labels[key] ?? raw;
+}
+
 export function buildAllPlayers(current: { unassignedPlayers?: PlayerInMatchDto[]; teamAPlayers?: PlayerInMatchDto[]; teamBPlayers?: PlayerInMatchDto[] } | null) {
     if (!current) return [];
     return [

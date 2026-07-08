@@ -17,6 +17,7 @@ import { IconRenderer } from '../components/IconRenderer';
 import { resolveIcon } from '../lib/groupIcons';
 import StatNumber from '../components/StatNumber';
 import type { MatchHeaderDto, MatchDetailsDto } from '../domains/matches/matchTypes';
+import { matchStepLabel } from '../domains/matches/matchUtils';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -441,7 +442,7 @@ function UpcomingMatchRow({
               </span>
             )}
             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${badge}`}>
-              {header.statusName}
+              {matchStepLabel(header.statusName || header.stepKey)}
             </span>
           </div>
 
@@ -620,26 +621,27 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
   const nav = useNavigate();
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const visible = events.slice(0, 5);
 
-  useEffect(() => { setActive(0); }, [events.length]);
+  useEffect(() => { setActive(0); }, [visible.length]);
 
   useEffect(() => {
-    if (events.length <= 1 || paused) return;
-    const id = setInterval(() => setActive(i => (i + 1) % events.length), 5000);
+    if (visible.length <= 1 || paused) return;
+    const id = setInterval(() => setActive(i => (i + 1) % visible.length), 5000);
     return () => clearInterval(id);
-  }, [events.length, paused]);
+  }, [visible.length, paused]);
 
   const go = (fn: (i: number) => number) => { setPaused(true); setActive(fn); };
   const swipe = useSwipe(
-    () => go(i => (i + 1) % events.length),
-    () => go(i => (i - 1 + events.length) % events.length),
+    () => go(i => (i + 1) % visible.length),
+    () => go(i => (i - 1 + visible.length) % visible.length),
   );
 
   if (loading && events.length === 0) {
     return <div className="h-24 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />;
   }
 
-  if (events.length === 0) {
+  if (visible.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 py-6 text-center">
         <CalendarDays size={20} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
@@ -648,7 +650,7 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
     );
   }
 
-  const ev = events[active];
+  const ev = visible[active] ?? visible[0];
   const evDate = ev.date ? new Date(ev.date + 'T00:00:00') : null;
   const monthLabel = evDate?.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') ?? '—';
   const dayLabel   = evDate?.toLocaleDateString('pt-BR', { day: '2-digit' }) ?? '—';
@@ -699,18 +701,18 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
         </div>
       </button>
 
-      {events.length > 1 && (
+      {visible.length > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
             type="button"
-            onClick={() => go(i => (i - 1 + events.length) % events.length)}
+            onClick={() => go(i => (i - 1 + visible.length) % visible.length)}
             aria-label="Evento anterior"
             className="h-5 w-5 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
           >
             <ChevronLeft size={13} />
           </button>
           <div className="flex gap-1.5">
-            {events.map((_, i) => (
+            {visible.map((_, i) => (
               <button
                 key={i}
                 type="button"
@@ -726,7 +728,7 @@ function EventCarousel({ events, loading }: { events: CalendarEvent[]; loading: 
           </div>
           <button
             type="button"
-            onClick={() => go(i => (i + 1) % events.length)}
+            onClick={() => go(i => (i + 1) % visible.length)}
             aria-label="Próximo evento"
             className="h-5 w-5 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
           >
@@ -982,7 +984,7 @@ export default function DashboardPage() {
           const bKey = `${b.date}T${b.time ?? '00:00'}`;
           return aKey.localeCompare(bKey);
         })
-        .slice(0, 3);
+        .slice(0, 5);
       setEvents(upcoming);
     } catch {
       setEvents([]);
