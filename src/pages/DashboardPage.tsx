@@ -147,8 +147,7 @@ function MatchRightPanel({
   // ── accept: contadores de convite (via summary — só mensalistas) ─────────
   if (step === 'accept') {
     if (!acceptationSummary) return <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />;
-    const acceptedGuests = acceptationSummary.acceptedPlayers.filter(p => p.isGuest).length;
-    const acceptedMembers = acceptationSummary.acceptedPlayers.length - acceptedGuests;
+    const accepted = acceptationSummary.acceptedPlayers.length;
     const refused  = acceptationSummary.rejectedPlayers.length;
     const pending  = acceptationSummary.pendingPlayers.length;
     return (
@@ -157,9 +156,7 @@ function MatchRightPanel({
           <span className="w-3 flex items-center justify-center shrink-0">
             <CheckCircle2 size={11} />
           </span>
-          <span className="tabular-nums">
-            {acceptedMembers}{acceptedGuests > 0 && <span className="font-medium"> (+{acceptedGuests})</span>}
-          </span>
+          <span className="tabular-nums">{accepted}</span>
         </span>
         <span className="flex items-center gap-1.5 text-xs font-medium text-amber-500 dark:text-amber-400">
           <span className="w-3 flex items-center justify-center shrink-0">
