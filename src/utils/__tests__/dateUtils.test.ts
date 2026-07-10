@@ -8,16 +8,25 @@ describe('toUtcDate', () => {
         expect(d.getMinutes()).toBe(0);
     });
 
-    it('keeps the literal hour when ISO string has Z suffix', () => {
-        const d = toUtcDate('2025-05-15T21:00:00Z');
+    it('converts legacy UTC strings to Sao Paulo wall time', () => {
+        const d = toUtcDate('2025-05-16T00:00:00Z');
         expect(d.getHours()).toBe(21);
         expect(d.getMinutes()).toBe(0);
+        expect(d.getDate()).toBe(15);
     });
 
-    it('keeps the literal hour when ISO string has an offset', () => {
-        const d = toUtcDate('2025-05-15T22:00:00+01:00');
-        expect(d.getHours()).toBe(22);
+    it('converts legacy midnight strings without timezone to Sao Paulo wall time', () => {
+        const d = toUtcDate('2025-05-16T00:00:00');
+        expect(d.getHours()).toBe(21);
         expect(d.getMinutes()).toBe(0);
+        expect(d.getDate()).toBe(15);
+    });
+
+    it('converts offset strings to Sao Paulo wall time', () => {
+        const d = toUtcDate('2025-05-16T00:00:00+00:00');
+        expect(d.getHours()).toBe(21);
+        expect(d.getMinutes()).toBe(0);
+        expect(d.getDate()).toBe(15);
     });
 
     it('returns Invalid Date for empty string', () => {
@@ -46,7 +55,7 @@ describe('formatUtcDate', () => {
     });
 
     it('returns the literal time formatted as HH:MM', () => {
-        const result = formatUtcDate('2025-05-15T09:30:00Z');
+        const result = formatUtcDate('2025-05-15T12:30:00Z');
         expect(result).not.toBeNull();
         expect(result!.time).toBe('09:30');
     });

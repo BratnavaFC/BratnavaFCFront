@@ -14,6 +14,7 @@ import { resolveIcon } from "../../../lib/groupIcons";
 import { BetApi, PaymentsApi } from "../../../api/endpoints";
 import { getResponseMessage } from "../../../api/apiResponse";
 import { toast } from "sonner";
+import { toUtcDate } from "../../../utils/dateUtils";
 
 // ── Bet results section (todos os jogadores) ─────────────────────────────────
 
@@ -246,7 +247,7 @@ function PaymentSection({
 
     useEffect(() => {
         if (paymentMode !== 0 || !groupId || !matchDate) return;
-        const d = new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''));
+        const d = toUtcDate(matchDate);
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         PaymentsApi.isMonthInitiated(groupId, year, month)
@@ -267,7 +268,7 @@ function PaymentSection({
                 return;
             }
             const dateLabel = matchDate
-                ? new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''))
+                ? toUtcDate(matchDate)
                       .toLocaleDateString("pt-BR")
                 : "—";
             setCreatingCharge(true);
@@ -330,7 +331,7 @@ function PaymentSection({
     // Monthly mode
     const handleInitiateMonthly = async () => {
         if (!matchDate || !groupId) return;
-        const d = new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''));
+        const d = toUtcDate(matchDate);
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         setInitiating(true);
@@ -346,7 +347,7 @@ function PaymentSection({
     };
 
     const dateLabel = matchDate
-        ? new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''))
+        ? toUtcDate(matchDate)
               .toLocaleString("pt-BR", { month: "long", year: "numeric" })
         : "—";
 

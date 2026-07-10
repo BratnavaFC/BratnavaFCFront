@@ -11,6 +11,7 @@ import { StepEnded } from "../steps/StepEnded";
 import { StepPost } from "../steps/StepPost";
 import { StepDone } from "../steps/StepDone";
 import { LinkedPollWidget } from "../ui/LinkedPollWidget";
+import { toUtcDate } from "../../../utils/dateUtils";
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
     create:  { label: "Criação",    color: "text-slate-600",   bg: "bg-slate-100"  },
@@ -120,7 +121,7 @@ export function MatchWizard({
                                 {current?.playedAt && (
                                     <span className="flex items-center gap-1">
                                         <Clock size={13} className="text-slate-400 shrink-0" />
-                                        {new Date(current.playedAt.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, '')).toLocaleString("pt-BR", {
+                                        {toUtcDate(current.playedAt).toLocaleString("pt-BR", {
                                             dateStyle: "short",
                                             timeStyle: "short",
                                         })}
