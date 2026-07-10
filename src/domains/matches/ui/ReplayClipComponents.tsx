@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import type { ReplayClipDto, ClipLikerDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 import ReplayPlayer, { type ReplayPlayerHandle } from "./ReplayPlayer";
+import { toUtcDate } from "../../../utils/dateUtils";
 
 // ── Stream URL helper ──────────────────────────────────────────────────────────
 // Usa a URL presignada direta do R2. Se o iOS Safari voltar a dar problema
@@ -92,7 +93,7 @@ export function LikersPopover({ anchorRect, data, onClose }: {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 export async function downloadClip(clip: ReplayClipDto, groupId: string) {
-    const time = new Date(clip.recordedAt)
+    const time = toUtcDate(clip.recordedAt)
         .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         .replace(/:/g, "-");
     const filename = `${clip.eventType}_${time}.mp4`;
@@ -109,7 +110,7 @@ export async function downloadClip(clip: ReplayClipDto, groupId: string) {
 }
 
 export function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString("pt-BR", {
+    return toUtcDate(iso).toLocaleTimeString("pt-BR", {
         hour: "2-digit", minute: "2-digit", second: "2-digit",
     });
 }

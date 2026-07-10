@@ -14,6 +14,7 @@ import CreateEditEventModal from "../components/modals/CreateEditEventModal";
 import CategoryManagerModal from "../components/modals/CategoryManagerModal";
 import DayDetailModal from "../components/modals/DayDetailModal";
 import type { CalendarEvent } from "../types/calendar";
+import { toUtcDate } from "../utils/dateUtils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -446,18 +447,14 @@ export default function CalendarPage() {
             playing: "Em jogo", ended: "Encerrada", post: "Pós-jogo", done: "Finalizada",
         };
 
-        // PlayedAt is stored as UTC on the backend. Convert to Brazil timezone so the
-        // chip lands on the correct calendar day (e.g. Tue 21:00 BRT = Wed 00:00 UTC).
-        const d = new Date(m.playedAt);
-        const tz = "America/Sao_Paulo";
-        const parts = new Intl.DateTimeFormat("pt-BR", {
-            timeZone: tz,
-            year: "numeric", month: "2-digit", day: "2-digit",
-            hour: "2-digit", minute: "2-digit",
-        }).formatToParts(d);
-        const get = (type: string) => parts.find(p => p.type === type)!.value;
-        const dateStr = `${get("year")}-${get("month")}-${get("day")}`;
-        const timeStr = `${get("hour")}:${get("minute")}`;
+        const d = toUtcDate(m.playedAt);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        const timeStr = `${hh}:${min}`;
 
         return {
             id:          m.matchId,

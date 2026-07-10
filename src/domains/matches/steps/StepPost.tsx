@@ -246,8 +246,7 @@ function PaymentSection({
 
     useEffect(() => {
         if (paymentMode !== 0 || !groupId || !matchDate) return;
-        const utcDate = matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z';
-        const d = new Date(utcDate);
+        const d = new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''));
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         PaymentsApi.isMonthInitiated(groupId, year, month)
@@ -268,7 +267,7 @@ function PaymentSection({
                 return;
             }
             const dateLabel = matchDate
-                ? new Date(matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z')
+                ? new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''))
                       .toLocaleDateString("pt-BR")
                 : "—";
             setCreatingCharge(true);
@@ -331,8 +330,7 @@ function PaymentSection({
     // Monthly mode
     const handleInitiateMonthly = async () => {
         if (!matchDate || !groupId) return;
-        const utcStr = matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z';
-        const d = new Date(utcStr);
+        const d = new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''));
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         setInitiating(true);
@@ -348,7 +346,7 @@ function PaymentSection({
     };
 
     const dateLabel = matchDate
-        ? new Date(matchDate.endsWith('Z') || matchDate.includes('+') ? matchDate : matchDate + 'Z')
+        ? new Date(matchDate.replace(/Z$/i, '').replace(/([+-]\d{2}:\d{2})$/, ''))
               .toLocaleString("pt-BR", { month: "long", year: "numeric" })
         : "—";
 

@@ -14,6 +14,7 @@ import { useGroupIcons } from "../hooks/useGroupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import Pager, { usePageSize } from "../components/Pager";
 import { resolveIcon } from "../lib/groupIcons";
+import { toUtcDate } from "../utils/dateUtils";
 import type {
     CurrentMatchBetContextDto,
     BetLeaderboardEntryDto,
@@ -885,7 +886,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                     <div className="flex gap-2 min-w-max">
                         {bettableMatches.map((m) => {
                             const isSelected = m.matchId === selectedMatchId;
-                            const dateLabel  = new Date(m.playedAt).toLocaleDateString("pt-BR", {
+                            const dateLabel  = toUtcDate(m.playedAt).toLocaleDateString("pt-BR", {
                                 day: "2-digit", month: "short",
                             });
                             return (
@@ -948,7 +949,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                                     {betCount} de {total} jogador{total !== 1 ? "es" : ""} já {betCount !== 1 ? "fizeram" : "fez"} sua aposta
                                 </p>
                                 <p className="text-xs text-slate-400 mt-0.5">
-                                    {new Date(ctx.playedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                    {toUtcDate(ctx.playedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                     {" · "}{ctx.statusName}
                                 </p>
                             </div>
@@ -1311,7 +1312,7 @@ function HistoryTab({ groupId }: { groupId: string }) {
                 <div className={`space-y-3 ${paging ? "opacity-60 transition-opacity" : ""}`}>
                     {history.map((match) => {
                         const isMatchOpen = expandedMatch === match.matchId;
-                        const matchDate   = new Date(match.playedAt).toLocaleDateString("pt-BR", {
+                        const matchDate   = toUtcDate(match.playedAt).toLocaleDateString("pt-BR", {
                             day: "2-digit", month: "short", year: "numeric",
                         });
 

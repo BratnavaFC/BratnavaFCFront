@@ -15,8 +15,7 @@ export function isValidHHmm(v: string) {
 }
 
 export function toUtcIso(dateStr: string, timeStr: string) {
-    const local = new Date(`${dateStr}T${timeStr}:00`);
-    return local.toISOString();
+    return `${dateStr}T${timeStr}:00`;
 }
 
 export function cls(...xs: Array<string | false | null | undefined>) {
@@ -67,7 +66,7 @@ export function pickActiveMatch(list: any[]) {
 
     const notFinalized = list
         .filter((m) => Number(m?.status) !== 6 && String(m?.statusName) !== "Finalized")
-        .sort((a, b) => new Date(b.playedAt ?? 0).getTime() - new Date(a.playedAt ?? 0).getTime());
+        .sort((a, b) => String(b.playedAt ?? "").localeCompare(String(a.playedAt ?? "")));
 
     return notFinalized[0] ?? null;
 }

@@ -1,22 +1,17 @@
 /**
- * Garante que uma string ISO seja interpretada como UTC.
- * Se a string não tiver sufixo de offset (Z ou +HH:MM), adiciona 'Z'.
- *
- * Motivação: `new Date("2025-05-15T21:00:00")` sem offset é interpretado
- * como horário LOCAL pelo browser. Para datas vindas do backend (UTC),
- * isso causa exibição errada para usuários em fusos diferentes de UTC.
+ * Interpreta a data como horario literal da partida, sem conversao por fuso.
  *
  * @example
- * toUtcDate("2025-05-15T21:00:00")   // → interpreta como 21:00 UTC
- * toUtcDate("2025-05-15T21:00:00Z")  // → igual, Z já presente
+ * toUtcDate("2025-05-15T21:00:00")   // interpreta como 21:00
+ * toUtcDate("2025-05-15T21:00:00Z")  // tambem interpreta como 21:00
  */
 export function toUtcDate(iso: string): Date {
     if (!iso) return new Date(NaN);
-    return new Date(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
+    return new Date(stripTimezone(iso));
 }
 
 /**
- * Formata uma data ISO (UTC) em objeto com componentes legíveis em pt-BR.
+ * Formata uma data ISO em objeto com componentes legiveis em pt-BR.
  */
 export function formatUtcDate(iso?: string | null) {
     if (!iso) return null;
@@ -36,4 +31,10 @@ export function formatUtcDate(iso?: string | null) {
         }),
         short: d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
     };
+}
+
+export function stripTimezone(iso: string): string {
+    return iso
+        .replace(/Z$/i, '')
+        .replace(/([+-]\d{2}:\d{2})$/, '');
 }

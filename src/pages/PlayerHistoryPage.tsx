@@ -6,6 +6,7 @@ import { useGroupIcons } from "../hooks/useGroupIcons";
 import { resolveIcon } from "../lib/groupIcons";
 import { IconRenderer } from "../components/IconRenderer";
 import { CalendarDays, ChevronRight, MapPin, Search, X } from "lucide-react";
+import { toUtcDate } from "../utils/dateUtils";
 
 /* ===================== Types ===================== */
 
@@ -56,12 +57,6 @@ function resultClass(r: "W" | "D" | "L" | "?") {
     if (r === "D") return "bg-slate-400 dark:bg-slate-600 text-white";
     if (r === "L") return "bg-red-500 text-white";
     return "bg-slate-300 dark:bg-slate-700 text-white";
-}
-
-/** Normaliza strings UTC sem sufixo Z antes de parsear. */
-function toUtcDate(iso: string): Date {
-    const s = iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z';
-    return new Date(s);
 }
 
 function fmtDate(iso: string) {

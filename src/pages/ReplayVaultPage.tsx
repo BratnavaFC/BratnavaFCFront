@@ -11,6 +11,7 @@ import type { PagedResult } from "../api/paged";
 import LoadMoreButton from "../components/LoadMoreButton";
 import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
 import { type ClipStateMap, type LikersData, VideoCard, Lightbox, LikersPopover } from "../domains/matches/ui/ReplayClipComponents";
+import { toUtcDate } from "../utils/dateUtils";
 
 const PAGE_SIZE = 20;
 
@@ -150,7 +151,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                 date: cs[0]?.recordedAt ?? "",
             }))
             // Mais recentes primeiro
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            .sort((a, b) => toUtcDate(b.date).getTime() - toUtcDate(a.date).getTime());
     })();
     const flatForLb = mode === "likes" ? byLikes : byMatch.flatMap((g) => g.clips);
 
@@ -217,7 +218,7 @@ function LikedTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
                                     {group.totalLikes} curtida{group.totalLikes !== 1 ? "s" : ""} · {group.clips.length} vídeo{group.clips.length !== 1 ? "s" : ""}
                                 </div>
                                 <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                                    {new Date(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                    {toUtcDate(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                 </span>
                             </>}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
@@ -377,7 +378,7 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
         clips.forEach((c) => { const arr = map.get(c.matchId) ?? []; arr.push(c); map.set(c.matchId, arr); });
         return [...map.entries()]
             .map(([matchId, cs]) => ({ matchId, clips: cs, date: cs[0]?.recordedAt ?? "" }))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            .sort((a, b) => toUtcDate(b.date).getTime() - toUtcDate(a.date).getTime());
     })();
     const flat = byMatch.flatMap((g) => g.clips);
 
@@ -427,7 +428,7 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
                                     {group.clips.length} favorito{group.clips.length !== 1 ? "s" : ""}
                                 </div>
                                 <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                                    {new Date(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                    {toUtcDate(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                 </span>
                             </>}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
@@ -578,7 +579,7 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                 goalCount: cs.filter((c) => c.eventType === "Gol").length,
                 playCount: cs.filter((c) => c.eventType === "Jogada").length,
             }))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            .sort((a, b) => toUtcDate(b.date).getTime() - toUtcDate(a.date).getTime());
     })();
 
     const flat = byMatch.flatMap((g) => g.clips);
@@ -653,7 +654,7 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                                     · {group.clips.length} vídeo{group.clips.length !== 1 ? "s" : ""}
                                 </div>
                                 <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                                    {new Date(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                    {toUtcDate(group.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                                 </span>
                             </>}>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">

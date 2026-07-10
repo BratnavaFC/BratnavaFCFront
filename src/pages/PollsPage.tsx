@@ -19,6 +19,7 @@ import PollCreateEventModal from '../components/modals/PollCreateEventModal';
 import PollDetailModal from '../components/modals/PollDetailModal';
 import PollCreatePollModal from '../components/modals/PollCreatePollModal';
 import { isDeadlinePassed, formatDeadline } from '../utils/pollUtils';
+import { toUtcDate } from '../utils/dateUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -416,9 +417,8 @@ function LinkMatchFromPollModal({
                             {matches.map((m) => {
                                 const isCurrent = m.matchId === currentMatchId;
                                 const isActing  = acting === m.matchId;
-                                const dateLabel = new Date(
-                                    m.playedAt.endsWith('Z') || m.playedAt.includes('+') ? m.playedAt : m.playedAt + 'Z'
-                                ).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                                const dateLabel = toUtcDate(m.playedAt)
+                                    .toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
                                 return (
                                     <div

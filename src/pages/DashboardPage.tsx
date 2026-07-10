@@ -18,6 +18,7 @@ import { resolveIcon } from '../lib/groupIcons';
 import StatNumber from '../components/StatNumber';
 import type { MatchHeaderDto, MatchDetailsDto } from '../domains/matches/matchTypes';
 import { matchStepLabel } from '../domains/matches/matchUtils';
+import { toUtcDate } from '../utils/dateUtils';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -97,8 +98,7 @@ const normalizeHex = (hex?: string | null) => {
 
 function formatDate(playedAt?: string) {
   if (!playedAt) return null;
-  const utcStr = playedAt.endsWith('Z') || playedAt.includes('+') ? playedAt : playedAt + 'Z';
-  const d = new Date(utcStr);
+  const d = toUtcDate(playedAt);
   if (isNaN(d.getTime())) return null;
   return {
     day:   d.toLocaleDateString('pt-BR', { day: '2-digit' }),

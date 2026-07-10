@@ -8,6 +8,7 @@ import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/e
 import { useAccountStore } from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
 import { getResponseMessage } from "../api/apiResponse";
+import { toUtcDate } from "../utils/dateUtils";
 
 import { MatchWizard } from "../domains/matches/steps/MatchWizard";
 import type {
@@ -1251,7 +1252,7 @@ export default function MatchesPage() {
                                 Excluir partida?
                             </h2>
                             <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {new Date(selectedMatch.playedAt + (selectedMatch.playedAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                                {toUtcDate(selectedMatch.playedAt).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                                 {selectedMatch.placeName ? ` · ${selectedMatch.placeName}` : ''}
                             </p>
                             <p className="text-xs text-slate-400 dark:text-slate-500 pt-1">
@@ -1369,7 +1370,7 @@ export default function MatchesPage() {
                             </span>
                         ) : selectedMatch ? (() => {
                             const timeTag = matchTimeLabel(selectedMatch.playedAt);
-                            const matchDate = new Date(selectedMatch.playedAt).toLocaleDateString("pt-BR", {
+                            const matchDate = toUtcDate(selectedMatch.playedAt).toLocaleDateString("pt-BR", {
                                 weekday: "short", day: "2-digit", month: "2-digit",
                             });
                             return (
