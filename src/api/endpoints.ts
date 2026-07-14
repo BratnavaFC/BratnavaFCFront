@@ -332,7 +332,7 @@ export const PollsApi = {
                            http.post(`/api/Polls/group/${groupId}/${pollId}/admin-vote`, dto),
   updateDeadline:        (groupId: string, pollId: string, dto: { deadlineDate?: string | null; deadlineTime?: string | null; clearDeadline?: boolean }) =>
                            http.patch(`/api/Polls/group/${groupId}/${pollId}/deadline`, dto),
-  updatePollDetails:     (groupId: string, pollId: string, dto: { description?: string | null; costAmount?: number | null; costType?: string | null }) =>
+  updatePollDetails:     (groupId: string, pollId: string, dto: { title?: string | null; description?: string | null; eventDate?: string | null; eventTime?: string | null; eventLocation?: string | null; eventIcon?: string | null; costAmount?: number | null; costType?: string | null }) =>
                            http.patch(`/api/Polls/group/${groupId}/${pollId}/details`, dto),
   setAllowGuests:        (groupId: string, pollId: string, allowGuests: boolean) =>
                            http.patch(`/api/Polls/group/${groupId}/${pollId}/allow-guests`, { allowGuests }),

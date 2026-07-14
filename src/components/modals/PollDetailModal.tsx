@@ -594,6 +594,13 @@ function VoteBar({ count, total, color }: { count: number; total: number; color:
 function PollDetailModal({
     poll, groupId, isAdmin, onClose, onUpdated,
 }: PollDetailModalProps) {
+    poll = {
+        ...poll,
+        options: Array.isArray(poll.options) ? poll.options : [],
+        myVotedOptionIds: Array.isArray(poll.myVotedOptionIds) ? poll.myVotedOptionIds : [],
+        votes: Array.isArray(poll.votes) ? poll.votes : (poll.votes ?? null),
+        members: Array.isArray(poll.members) ? poll.members : (poll.members ?? null),
+    };
     const [selectedIds, setSelectedIds] = useState<string[]>(poll.myVotedOptionIds);
     const [voting, setVoting] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -608,6 +615,7 @@ function PollDetailModal({
     const [deadlineDateDraft, setDeadlineDateDraft] = useState(poll.deadlineDate ?? '');
     const [deadlineTimeDraft, setDeadlineTimeDraft] = useState(poll.deadlineTime ?? '');
     const [showDescEdit, setShowDescEdit] = useState(false);
+    const [titleDraft, setTitleDraft] = useState(poll.title ?? '');
     const [descriptionDraft, setDescriptionDraft] = useState(poll.description ?? '');
 
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
@@ -702,14 +710,19 @@ function PollDetailModal({
     }
 
     async function handleUpdateDescription() {
+        if (!titleDraft.trim()) {
+            toast.error('Informe o nome.');
+            return;
+        }
         setActionLoading('description');
         try {
             const res = await PollsApi.updatePollDetails(groupId, poll.id, {
+                title: titleDraft.trim(),
                 description: descriptionDraft.trim() !== '' ? descriptionDraft.trim() : '',
             });
-            onUpdated({ ...poll, description: res.data.data.description ?? null });
+            onUpdated({ ...poll, ...(res.data.data as Partial<Poll>), options: poll.options });
             setShowDescEdit(false);
-            toast.success('Descrição atualizada.');
+            toast.success('Votação atualizada.');
         } catch (e) {
             toast.error(extractApiError(e, 'Erro ao atualizar.'));
         } finally { setActionLoading(null); }
@@ -1017,8 +1030,18 @@ function PollDetailModal({
                 {isAdmin && showDescEdit && (
                     <div className="px-5 py-3 border-t dark:border-slate-700 bg-indigo-50/60 dark:bg-indigo-900/10 space-y-2.5 shrink-0">
                         <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
-                            <Pencil size={12} /> Editar descrição
+                            <Pencil size={12} /> Editar votação
                         </p>
+                        <div>
+                            <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Nome</label>
+                            <input
+                                value={titleDraft}
+                                onChange={e => setTitleDraft(e.target.value)}
+                                className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Descrição</label>
                         <textarea
                             rows={3}
                             value={descriptionDraft}
@@ -1026,6 +1049,7 @@ function PollDetailModal({
                             placeholder="Descrição opcional…"
                             className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
                         />
+                        </div>
                         <div className="flex gap-2 flex-wrap">
                             <button
                                 type="button"
@@ -1138,9 +1162,9 @@ function PollDetailModal({
                         <div className="flex items-center gap-2 ml-auto flex-wrap">
                             <button
                                 type="button"
-                                onClick={() => { setShowDescEdit(p => !p); setDescriptionDraft(poll.description ?? ''); }}
+                                onClick={() => { setShowDescEdit(p => !p); setTitleDraft(poll.title ?? ''); setDescriptionDraft(poll.description ?? ''); }}
                                 disabled={!!actionLoading}
-                                title="Editar descrição"
+                                title="Editar votação"
                                 className={`px-3 py-2 rounded-xl border text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${showDescEdit ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
                             >
                                 <Pencil size={13} />

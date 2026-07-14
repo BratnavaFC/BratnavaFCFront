@@ -20,6 +20,7 @@ import PollDetailModal from '../components/modals/PollDetailModal';
 import PollCreatePollModal from '../components/modals/PollCreatePollModal';
 import { isDeadlinePassed, formatDeadline } from '../utils/pollUtils';
 import { toUtcDate } from '../utils/dateUtils';
+import { useRealtimeGroup } from '../hooks/useRealtimeGroup';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -582,6 +583,21 @@ export default function PollsPage() {
     // Recarrega ao trocar de grupo ou tamanho de página.
     useEffect(() => { if (groupId) load(pageSize); }, [groupId, pageSize, load]);
 
+    useRealtimeGroup(groupId, async event => {
+        if (event.type !== 'poll.changed') return;
+
+        await load(pageSize);
+
+        if (selectedPoll?.id && event.pollId?.toLowerCase() === selectedPoll.id.toLowerCase()) {
+            try {
+                const res = await PollsApi.getPoll(groupId!, selectedPoll.id);
+                setSelectedPoll(res.data.data);
+            } catch {
+                setSelectedPoll(null);
+            }
+        }
+    });
+
     // Card independente (paginado) de uma seção: "Por página" no cabeçalho,
     // navegação Anterior/Próxima no rodapé ocupando a largura do card.
     function renderPollSection(key: SecKey, label: string) {
@@ -646,7 +662,22 @@ export default function PollsPage() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function handlePollUpdated(updated: any) {
-        setSelectedPoll(updated as Poll);
+        const mergedPoll = (prev: Poll | null) => ({ ...(prev ?? {}), ...(updated ?? {}) } as Poll);
+        setSelectedPoll(mergedPoll);
+        setSections(prev => {
+            const next = { ...prev };
+            (Object.keys(next) as SecKey[]).forEach(key => {
+                next[key] = {
+                    ...next[key],
+                    items: next[key].items.map(item =>
+                        item.id === updated.id
+                            ? ({ ...item, ...updated, optionCount: item.optionCount } as PollSummary)
+                            : item,
+                    ),
+                };
+            });
+            return next;
+        });
         load(pageSize);
     }
 

@@ -79,6 +79,8 @@ interface PollEventDetailModalProps {
     onUpdated: (p: Poll) => void;
 }
 
+const EVENT_ICONS = ['🥩','🍺','🎂','🎉','⚽','🏆','🎵','🍔','🎯','🌟','🤝','🚀','📅','🎊'];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function pct(votes: number, total: number) {
@@ -448,6 +450,13 @@ function PresencasTab({ poll, isAdmin }: { poll: Poll; isAdmin: boolean }) {
 function PollEventDetailModal({
     poll, groupId, isAdmin, myPlayerId, onClose, onUpdated,
 }: PollEventDetailModalProps) {
+    poll = {
+        ...poll,
+        options: Array.isArray(poll.options) ? poll.options : [],
+        myVotedOptionIds: Array.isArray(poll.myVotedOptionIds) ? poll.myVotedOptionIds : [],
+        votes: Array.isArray(poll.votes) ? poll.votes : (poll.votes ?? null),
+        members: Array.isArray(poll.members) ? poll.members : (poll.members ?? null),
+    };
     const [voting, setVoting] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [showClosePollModal, setShowClosePollModal] = useState(false);
@@ -455,11 +464,15 @@ function PollEventDetailModal({
     const [deadlineDateDraft, setDeadlineDateDraft] = useState(poll.deadlineDate ?? '');
     const [deadlineTimeDraft, setDeadlineTimeDraft] = useState(poll.deadlineTime ?? '');
     const [showDetailsEdit, setShowDetailsEdit] = useState(false);
+    const [titleDraft, setTitleDraft] = useState(poll.title ?? '');
+    const [eventLocationDraft, setEventLocationDraft] = useState(poll.eventLocation ?? '');
+    const [eventIconDraft, setEventIconDraft] = useState(poll.eventIcon ?? '');
     const [descriptionDraft, setDescriptionDraft] = useState(poll.description ?? '');
     const [costTypeDraft, setCostTypeDraft] = useState(poll.costType ?? '');
     const [costAmountDraft, setCostAmountDraft] = useState(poll.costAmount != null ? String(poll.costAmount) : '');
     const [activeTab, setActiveTab] = useState<'respostas' | 'presencas'>('respostas');
 
+    const isEvent = poll.type === 'event';
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
     const isOpen = poll.status === 'open' && !deadlinePassed;
     const cost = formatCost(poll.costType, poll.costAmount);
@@ -516,15 +529,22 @@ function PollEventDetailModal({
     }
 
     async function handleUpdateDetails() {
+        if (!titleDraft.trim()) {
+            toast.error('Informe o nome.');
+            return;
+        }
         setActionLoading('details');
         try {
             const costAmt = costAmountDraft.trim() !== '' ? parseFloat(costAmountDraft) : null;
             const res = await PollsApi.updatePollDetails(groupId, poll.id, {
+                title:       titleDraft.trim(),
                 description: descriptionDraft.trim() !== '' ? descriptionDraft.trim() : '',
+                eventLocation: isEvent ? eventLocationDraft.trim() : undefined,
+                eventIcon:   isEvent ? eventIconDraft.trim() : undefined,
                 costAmount:  costAmt,
                 costType:    costTypeDraft || '',
             });
-            onUpdated(res.data.data as unknown as Poll);
+            onUpdated({ ...poll, ...(res.data.data as Partial<Poll>), options: poll.options });
             setShowDetailsEdit(false);
             toast.success('Evento atualizado.');
         } catch (e) {
@@ -846,21 +866,56 @@ function PollEventDetailModal({
 
                 {/* Inline details editor (admin) */}
                 {isAdmin && showDetailsEdit && (
-                    <div className="px-5 py-3 border-t dark:border-slate-700 bg-indigo-50/60 dark:bg-indigo-900/10 space-y-3 shrink-0">
+                    <div className="px-5 py-3 border-t dark:border-slate-700 bg-indigo-50/60 dark:bg-indigo-900/10 space-y-3 shrink-0 max-h-[52vh] overflow-y-auto">
                         <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
                             <Pencil size={12} /> Editar evento
                         </p>
                         <div>
+                            <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Nome</label>
+                            <input
+                                value={titleDraft}
+                                onChange={e => setTitleDraft(e.target.value)}
+                                className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
+                            />
+                        </div>
+                        {isEvent && (
+                            <div className="space-y-2">
+                                <div>
+                                    <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Local</label>
+                                    <input
+                                        value={eventLocationDraft}
+                                        onChange={e => setEventLocationDraft(e.target.value)}
+                                        className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Ícone</label>
+                                    <div className="grid grid-cols-7 gap-1.5">
+                                        {EVENT_ICONS.map(icon => (
+                                            <button
+                                                key={icon}
+                                                type="button"
+                                                onClick={() => setEventIconDraft(icon)}
+                                                className={`h-8 rounded-lg text-lg flex items-center justify-center transition-colors border ${eventIconDraft === icon ? 'border-slate-900 bg-white dark:border-white dark:bg-white/10' : 'border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700'}`}
+                                            >
+                                                {icon}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <div>
                             <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Descrição</label>
                             <textarea
-                                rows={3}
+                                rows={2}
                                 value={descriptionDraft}
                                 onChange={e => setDescriptionDraft(e.target.value)}
                                 placeholder="Descrição opcional…"
                                 className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-slate-700 dark:text-white"
                             />
                         </div>
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="sticky bottom-0 -mx-5 px-5 pt-2 pb-1 border-t border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/95 dark:bg-slate-800/95 flex gap-2 flex-wrap">
                             <div>
                                 <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Custo</label>
                                 <select
@@ -911,7 +966,7 @@ function PollEventDetailModal({
 
                 {/* Footer (admin) */}
                 {isAdmin && (
-                    <div className="px-5 py-3 border-t dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/30 flex items-center gap-2 flex-wrap justify-end shrink-0">
+                    <div className="px-5 py-3 border-t dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/30 grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:justify-end shrink-0">
                         {/* Allow guests toggle */}
                         <button
                             type="button"
@@ -928,9 +983,17 @@ function PollEventDetailModal({
                         </button>
                         <button
                             type="button"
-                            onClick={() => { setShowDetailsEdit(p => !p); setDescriptionDraft(poll.description ?? ''); setCostTypeDraft(poll.costType ?? ''); setCostAmountDraft(poll.costAmount != null ? String(poll.costAmount) : ''); }}
+                            onClick={() => {
+                                setShowDetailsEdit(p => !p);
+                                setTitleDraft(poll.title ?? '');
+                                setEventLocationDraft(poll.eventLocation ?? '');
+                                setEventIconDraft(poll.eventIcon ?? '📅');
+                                setDescriptionDraft(poll.description ?? '');
+                                setCostTypeDraft(poll.costType ?? '');
+                                setCostAmountDraft(poll.costAmount != null ? String(poll.costAmount) : '');
+                            }}
                             disabled={!!actionLoading}
-                            title="Editar descrição e valor"
+                            title="Editar evento"
                             className={`px-3 py-2 rounded-xl border text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${showDetailsEdit ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
                         >
                             <Pencil size={13} />

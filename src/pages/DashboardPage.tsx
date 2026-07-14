@@ -19,6 +19,7 @@ import StatNumber from '../components/StatNumber';
 import type { MatchHeaderDto, MatchDetailsDto } from '../domains/matches/matchTypes';
 import { matchStepLabel } from '../domains/matches/matchUtils';
 import { toUtcDate } from '../utils/dateUtils';
+import { useRealtimeGroup } from '../hooks/useRealtimeGroup';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -1038,6 +1039,17 @@ export default function DashboardPage() {
     loadRecentMatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId, selectedPlayerId]);
+
+  useRealtimeGroup(groupId, event => {
+    if (event.type === 'match.changed') {
+      void loadUpcoming();
+      void loadRecentMatches();
+    }
+
+    if (event.type === 'poll.changed') {
+      void loadEvents();
+    }
+  });
 
   // ── render ─────────────────────────────────────────────────────────────────
 

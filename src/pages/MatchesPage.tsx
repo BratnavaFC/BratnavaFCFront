@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, RotateCcw, Trash2, UserPlus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, RotateCcw, Trash2, UserPlus } from "lucide-react";
 import { AddGuestModal } from "../components/modals/AddGuestModal";
 import ModalBackdrop from "../components/modals/ModalBackdrop";
 import { MatchesApi, TeamColorApi, TeamGenApi, GroupSettingsApi } from "../api/endpoints";
@@ -9,6 +9,7 @@ import { useAccountStore } from "../auth/accountStore";
 import { isGodMode } from "../auth/guards";
 import { getResponseMessage } from "../api/apiResponse";
 import { toUtcDate } from "../utils/dateUtils";
+import { useRealtimeGroup } from "../hooks/useRealtimeGroup";
 
 import { MatchWizard } from "../domains/matches/steps/MatchWizard";
 import type {
@@ -80,6 +81,11 @@ export default function MatchesPage() {
     const [creating, setCreating] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [deleting,          setDeleting]          = useState(false);
+    const [editMatchOpen, setEditMatchOpen] = useState(false);
+    const [editMatchPlaceName, setEditMatchPlaceName] = useState("");
+    const [editMatchDate, setEditMatchDate] = useState("");
+    const [editMatchTime, setEditMatchTime] = useState("");
+    const [savingMatchEdit, setSavingMatchEdit] = useState(false);
 
     const [mutatingInvite, setMutatingInvite] = useState<Record<string, boolean>>({});
 
@@ -361,6 +367,13 @@ export default function MatchesPage() {
         // Only reloads the payload for the current step (lightweight)
         await loadStepPayload(currentMatchId, stepKey);
     }
+
+    useRealtimeGroup(groupId, async event => {
+        if (event.type !== "match.changed") return;
+
+        const changedMatchId = event.matchId ?? undefined;
+        await loadUpcoming(changedMatchId === currentMatchId ? currentMatchId : undefined);
+    });
 
     /** Switches to a different match by list index, loading its step payload. */
     async function selectMatch(idx: number) {
@@ -896,6 +909,33 @@ export default function MatchesPage() {
         }
     }
 
+    function openEditMatch() {
+        if (!selectedMatch) return;
+        const date = toUtcDate(selectedMatch.playedAt);
+        setEditMatchPlaceName(selectedMatch.placeName ?? "");
+        setEditMatchDate(toDateInputValue(date));
+        setEditMatchTime(`${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`);
+        setEditMatchOpen(true);
+    }
+
+    async function saveMatchEdit() {
+        const place = editMatchPlaceName.trim();
+        if (!place || !editMatchDate || !isValidHHmm(editMatchTime)) {
+            toast.error("Informe local, data e horário da partida.");
+            return;
+        }
+
+        setSavingMatchEdit(true);
+        try {
+            await editMatch(toUtcIso(editMatchDate, editMatchTime), place);
+            setEditMatchOpen(false);
+            const editedId = currentMatchId;
+            await loadUpcoming(editedId ?? undefined);
+        } finally {
+            setSavingMatchEdit(false);
+        }
+    }
+
     async function deleteMatch() {
         if (!admin || !groupId || !currentMatchId) return;
         setDeleting(true);
@@ -1237,6 +1277,49 @@ export default function MatchesPage() {
                 }}
             />
 
+            {editMatchOpen && selectedMatch && (
+                <ModalBackdrop onClose={() => !savingMatchEdit && setEditMatchOpen(false)}>
+                    <div className="relative z-10 w-full max-w-md mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                <Pencil size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-bold text-slate-900 dark:text-white">Alterar partida</h2>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Atualize local, data e horario.</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                Local
+                                <input className="input mt-1" value={editMatchPlaceName} onChange={(e) => setEditMatchPlaceName(e.target.value)} />
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    Data
+                                    <input className="input mt-1" type="date" value={editMatchDate} onChange={(e) => setEditMatchDate(e.target.value)} />
+                                </label>
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    Horario
+                                    <input className="input mt-1" type="time" value={editMatchTime} onChange={(e) => setEditMatchTime(e.target.value)} />
+                                </label>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button type="button" onClick={() => setEditMatchOpen(false)} disabled={savingMatchEdit}
+                                className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50">
+                                Cancelar
+                            </button>
+                            <button type="button" onClick={saveMatchEdit} disabled={savingMatchEdit}
+                                className="rounded-xl bg-slate-900 dark:bg-white px-4 py-2 text-sm font-semibold text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-100 disabled:opacity-50 inline-flex items-center gap-2">
+                                {savingMatchEdit && <Loader2 size={14} className="animate-spin" />}
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+                </ModalBackdrop>
+            )}
+
             {/* ── Confirmar exclusão ── */}
             {confirmDeleteOpen && selectedMatch && (
                 <ModalBackdrop onClose={() => !deleting && setConfirmDeleteOpen(false)}>
@@ -1415,6 +1498,19 @@ export default function MatchesPage() {
                         <span className="hidden sm:inline">Próxima</span>
                         <ChevronRight size={15} />
                     </button>
+
+                    {/* Alterar partida */}
+                    {admin && !creatingNew && selectedMatch && selectedMatch.stepKey !== 'done' && (
+                        <button
+                            type="button"
+                            onClick={openEditMatch}
+                            title="Alterar partida"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/50 shrink-0"
+                        >
+                            <Pencil size={14} />
+                            <span className="hidden sm:inline">Alterar</span>
+                        </button>
+                    )}
 
                     {/* Excluir partida */}
                     {admin && !creatingNew && selectedMatch && selectedMatch.stepKey !== 'done' && (

@@ -225,6 +225,17 @@ export interface UpsertGroupSettingsDto {
   defaultPlaceName?: string;
   defaultDayOfWeek?: DayOfWeek;
   defaultKickoffTime?: string;
+  matchSchedulingEnabled?: boolean;
+  matchSchedulingMode?: number;
+  matchScheduleDayOfWeek?: DayOfWeek;
+  matchScheduleTime?: string;
+  manualMatchSchedules?: ManualMatchScheduleDto[];
+}
+
+export interface ManualMatchScheduleDto {
+  playedAt?: string;
+  created?: boolean;
+  matchId?: string;
 }
 
 export interface VoteCountDto {

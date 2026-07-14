@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, DollarSign, AlertCircle, Save, Trophy, BarChart2 } from 'lucide-react';
+import { Loader2, ShieldOff, ShieldPlus, Shield, AlertTriangle, Wallet, Users, Settings, CalendarClock, DollarSign, AlertCircle, Save, Trophy, BarChart2, Pencil } from 'lucide-react';
 import { Section } from '../components/Section';
 import { Field } from '../components/Field';
-import { GroupSettingsApi, GroupsApi, UsersApi } from '../api/endpoints';
+import { GroupSettingsApi, GroupsApi, MatchesApi, UsersApi } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
 import { getResponseMessage } from '../api/apiResponse';
 import { isGodMode } from '../auth/guards';
@@ -36,6 +36,12 @@ type AdminUser = {
     userName?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+};
+
+type ManualMatchSchedule = {
+    playedAt: string;
+    created?: boolean;
+    matchId?: string | null;
 };
 
 type GroupDetailDto = {
@@ -100,6 +106,22 @@ export default function GroupSettingsPage() {
     const [defaultPlaceName, setDefaultPlaceName]     = useState('');
     const [defaultDayOfWeek, setDefaultDayOfWeek]     = useState<string>('');
     const [defaultKickoffTime, setDefaultKickoffTime] = useState('');
+
+    const [matchSchedulingEnabled, setMatchSchedulingEnabled] = useState(false);
+    const [matchSchedulingMode, setMatchSchedulingMode] = useState(0);
+    const [matchScheduleDayOfWeek, setMatchScheduleDayOfWeek] = useState<string>('');
+    const [matchScheduleTime, setMatchScheduleTime] = useState('');
+    const [manualMatchSchedules, setManualMatchSchedules] = useState<ManualMatchSchedule[]>([]);
+    const [manualScheduleDate, setManualScheduleDate] = useState('');
+    const [manualScheduleTime, setManualScheduleTime] = useState('');
+    const [matchEdit, setMatchEdit] = useState<{
+        scheduleIndex?: number | null;
+        matchId: string;
+        placeName: string;
+        date: string;
+        time: string;
+    } | null>(null);
+    const [savingMatchEdit, setSavingMatchEdit] = useState(false);
 
     // ── pagamento ──────────────────────────────────────────────────
     /** 0 = Monthly, 1 = PerGame */
@@ -187,6 +209,11 @@ export default function GroupSettingsPage() {
                 setShowPlayerStats(gs.showPlayerStats ?? false);
                 setPaymentDueDay(gs.paymentDueDay ?? null);
                 setAutoFinalizeMvpHours(gs.autoFinalizeMvpHours ?? null);
+                setMatchSchedulingEnabled(gs.matchSchedulingEnabled ?? false);
+                setMatchSchedulingMode(gs.matchSchedulingMode ?? 0);
+                setMatchScheduleDayOfWeek(gs.matchScheduleDayOfWeek != null ? String(gs.matchScheduleDayOfWeek) : '');
+                setMatchScheduleTime(gs.matchScheduleTime ? gs.matchScheduleTime.slice(0, 5) : '');
+                setManualMatchSchedules(Array.isArray(gs.manualMatchSchedules) ? gs.manualMatchSchedules : []);
             }
         } catch (e) {
             toast.error(getResponseMessage(e, 'Erro ao carregar configurações.'));
@@ -240,6 +267,84 @@ export default function GroupSettingsPage() {
     }
 
     // ── save settings ──────────────────────────────────────────────
+    function addManualSchedule() {
+        if (!manualScheduleDate || !manualScheduleTime) return;
+        const playedAt = `${manualScheduleDate}T${manualScheduleTime}:00`;
+        setManualMatchSchedules((items) => [
+            ...items,
+            { playedAt, created: false, matchId: null },
+        ].sort((a, b) => a.playedAt.localeCompare(b.playedAt)));
+        setManualScheduleDate('');
+        setManualScheduleTime('');
+    }
+
+    function removeManualSchedule(index: number) {
+        setManualMatchSchedules((items) => items.filter((_, i) => i !== index));
+    }
+
+    function editManualSchedule(index: number) {
+        const item = manualMatchSchedules[index];
+        if (!item || item.created) return;
+
+        const [date = '', rawTime = ''] = item.playedAt.split('T');
+        setManualScheduleDate(date);
+        setManualScheduleTime(rawTime.slice(0, 5));
+        setManualMatchSchedules((items) => items.filter((_, i) => i !== index));
+    }
+
+    async function startEditCreatedMatch(matchId: string, fallback?: { playedAt?: string; placeName?: string | null; scheduleIndex?: number | null }) {
+        if (!groupId) return;
+        if (!matchId) return;
+
+        try {
+            const res = await MatchesApi.get(groupId, matchId);
+            const match = res.data.data as any;
+            const playedAt = (match?.playedAt ?? fallback?.playedAt ?? '') as string;
+            const [date = '', rawTime = ''] = playedAt.split('T');
+            setMatchEdit({
+                scheduleIndex: fallback?.scheduleIndex ?? null,
+                matchId,
+                placeName: match?.placeName ?? fallback?.placeName ?? defaultPlaceName ?? '',
+                date,
+                time: rawTime.slice(0, 5),
+            });
+        } catch (e) {
+            toast.error(getResponseMessage(e, 'Erro ao carregar partida.'));
+        }
+    }
+
+    async function saveCreatedMatchEdit() {
+        if (!groupId || !matchEdit) return;
+        const placeName = matchEdit.placeName.trim();
+        if (!placeName || !matchEdit.date || !matchEdit.time) {
+            toast.error('Informe local, data e horario da partida.');
+            return;
+        }
+
+        const playedAt = `${matchEdit.date}T${matchEdit.time}:00`;
+        setSavingMatchEdit(true);
+        try {
+            await MatchesApi.update(groupId, matchEdit.matchId, { placeName, playedAt } as any);
+            if (matchEdit.scheduleIndex != null) {
+                setManualMatchSchedules((items) => items.map((item, index) =>
+                    index === matchEdit.scheduleIndex ? { ...item, playedAt } : item
+                ));
+            }
+            setMatchEdit(null);
+            toast.success('Partida atualizada.');
+        } catch (e) {
+            toast.error(getResponseMessage(e, 'Erro ao atualizar partida.'));
+        } finally {
+            setSavingMatchEdit(false);
+        }
+    }
+
+    function formatManualSchedule(value: string) {
+        const [date = '', rawTime = ''] = value.split('T');
+        const [year, month, day] = date.split('-');
+        return `${day ?? '--'}/${month ?? '--'}/${year ?? '----'} ${rawTime.slice(0, 5)}`;
+    }
+
     async function save() {
         if (!groupId) return;
         setMsg(null);
@@ -268,6 +373,15 @@ export default function GroupSettingsPage() {
                 showPlayerStats,
                 paymentDueDay: paymentMode === 0 ? paymentDueDay : null,
                 autoFinalizeMvpHours,
+                matchSchedulingEnabled,
+                matchSchedulingMode,
+                matchScheduleDayOfWeek: matchSchedulingMode === 1 && matchScheduleDayOfWeek !== '' ? Number(matchScheduleDayOfWeek) : null,
+                matchScheduleTime: matchSchedulingMode === 1 && matchScheduleTime ? `${matchScheduleTime}:00` : null,
+                manualMatchSchedules: manualMatchSchedules.map((item) => ({
+                    playedAt: item.playedAt,
+                    created: item.created ?? false,
+                    matchId: item.matchId ?? null,
+                })),
             } as any);
             setIsPersisted(true);
             setMsg({ text: 'Configurações salvas com sucesso.', ok: true });
@@ -471,6 +585,136 @@ export default function GroupSettingsPage() {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
+                                                <CalendarClock size={17} />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-white">Agendar inicio das partidas</div>
+                                                <div className="text-xs text-slate-400 dark:text-slate-500">Crie partidas manualmente ou por recorrencia usando os padroes acima.</div>
+                                            </div>
+                                        </div>
+                                        <button type="button" role="switch" aria-checked={matchSchedulingEnabled}
+                                            onClick={() => setMatchSchedulingEnabled((v) => !v)}
+                                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${matchSchedulingEnabled ? 'bg-slate-900 dark:bg-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 shadow transition-transform ${matchSchedulingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+
+                                    {matchSchedulingEnabled && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[{ val: 0, label: 'Manual' }, { val: 1, label: 'Recorrente' }].map(({ val, label }) => (
+                                                    <label key={val} className={`flex items-center justify-center p-2.5 rounded-lg border-2 cursor-pointer transition-all text-sm font-medium select-none ${matchSchedulingMode === val ? 'border-slate-900 bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+                                                        <input type="radio" name="matchSchedulingMode" value={val} checked={matchSchedulingMode === val} onChange={() => setMatchSchedulingMode(val)} className="sr-only" />
+                                                        {label}
+                                                    </label>
+                                                ))}
+                                            </div>
+
+                                            {matchSchedulingMode === 0 ? (
+                                                <div className="space-y-3">
+                                                    <div className="grid md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                                                        <Field label="Data">
+                                                            <input className="input" type="date" value={manualScheduleDate} onChange={(e) => setManualScheduleDate(e.target.value)} />
+                                                        </Field>
+                                                        <Field label="Horario">
+                                                            <input className="input" type="time" value={manualScheduleTime} onChange={(e) => setManualScheduleTime(e.target.value)} />
+                                                        </Field>
+                                                        <button type="button" onClick={addManualSchedule} disabled={!manualScheduleDate || !manualScheduleTime}
+                                                            className="h-10 rounded-lg bg-slate-900 text-white px-4 text-sm font-semibold disabled:opacity-40 dark:bg-white dark:text-slate-900">
+                                                            Adicionar
+                                                        </button>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {manualMatchSchedules.length === 0 ? (
+                                                            <div className="rounded-lg border border-dashed border-slate-200 dark:border-slate-700 p-4 text-sm text-slate-400 text-center">
+                                                                Nenhuma partida manual agendada.
+                                                            </div>
+                                                        ) : manualMatchSchedules.map((item, index) => (
+                                                            <div key={`${item.playedAt}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                                                                <div>
+                                                                    <div className="text-sm font-semibold text-slate-900 dark:text-white">{formatManualSchedule(item.playedAt)}</div>
+                                                                    <div className="text-xs text-slate-400">{item.created ? 'Partida criada. Remover aqui nao exclui a partida.' : 'Aguardando horario'}</div>
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    <button type="button" onClick={() => editManualSchedule(index)} disabled={item.created}
+                                                                        className="rounded-lg border border-slate-200 text-slate-600 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300">
+                                                                        Editar
+                                                                    </button>
+                                                                    {item.created && item.matchId && (
+                                                                        <button type="button" onClick={() => startEditCreatedMatch(item.matchId!, { playedAt: item.playedAt, placeName: defaultPlaceName, scheduleIndex: index })}
+                                                                            title="Alterar partida"
+                                                                            aria-label="Alterar partida"
+                                                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50">
+                                                                            <Pencil size={15} />
+                                                                        </button>
+                                                                    )}
+                                                                    <button type="button" onClick={() => removeManualSchedule(index)}
+                                                                        className="rounded-lg border border-rose-200 text-rose-600 px-3 py-1.5 text-xs font-semibold hover:bg-rose-50">
+                                                                        Remover
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {matchEdit && (
+                                                            <div className="rounded-xl border border-blue-200 bg-blue-50/60 dark:bg-blue-950/20 dark:border-blue-900 p-4 space-y-3">
+                                                                <div>
+                                                                    <div className="text-sm font-bold text-slate-900 dark:text-white">Alterar partida criada</div>
+                                                                    <div className="text-xs text-slate-500 dark:text-slate-400">Atualiza local, data e horario da partida no sistema.</div>
+                                                                </div>
+                                                                <Field label="Local">
+                                                                    <input className="input" value={matchEdit.placeName}
+                                                                        onChange={(e) => setMatchEdit((prev) => prev ? { ...prev, placeName: e.target.value } : prev)} />
+                                                                </Field>
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <Field label="Data">
+                                                                        <input className="input" type="date" value={matchEdit.date}
+                                                                            onChange={(e) => setMatchEdit((prev) => prev ? { ...prev, date: e.target.value } : prev)} />
+                                                                    </Field>
+                                                                    <Field label="Horario">
+                                                                        <input className="input" type="time" value={matchEdit.time}
+                                                                            onChange={(e) => setMatchEdit((prev) => prev ? { ...prev, time: e.target.value } : prev)} />
+                                                                    </Field>
+                                                                </div>
+                                                                <div className="flex gap-2 justify-end">
+                                                                    <button type="button" onClick={() => setMatchEdit(null)}
+                                                                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                                                                        Cancelar
+                                                                    </button>
+                                                                    <button type="button" onClick={saveCreatedMatchEdit} disabled={savingMatchEdit}
+                                                                        className="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:bg-white dark:text-slate-900">
+                                                                        {savingMatchEdit ? 'Salvando...' : 'Salvar partida'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="grid md:grid-cols-2 gap-3">
+                                                    <Field label="Criar automaticamente em">
+                                                        <select className="input" value={matchScheduleDayOfWeek}
+                                                            onChange={(e) => setMatchScheduleDayOfWeek(e.target.value)}>
+                                                            {DAY_OPTIONS.map((o) => (
+                                                                <option key={o.value} value={o.value}>{o.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    </Field>
+                                                    <Field label="Horario do agendamento">
+                                                        <input className="input" type="time" value={matchScheduleTime}
+                                                            onChange={(e) => setMatchScheduleTime(e.target.value)} />
+                                                    </Field>
+                                                    <p className="md:col-span-2 text-xs text-slate-400 dark:text-slate-500">
+                                                        No horario agendado, o sistema cria a proxima partida usando local, dia e horario padrao configurados acima.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                                 {/* Exibir stats */}
                                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-700/50">
