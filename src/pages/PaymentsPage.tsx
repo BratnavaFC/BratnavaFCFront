@@ -1314,10 +1314,13 @@ export default function PaymentsPage() {
                 onClose={() => setPayModal(false)}
                 onSaved={() => {
                     loadMyData();
-                    if (isAdmin) { loadMonthly(); loadExtra(); }
-                    if (caixaSubTab === 'mes') loadCaixaMes();
-                    else loadCaixaGeral();
-                    loadPendingTotals();
+                    if (isAdmin) {
+                        loadMonthly();
+                        loadExtra();
+                        if (caixaSubTab === 'mes') loadCaixaMes();
+                        else loadCaixaGeral();
+                        loadPendingTotals();
+                    }
                 }}
             />
 
