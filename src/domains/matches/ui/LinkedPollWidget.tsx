@@ -4,6 +4,9 @@ import { BarChart2, CalendarDays, Check, Link2, Loader2, Plus, X } from "lucide-
 import { PollsApi, MatchesApi } from "../../../api/endpoints";
 import { cls } from "../matchUtils";
 import PollDetailModal from "../../../components/modals/PollDetailModal";
+import PollEventDetailModal from "../../../components/modals/PollEventDetailModal";
+import useAccountStore from "../../../auth/accountStore";
+import { useRealtimeGroup } from "../../../hooks/useRealtimeGroup";
 
 // ── Re-uses the same Poll shape as PollDetailModal / PollsPage ────────────────
 
@@ -20,6 +23,7 @@ interface PollVote {
     optionId: string;
     playerId: string;
     playerName: string;
+    guests?: { id: string; guestName?: string; name?: string; isAdult: boolean }[];
 }
 
 interface PollMemberVote {
@@ -51,6 +55,8 @@ interface Poll {
     costAmount?: number | null;
     members?: PollMemberVote[] | null;
     linkedMatchId?: string | null;
+    allowGuests?: boolean;
+    isAcceptingVotes: boolean;
 }
 
 interface PollListItem {
@@ -60,6 +66,43 @@ interface PollListItem {
     totalVoters: number;
     optionCount: number;
     type: "poll" | "event";
+}
+
+function getGoingVotes(poll: Poll) {
+    const simOption = poll.options.find(o => o.text.toLowerCase() === "sim");
+    if (!simOption) return [];
+    return (poll.votes ?? []).filter(v => v.optionId === simOption.id);
+}
+
+function getEventPresenceStats(poll: Poll) {
+    if (poll.type !== "event") {
+        return {
+            going: 0,
+            guests: 0,
+            total: poll.totalVoters,
+        };
+    }
+
+    const goingVotes = getGoingVotes(poll);
+    const guestCount = poll.allowGuests
+        ? goingVotes.reduce((sum, vote) => sum + (vote.guests?.length ?? 0), 0)
+        : 0;
+
+    return {
+        going: goingVotes.length,
+        guests: guestCount,
+        total: goingVotes.length + guestCount,
+    };
+}
+
+function normalizePoll(data: any): Poll {
+    return {
+        ...data,
+        isAcceptingVotes: data?.isAcceptingVotes ?? data?.status === "open",
+        votes: Array.isArray(data?.votes)
+            ? data.votes.map((vote: PollVote) => ({ ...vote, guests: vote.guests ?? [] }))
+            : data?.votes,
+    } as Poll;
 }
 
 // ── LinkPollModal — admin picks a poll to link ────────────────────────────────
@@ -233,19 +276,36 @@ export function LinkedPollWidget({
     const [showDetail,   setShowDetail]   = useState(false);
     const [showLinkPick, setShowLinkPick] = useState(false);
     const [unlinking,    setUnlinking]    = useState(false);
+    const active = useAccountStore(s => s.getActive());
+
+    async function refreshLinkedPoll() {
+        if (!linkedPollId) {
+            setPoll(null);
+            return;
+        }
+
+        try {
+            const res = await PollsApi.getPoll(groupId, linkedPollId);
+            const data = (res.data as any)?.data ?? res.data;
+            setPoll(normalizePoll(data));
+        } catch {
+            setPoll(null);
+        }
+    }
 
     // Fetch full poll whenever linkedPollId changes
     useEffect(() => {
         if (!linkedPollId) { setPoll(null); return; }
         setLoadingPoll(true);
-        PollsApi.getPoll(groupId, linkedPollId)
-            .then((res) => {
-                const data = (res.data as any)?.data ?? res.data;
-                setPoll(data as Poll);
-            })
-            .catch(() => setPoll(null))
-            .finally(() => setLoadingPoll(false));
+        refreshLinkedPoll().finally(() => setLoadingPoll(false));
     }, [groupId, linkedPollId]);
+
+    useRealtimeGroup(groupId, async event => {
+        if (event.type !== "poll.changed") return;
+        if (!linkedPollId) return;
+        if (event.pollId && event.pollId.toLowerCase() !== linkedPollId.toLowerCase()) return;
+        await refreshLinkedPoll();
+    });
 
     async function handleUnlink() {
         setUnlinking(true);
@@ -321,6 +381,10 @@ export function LinkedPollWidget({
     // ── Poll linked — strip ───────────────────────────────────────────────────
     const isOpen   = poll.status === "open";
     const hasVoted = poll.myVotedOptionIds?.length > 0;
+    const presence = getEventPresenceStats(poll);
+    const linkedSummary = poll.type === "event"
+        ? `${poll.totalVoters} ${poll.totalVoters === 1 ? "voto" : "votos"} - ${presence.total} ${presence.total === 1 ? "presença" : "presenças"}`
+        : `${poll.totalVoters} ${poll.totalVoters === 1 ? "resposta" : "respostas"}`;
 
     return (
         <>
@@ -356,7 +420,7 @@ export function LinkedPollWidget({
                     )}
 
                     <span className="text-[10px] text-indigo-400 dark:text-indigo-500 shrink-0">
-                        {poll.totalVoters} {poll.totalVoters === 1 ? "resposta" : "respostas"} · abrir →
+                        {linkedSummary} · abrir →
                     </span>
                 </button>
 
@@ -378,13 +442,24 @@ export function LinkedPollWidget({
 
             {/* Full poll detail modal */}
             {showDetail && (
-                <PollDetailModal
-                    poll={poll}
-                    groupId={groupId}
-                    isAdmin={admin}
-                    onClose={() => setShowDetail(false)}
-                    onUpdated={(updated) => setPoll(updated as Poll)}
-                />
+                poll.type === "event" ? (
+                    <PollEventDetailModal
+                        poll={normalizePoll(poll) as any}
+                        groupId={groupId}
+                        isAdmin={admin}
+                        myPlayerId={active?.activePlayerId ?? undefined}
+                        onClose={() => setShowDetail(false)}
+                        onUpdated={(updated) => setPoll(normalizePoll(updated))}
+                    />
+                ) : (
+                    <PollDetailModal
+                        poll={poll}
+                        groupId={groupId}
+                        isAdmin={admin}
+                        onClose={() => setShowDetail(false)}
+                        onUpdated={(updated) => setPoll(normalizePoll(updated))}
+                    />
+                )
             )}
 
             {/* Link picker (admin changes the linked poll) */}

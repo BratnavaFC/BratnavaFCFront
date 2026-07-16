@@ -88,6 +88,30 @@ function pct(votes: number, total: number) {
     return Math.round((votes / total) * 100);
 }
 
+function optionPresenceCount(poll: Poll, option: PollOption, votes: PollVote[]) {
+    const base = option.voteCount;
+    if (poll.type !== 'event' || option.text.toLowerCase() !== 'sim') {
+        return base;
+    }
+    return base + votes.reduce((sum, vote) => sum + (vote.guests?.length ?? 0), 0);
+}
+
+function optionPresenceNames(poll: Poll, option: PollOption, votes: PollVote[]) {
+    const names = votes.map(v => v.playerName);
+    if (poll.type !== 'event' || option.text.toLowerCase() !== 'sim') {
+        return names;
+    }
+    return votes.flatMap(v => [
+        v.playerName,
+        ...((v.guests ?? []).map(g => `${g.guestName} (convidado de ${v.playerName})`)),
+    ]);
+}
+
+function optionGuestCount(poll: Poll, option: PollOption, votes: PollVote[]) {
+    if (poll.type !== 'event' || option.text.toLowerCase() !== 'sim') return 0;
+    return votes.reduce((sum, vote) => sum + (vote.guests?.length ?? 0), 0);
+}
+
 function formatEventDate(dateStr?: string | null): string {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
@@ -478,12 +502,14 @@ function PollEventDetailModal({
     const cost = formatCost(poll.costType, poll.costAmount);
 
     const rsvpOptions = [...poll.options].sort((a, b) => a.sortOrder - b.sortOrder);
-    const totalVotes = poll.options.reduce((s, o) => s + o.voteCount, 0);
+    const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
     const votedOptionText = getRsvpOption(poll.options, poll.myVotedOptionIds);
     const votedOptionId = poll.myVotedOptionIds[0] ?? null;
 
     // Find the "Sim" (going) option
     const simOption = poll.options.find(o => o.text.toLowerCase() === 'sim');
+    const simVotes = simOption ? (poll.votes ?? []).filter(v => v.optionId === simOption.id) : [];
+    const eventPresenceTotal = simOption ? optionPresenceCount(poll, simOption, simVotes) : 0;
     const iVotedSim = simOption ? poll.myVotedOptionIds.includes(simOption.id) : false;
     const myVote = myPlayerId ? (poll.votes ?? []).find(v => v.playerId === myPlayerId) ?? null : null;
 
@@ -676,7 +702,9 @@ function PollEventDetailModal({
                         )}
                         <span className="flex items-center gap-1.5">
                             <Users size={12} className="text-slate-400" />
-                            {poll.totalVoters} resposta{poll.totalVoters !== 1 ? 's' : ''}
+                            {isEvent
+                                ? `${poll.totalVoters} voto${poll.totalVoters !== 1 ? 's' : ''} · ${eventPresenceTotal} presença${eventPresenceTotal !== 1 ? 's' : ''}`
+                                : `${poll.totalVoters} resposta${poll.totalVoters !== 1 ? 's' : ''}`}
                         </span>
                     </div>
                 </div>
@@ -765,7 +793,9 @@ function PollEventDetailModal({
                                 const cfg = RSVP_CONFIG[opt.text] ?? { icon: '·', colorClass: 'text-slate-600 dark:text-slate-300', bgClass: '', activeClass: '' };
                                 const color = PROGRESS_COLORS[opt.text] ?? '#6366f1';
                                 const votersForOpt = poll.votes?.filter(v => v.optionId === opt.id) ?? [];
+                                const voterNames = votersForOpt.map(v => v.playerName);
                                 const p = pct(opt.voteCount, totalVotes);
+                                const countLabel = `${opt.voteCount} voto${opt.voteCount !== 1 ? 's' : ''}`;
                                 return (
                                     <div key={opt.id} className="py-2.5 border-b border-slate-100 dark:border-slate-700/60 last:border-0">
                                         <div className="flex items-center justify-between mb-2">
@@ -773,7 +803,9 @@ function PollEventDetailModal({
                                                 <span className={`text-sm font-semibold ${cfg.colorClass}`}>{opt.text}</span>
                                             </div>
                                             <div className="flex items-center gap-2.5">
-                                                <span className="text-xs text-slate-400 dark:text-slate-500">{opt.voteCount} {opt.voteCount !== 1 ? 'pessoas' : 'pessoa'}</span>
+                                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                                    {countLabel}
+                                                </span>
                                                 <span className="text-xs font-semibold tabular-nums" style={{ color }}>{p}%</span>
                                             </div>
                                         </div>
@@ -782,10 +814,9 @@ function PollEventDetailModal({
                                         </div>
                                         {(poll.showVotes || isAdmin) && votersForOpt.length > 0 && (
                                             <div className="mt-2 flex flex-wrap gap-1">
-                                                {votersForOpt.map(v => (
-                                                    <span key={v.playerId} className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-                                                        {v.playerName}
-                                                        {v.guests.length > 0 && <span className="ml-1 text-violet-400">+{v.guests.length}</span>}
+                                                {voterNames.map((name, index) => (
+                                                    <span key={`${opt.id}-${index}-${name}`} className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                                                        {name}
                                                     </span>
                                                 ))}
                                             </div>

@@ -29,6 +29,7 @@ interface PollVote {
     optionId: string;
     playerId: string;
     playerName: string;
+    guests?: { id: string; guestName?: string; name?: string; isAdult: boolean }[];
 }
 
 interface PollMemberVote {
@@ -59,6 +60,7 @@ interface Poll {
     costType?: string | null;
     costAmount?: number | null;
     members?: PollMemberVote[] | null;
+    allowGuests?: boolean;
 }
 
 interface OptionDraft {
@@ -86,6 +88,44 @@ const EMPTY_OPTION_DRAFT: OptionDraft = {
 function pct(votes: number, total: number) {
     if (total === 0) return 0;
     return Math.round((votes / total) * 100);
+}
+
+function isGoingOption(option: PollOption) {
+    return option.text.toLowerCase() === 'sim';
+}
+
+function optionGuestCount(poll: Poll, option: PollOption, votes: PollVote[]) {
+    if (poll.type !== 'event' || !isGoingOption(option)) return 0;
+    return votes.reduce((sum, vote) => sum + (vote.guests?.length ?? 0), 0);
+}
+
+function optionPresenceCount(poll: Poll, option: PollOption, votes: PollVote[]) {
+    return option.voteCount + optionGuestCount(poll, option, votes);
+}
+
+function optionPresenceLabel(poll: Poll, option: PollOption, votes: PollVote[]) {
+    return `${option.voteCount} voto${option.voteCount !== 1 ? 's' : ''}`;
+}
+
+function optionPresenceNames(poll: Poll, option: PollOption, votes: PollVote[]) {
+    return votes.map(v => v.playerName);
+}
+
+function eventPresenceTotal(poll: Poll) {
+    const simOption = poll.options.find(isGoingOption);
+    if (!simOption) return 0;
+    const votes = poll.votes?.filter(v => v.optionId === simOption.id) ?? [];
+    return optionPresenceCount(poll, simOption, votes);
+}
+
+function eventPresenceNames(poll: Poll) {
+    const simOption = poll.options.find(isGoingOption);
+    if (!simOption) return [];
+    const votes = poll.votes?.filter(v => v.optionId === simOption.id) ?? [];
+    return votes.flatMap(v => [
+        v.playerName,
+        ...((v.guests ?? []).map(g => `${g.guestName ?? g.name ?? 'Convidado'} (convidado de ${v.playerName})`)),
+    ]);
 }
 
 // ─── AdminVotePanel ───────────────────────────────────────────────────────────
@@ -480,6 +520,8 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                 const p = pct(opt.voteCount, totalVotes);
                 const isLeader = opt.voteCount > 0 && opt.voteCount === maxVotes;
                 const voters = (poll.votes ?? []).filter(v => v.optionId === opt.id);
+                const presenceLabel = optionPresenceLabel(poll, opt, voters);
+                const presenceNames = optionPresenceNames(poll, opt, voters);
 
                 return (
                     <div
@@ -519,7 +561,7 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                             <div className="text-right shrink-0 pl-1">
                                 <p className="text-xl font-black leading-none" style={{ color }}>{p}%</p>
                                 <p className="text-[10px] text-slate-400 mt-0.5">
-                                    {opt.voteCount} voto{opt.voteCount !== 1 ? 's' : ''}
+                                    {presenceLabel}
                                 </p>
                             </div>
                         </div>
@@ -535,13 +577,13 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
                         {/* Voter chips */}
                         {voters.length > 0 && (
                             <div className="mt-2.5 flex flex-wrap gap-1">
-                                {voters.map(v => (
+                                {presenceNames.map((name, index) => (
                                     <span
-                                        key={v.playerId}
+                                        key={`${opt.id}-${index}-${name}`}
                                         className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                                         style={{ backgroundColor: `${color}20`, color }}
                                     >
-                                        {v.playerName}
+                                        {name}
                                     </span>
                                 ))}
                             </div>
@@ -571,12 +613,12 @@ function PollResultsView({ poll, totalVotes, COLORS }: {
 
 // ─── VoteBar ─────────────────────────────────────────────────────────────────
 
-function VoteBar({ count, total, color }: { count: number; total: number; color: string }) {
+function VoteBar({ count, total, color, label }: { count: number; total: number; color: string; label?: string }) {
     const p = pct(count, total);
     return (
         <div className="mt-2">
             <div className="flex items-center justify-between text-[11px] mb-1">
-                <span className="text-slate-500 dark:text-slate-400">{count} voto{count !== 1 ? 's' : ''}</span>
+                <span className="text-slate-500 dark:text-slate-400">{label ?? `${count} voto${count !== 1 ? 's' : ''}`}</span>
                 <span className="font-semibold" style={{ color }}>{p}%</span>
             </div>
             <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
@@ -585,6 +627,71 @@ function VoteBar({ count, total, color }: { count: number; total: number; color:
                     style={{ width: `${p}%`, backgroundColor: color }}
                 />
             </div>
+        </div>
+    );
+}
+
+function PollPresenceView({ poll }: { poll: Poll }) {
+    const simOption = poll.options.find(isGoingOption);
+    const goingVotes = simOption
+        ? (poll.votes ?? []).filter(v => v.optionId === simOption.id)
+        : [];
+    const guestCount = goingVotes.reduce((sum, vote) => sum + (vote.guests?.length ?? 0), 0);
+    const total = goingVotes.length + guestCount;
+
+    return (
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-800/50 bg-emerald-50/70 dark:bg-emerald-900/10 p-4">
+                <p className="text-xs uppercase tracking-wide font-bold text-emerald-700 dark:text-emerald-300 mb-1">
+                    Presenças confirmadas
+                </p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white">
+                    {total}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {goingVotes.length} mensalista{goingVotes.length !== 1 ? 's' : ''}
+                    {guestCount > 0 && ` + ${guestCount} convidado${guestCount !== 1 ? 's' : ''}`}
+                </p>
+            </div>
+
+            {goingVotes.length === 0 ? (
+                <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 text-center text-sm text-slate-400">
+                    Nenhuma presença confirmada ainda.
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {goingVotes.map(vote => {
+                        const guests = vote.guests ?? [];
+                        return (
+                            <div key={vote.playerId} className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
+                                        {vote.playerName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{vote.playerName}</span>
+                                    {guests.length > 0 && (
+                                        <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
+                                            +{guests.length} convidado{guests.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </div>
+                                {guests.length > 0 && (
+                                    <div className="mt-2 pl-11 space-y-1">
+                                        {guests.map(guest => (
+                                            <p key={guest.id} className="text-xs text-slate-500 dark:text-slate-400">
+                                                {guest.guestName ?? guest.name ?? 'Convidado'}
+                                                <span className="ml-1 text-slate-400 dark:text-slate-500">
+                                                    (Convidado de {vote.playerName} · {guest.isAdult ? 'Adulto' : 'Criança'})
+                                                </span>
+                                            </p>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
@@ -610,7 +717,7 @@ function PollDetailModal({
     const [savingOption, setSavingOption] = useState(false);
     const [showClosePollModal, setShowClosePollModal] = useState(false);
     const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null);
-    const [detailTab, setDetailTab] = useState<'options' | 'resultado'>('options');
+    const [detailTab, setDetailTab] = useState<'options' | 'resultado' | 'presencas'>('options');
     const [showDeadlineEdit, setShowDeadlineEdit] = useState(false);
     const [deadlineDateDraft, setDeadlineDateDraft] = useState(poll.deadlineDate ?? '');
     const [deadlineTimeDraft, setDeadlineTimeDraft] = useState(poll.deadlineTime ?? '');
@@ -621,6 +728,7 @@ function PollDetailModal({
     const deadlinePassed = isDeadlinePassed(poll.deadlineDate, poll.deadlineTime);
     const isOpen = poll.status === 'open' && !deadlinePassed;
     const totalVotes = poll.options.reduce((s, o) => s + o.voteCount, 0);
+    const presenceTotal = eventPresenceTotal(poll);
     const hasMyVotes = selectedIds.length > 0;
     const votesChanged = JSON.stringify([...selectedIds].sort()) !== JSON.stringify([...poll.myVotedOptionIds].sort());
 
@@ -837,7 +945,12 @@ function PollDetailModal({
                         <h2 className="text-base font-bold text-slate-900 dark:text-white leading-snug">{poll.title}</h2>
                         {poll.description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{poll.description}</p>}
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                            <span className="flex items-center gap-1"><Users size={11} /> {poll.totalVoters} votante{poll.totalVoters !== 1 ? 's' : ''}</span>
+                            <span className="flex items-center gap-1">
+                                <Users size={11} />
+                                {poll.type === 'event'
+                                    ? `${poll.totalVoters} voto${poll.totalVoters !== 1 ? 's' : ''} · ${presenceTotal} presença${presenceTotal !== 1 ? 's' : ''}`
+                                    : `${poll.totalVoters} votante${poll.totalVoters !== 1 ? 's' : ''}`}
+                            </span>
                             {poll.deadlineDate && (
                                 <span className={`flex items-center gap-1 font-medium ${deadlinePassed ? 'text-rose-500' : 'text-amber-600'}`}>
                                     <Clock size={11} />
@@ -851,8 +964,8 @@ function PollDetailModal({
                     </button>
                 </div>
 
-                {/* Admin tab switcher */}
-                {isAdmin && (
+                {/* Detail tab switcher */}
+                {(isAdmin || poll.type === 'event') && (
                     <div className="flex border-b dark:border-slate-700 shrink-0">
                         <button
                             type="button"
@@ -865,17 +978,32 @@ function PollDetailModal({
                         >
                             <CheckSquare size={12} /> Opções
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setDetailTab('resultado')}
-                            className={`flex-1 py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border-b-2 ${
-                                detailTab === 'resultado'
-                                    ? 'text-slate-900 dark:text-white border-slate-900 dark:border-white'
-                                    : 'text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600 dark:hover:text-slate-300'
-                            }`}
-                        >
-                            <BarChart2 size={12} /> Resultado
-                        </button>
+                        {isAdmin && (
+                            <button
+                                type="button"
+                                onClick={() => setDetailTab('resultado')}
+                                className={`flex-1 py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border-b-2 ${
+                                    detailTab === 'resultado'
+                                        ? 'text-slate-900 dark:text-white border-slate-900 dark:border-white'
+                                        : 'text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600 dark:hover:text-slate-300'
+                                }`}
+                            >
+                                <BarChart2 size={12} /> Resultado
+                            </button>
+                        )}
+                        {poll.type === 'event' && (
+                            <button
+                                type="button"
+                                onClick={() => setDetailTab('presencas')}
+                                className={`flex-1 py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border-b-2 ${
+                                    detailTab === 'presencas'
+                                        ? 'text-slate-900 dark:text-white border-slate-900 dark:border-white'
+                                        : 'text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600 dark:hover:text-slate-300'
+                                }`}
+                            >
+                                <Users size={12} /> Presenças
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -884,8 +1012,12 @@ function PollDetailModal({
                     <PollResultsView poll={poll} totalVotes={totalVotes} COLORS={COLORS} />
                 )}
 
+                {poll.type === 'event' && detailTab === 'presencas' && (
+                    <PollPresenceView poll={poll} />
+                )}
+
                 {/* Scrollable body */}
-                <div className={`flex-1 overflow-y-auto px-5 py-4 space-y-4${isAdmin && detailTab !== 'options' ? ' hidden' : ''}`}>
+                <div className={`flex-1 overflow-y-auto px-5 py-4 space-y-4${detailTab !== 'options' ? ' hidden' : ''}`}>
 
                     {/* Options */}
                     {poll.options.length === 0 && (
@@ -900,6 +1032,8 @@ function PollDetailModal({
                         const isSelected = selectedIds.includes(opt.id);
                         const isEditing = editingOption === opt.id;
                         const votersForOpt = poll.votes?.filter(v => v.optionId === opt.id) ?? [];
+                        const presenceLabel = optionPresenceLabel(poll, opt, votersForOpt);
+                        const presenceNames = optionPresenceNames(poll, opt, votersForOpt);
 
                         if (isEditing) {
                             return (
@@ -982,15 +1116,15 @@ function PollDetailModal({
 
                                             {/* Vote bar */}
                                             {(poll.showVotes || isAdmin) && (
-                                                <VoteBar count={opt.voteCount} total={totalVotes} color={color} />
+                                                <VoteBar count={opt.voteCount} total={totalVotes} color={color} label={presenceLabel} />
                                             )}
 
                                             {/* Who voted */}
                                             {(poll.showVotes || isAdmin) && votersForOpt.length > 0 && (
                                                 <div className="mt-2 flex flex-wrap gap-1">
-                                                    {votersForOpt.map(v => (
-                                                        <span key={v.playerId} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                                                            {v.playerName}
+                                                    {presenceNames.map((name, index) => (
+                                                        <span key={`${opt.id}-${index}-${name}`} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                                            {name}
                                                         </span>
                                                     ))}
                                                 </div>
