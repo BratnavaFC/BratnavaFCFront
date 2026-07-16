@@ -34,54 +34,63 @@ export function LikersPopover({ anchorRect, data, onClose }: {
     data:       LikersData | undefined;
     onClose:    () => void;
 }) {
-    const PANEL_W = 210;
-    const MARGIN  = 8;
-    const viewW   = typeof window !== "undefined" ? window.innerWidth : 1200;
-    let left = anchorRect.left;
-    if (left + PANEL_W + MARGIN > viewW) left = anchorRect.right - PANEL_W;
-    if (left < MARGIN) left = MARGIN;
-    const top = anchorRect.bottom + 6;
-
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [onClose]);
 
+    const total = Array.isArray(data) ? data.length : 0;
+    void anchorRect;
+
     return (
         <>
-            <div className="fixed inset-0" style={{ zIndex: 200 }} onClick={onClose} />
-            <div className="fixed rounded-xl shadow-2xl overflow-hidden"
-                style={{ zIndex: 201, top, left, width: PANEL_W, background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)" }}>
-                <div className="flex items-center justify-between px-3 py-2"
+            <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" style={{ zIndex: 200 }} onClick={onClose} />
+            <div className="fixed inset-x-3 bottom-3 mx-auto max-w-[390px] overflow-hidden rounded-3xl shadow-2xl sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2"
+                style={{ zIndex: 201, background: "linear-gradient(180deg,#111827,#0f172a)", border: "1px solid rgba(255,255,255,0.13)" }}>
+                <div className="flex items-center gap-3 px-5 py-4"
                     style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.8)" }}>
-                        <Heart size={11} style={{ fill: "#f43f5e", color: "#f43f5e" }} />
-                        Quem curtiu
-                    </span>
-                    <button type="button" onClick={onClose} style={{ color: "rgba(255,255,255,0.4)" }}
-                        className="hover:text-white/80 transition-colors">
-                        <X size={13} />
+                    <div className="h-11 w-11 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: "linear-gradient(135deg,#fb7185,#e11d48)" }}>
+                        <Heart size={19} style={{ fill: "#fff", color: "#fff" }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-black text-white leading-tight">Curtido por</h3>
+                        <p className="text-xs font-semibold text-white/50">
+                            {data === "loading" || data === undefined
+                                ? "Carregando curtidas..."
+                                : total === 1 ? "1 curtida neste replay" : `${total} curtidas neste replay`}
+                        </p>
+                    </div>
+                    <button type="button" onClick={onClose}
+                        className="h-9 w-9 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                        style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.11)" }}>
+                        <X size={16} />
                     </button>
                 </div>
-                <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
+                <div className="overflow-y-auto px-4 py-3" style={{ maxHeight: "min(62vh, 430px)" }}>
                     {(data === "loading" || data === undefined) ? (
-                        <div className="flex items-center justify-center py-5">
-                            <Loader2 size={16} className="animate-spin" style={{ color: "rgba(255,255,255,0.35)" }} />
+                        <div className="flex items-center justify-center py-10">
+                            <Loader2 size={22} className="animate-spin" style={{ color: "rgba(255,255,255,0.45)" }} />
                         </div>
                     ) : data.length === 0 ? (
-                        <p className="text-center py-5 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        <p className="text-center py-10 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>
                             Nenhuma curtida ainda
                         </p>
                     ) : data.map((l) => (
-                        <div key={l.userId} className="flex items-center gap-2 px-3 py-1.5">
-                            <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                                style={{ background: "rgba(244,63,94,0.18)", color: "#fda4af" }}>
+                        <div key={l.userId} className="flex items-center gap-3 rounded-2xl px-2.5 py-2">
+                            <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-black shrink-0"
+                                style={{ background: "linear-gradient(135deg,rgba(244,63,94,0.95),rgba(139,92,246,0.95))", color: "#fff" }}>
                                 {l.userName[0]?.toUpperCase() ?? "?"}
                             </div>
-                            <span className="text-xs truncate" style={{ color: "rgba(255,255,255,0.8)" }}>
-                                {l.userName}
-                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold truncate text-white">{l.userName}</p>
+                                <p className="text-[11px] font-semibold text-white/40">curtiu este replay</p>
+                            </div>
+                            <div className="h-8 w-8 rounded-full flex items-center justify-center"
+                                style={{ background: "rgba(244,63,94,0.16)" }}>
+                                <Heart size={15} style={{ fill: "#fb7185", color: "#fb7185" }} />
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -290,23 +299,26 @@ export function VideoCard({
                     {/* Like + favorite */}
                     <div className="flex items-center gap-1.5">
                         <button type="button" onClick={(e) => { e.stopPropagation(); onLike(); }}
-                            className="flex items-center gap-1 transition-transform active:scale-90" title="Like">
-                            <Heart size={14} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "rgba(255,255,255,0.7)", filter: state.isLikedByMe ? "drop-shadow(0 0 4px rgba(244,63,94,0.6))" : "none", transition: "all 0.15s" }} />
+                            className="flex items-center gap-1 rounded-full px-2.5 py-1 transition-transform active:scale-90" title="Curtir"
+                            style={{ background: state.isLikedByMe ? "rgba(244,63,94,0.22)" : "rgba(0,0,0,0.48)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.45)" : "rgba(255,255,255,0.14)"}`, backdropFilter: "blur(5px)" }}>
+                            <Heart size={14} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "rgba(255,255,255,0.8)", filter: state.isLikedByMe ? "drop-shadow(0 0 4px rgba(244,63,94,0.6))" : "none", transition: "all 0.15s" }} />
                         </button>
-                        {state.likeCount > 0 && (
-                            onShowLikers ? (
-                                <button type="button"
-                                    onClick={(e) => { e.stopPropagation(); onShowLikers(e.currentTarget.getBoundingClientRect()); }}
-                                    title="Ver quem curtiu"
-                                    className="transition-transform active:scale-90">
-                                    <span style={{ fontSize: 10, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
-                                </button>
-                            ) : (
-                                <span style={{ fontSize: 10, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
-                            )
+                        {onShowLikers ? (
+                            <button type="button"
+                                onClick={(e) => { e.stopPropagation(); onShowLikers(e.currentTarget.getBoundingClientRect()); }}
+                                title="Ver quem curtiu"
+                                className="rounded-full px-2 py-1 transition-transform active:scale-90"
+                                style={{ background: "rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.14)", backdropFilter: "blur(5px)" }}>
+                                <span style={{ fontSize: 10, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.78)", fontWeight: 800 }}>
+                                    {state.likeCount}
+                                </span>
+                            </button>
+                        ) : (
+                            <span style={{ fontSize: 10, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.6)", fontWeight: 700 }}>{state.likeCount}</span>
                         )}
                         <button type="button" onClick={(e) => { e.stopPropagation(); onFavorite(); }}
-                            className="transition-transform active:scale-90" title="Favoritar">
+                            className="rounded-full px-2.5 py-1 transition-transform active:scale-90" title="Favoritar"
+                            style={{ background: state.isFavoritedByMe ? "rgba(245,158,11,0.22)" : "rgba(0,0,0,0.48)", border: `1px solid ${state.isFavoritedByMe ? "rgba(245,158,11,0.45)" : "rgba(255,255,255,0.14)"}`, backdropFilter: "blur(5px)" }}>
                             <Bookmark size={14} style={{ fill: state.isFavoritedByMe ? "#f59e0b" : "none", color: state.isFavoritedByMe ? "#f59e0b" : "rgba(255,255,255,0.7)", filter: state.isFavoritedByMe ? "drop-shadow(0 0 4px rgba(245,158,11,0.6))" : "none", transition: "all 0.15s" }} />
                         </button>
                     </div>
@@ -585,22 +597,23 @@ export function Lightbox({
                         <div className="flex items-center rounded-xl"
                             style={{ background: state.isLikedByMe ? "rgba(244,63,94,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.5)" : "rgba(255,255,255,0.14)"}` }}>
                             <button type="button" onClick={() => onLike(clip.id)} title="Curtir"
-                                className="flex items-center justify-center rounded-l-xl transition-all active:scale-95"
-                                style={{ width: 32, height: 30, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
+                                className="flex items-center gap-1.5 justify-center rounded-l-xl transition-all active:scale-95"
+                                style={{ height: 34, padding: "0 10px", color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.62)" }}>
                                 <Heart size={13} style={{ fill: state.isLikedByMe ? "#f43f5e" : "none", color: state.isLikedByMe ? "#f43f5e" : "inherit", transition: "all 0.15s" }} />
+                                <span className="text-xs font-bold hidden sm:inline">{state.isLikedByMe ? "Curtido" : "Curtir"}</span>
                             </button>
                             {onShowLikers ? (
                                 <button type="button"
                                     onClick={(e) => onShowLikers(clip.id, e.currentTarget.getBoundingClientRect())}
                                     className="flex items-center justify-center text-xs font-bold rounded-r-xl transition-all active:scale-95"
                                     title="Ver quem curtiu"
-                                    style={{ height: 30, minWidth: 28, padding: "0 8px", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.1)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
-                                    {state.likeCount}
+                                    style={{ height: 34, minWidth: 76, padding: "0 10px", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.1)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.62)" }}>
+                                    {state.likeCount} curtida{state.likeCount !== 1 ? "s" : ""}
                                 </button>
                             ) : (
                                 <span className="text-xs font-bold"
-                                    style={{ height: 30, minWidth: 28, padding: "0 8px", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.1)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
-                                    {state.likeCount}
+                                    style={{ height: 34, minWidth: 76, padding: "0 10px", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `1px solid ${state.isLikedByMe ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.1)"}`, color: state.isLikedByMe ? "#fda4af" : "rgba(255,255,255,0.5)" }}>
+                                    {state.likeCount} curtida{state.likeCount !== 1 ? "s" : ""}
                                 </span>
                             )}
                         </div>
