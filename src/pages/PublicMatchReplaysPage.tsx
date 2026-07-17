@@ -7,6 +7,7 @@ import {
 import { PublicApi } from "../api/endpoints";
 import type { PublicClipDto, PublicMatchReplaysDto } from "../domains/matches/matchTypes";
 import ReplayPlayer from "../domains/matches/ui/ReplayPlayer";
+import { teamButtonStyle, teamLabel } from "../utils/teamColorUtils";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,20 @@ function ColorDot({ hex, name }: { hex: string | null; name: string | null }) {
     );
 }
 
+function isGoalType(type: string) {
+    return type === "Gol" || type === "GolTimeA" || type === "GolTimeB";
+}
+
+function isPlayType(type: string) {
+    return type === "Jogada";
+}
+
+function clipLabel(type: string, teamAName: string, teamBName: string) {
+    if (type === "GolTimeA") return `Gol ${teamAName}`;
+    if (type === "GolTimeB") return `Gol ${teamBName}`;
+    return type;
+}
+
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 
 function PublicLightbox({
@@ -38,15 +53,19 @@ function PublicLightbox({
     onClose,
     onPrev,
     onNext,
+    teamAName,
+    teamBName,
 }: {
     clips: PublicClipDto[];
     index: number;
     onClose: () => void;
     onPrev: () => void;
     onNext: () => void;
+    teamAName: string;
+    teamBName: string;
 }) {
     const clip = clips[index];
-    const isGol = clip.eventType === "Gol";
+    const isGol = isGoalType(clip.eventType);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -77,7 +96,7 @@ function PublicLightbox({
                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                         : "bg-blue-500/20 text-blue-400 border border-blue-500/30",
                 ].join(" ")}>
-                    {clip.eventType}
+                    {clipLabel(clip.eventType, teamAName, teamBName)}
                 </span>
                 {isGol && clip.goalNumber != null && clip.totalGoals != null && (
                     <span className="text-[11px] font-semibold text-slate-400 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-full">
@@ -123,12 +142,16 @@ function PublicClipCard({
     clip,
     index,
     onPlay,
+    teamAName,
+    teamBName,
 }: {
     clip: PublicClipDto;
     index: number;
     onPlay: (idx: number) => void;
+    teamAName: string;
+    teamBName: string;
 }) {
-    const isGol = clip.eventType === "Gol";
+    const isGol = isGoalType(clip.eventType);
 
     return (
         <div
@@ -156,7 +179,7 @@ function PublicClipCard({
                     "text-[10px] font-bold px-2 py-0.5 rounded-full",
                     isGol ? "bg-emerald-500/30 text-emerald-300" : "bg-blue-500/30 text-blue-300",
                 ].join(" ")}>
-                    {isGol && clip.goalNumber != null ? `Gol ${clip.goalNumber}` : clip.eventType}
+                    {isGol && clip.goalNumber != null ? `Gol ${clip.goalNumber}` : clipLabel(clip.eventType, teamAName, teamBName)}
                 </span>
             </div>
         </div>
@@ -170,7 +193,7 @@ export default function PublicMatchReplaysPage() {
     const [data, setData]       = useState<PublicMatchReplaysDto | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError]     = useState<string | null>(null);
-    const [filter, setFilter]   = useState<"all" | "Gol" | "Jogada">("all");
+    const [filter, setFilter]   = useState<"all" | "Gol" | "GolTimeA" | "GolTimeB" | "Jogada">("all");
     const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
     useEffect(() => {
@@ -183,8 +206,10 @@ export default function PublicMatchReplaysPage() {
 
     const filtered = useMemo(() => {
         if (!data) return [];
-        if (filter === "Gol")    return data.clips.filter((c) => c.eventType === "Gol");
-        if (filter === "Jogada") return data.clips.filter((c) => c.eventType === "Jogada");
+        if (filter === "Gol")    return data.clips.filter((c) => isGoalType(c.eventType));
+        if (filter === "GolTimeA") return data.clips.filter((c) => c.eventType === "GolTimeA");
+        if (filter === "GolTimeB") return data.clips.filter((c) => c.eventType === "GolTimeB");
+        if (filter === "Jogada") return data.clips.filter((c) => isPlayType(c.eventType));
         return data.clips;
     }, [data, filter]);
 
@@ -206,8 +231,16 @@ export default function PublicMatchReplaysPage() {
         </div>
     );
 
-    const totalGoals   = data.clips.filter((c) => c.eventType === "Gol").length;
-    const totalJogadas = data.clips.filter((c) => c.eventType === "Jogada").length;
+    const totalGoals   = data.clips.filter((c) => isGoalType(c.eventType)).length;
+    const totalGoalsA  = data.clips.filter((c) => c.eventType === "GolTimeA").length;
+    const totalGoalsB  = data.clips.filter((c) => c.eventType === "GolTimeB").length;
+    const totalJogadas = data.clips.filter((c) => isPlayType(c.eventType)).length;
+    const hasSplitGoals = totalGoalsA > 0 || totalGoalsB > 0;
+    const teamAName = teamLabel("A", { name: data.teamAColorName, hex: data.teamAColorHex });
+    const teamBName = teamLabel("B", { name: data.teamBColorName, hex: data.teamBColorHex });
+    const filterOptions = hasSplitGoals
+        ? (["all", "Jogada", "Gol", "GolTimeA", "GolTimeB"] as const)
+        : (["all", "Jogada", "Gol"] as const);
     const hasScore     = data.teamAGoals != null && data.teamBGoals != null;
 
     return (
@@ -269,7 +302,7 @@ export default function PublicMatchReplaysPage() {
                         {/* Filter tabs */}
                         {totalGoals > 0 && totalJogadas > 0 && (
                             <div className="flex items-center gap-1 mb-5">
-                                {(["all", "Gol", "Jogada"] as const).map((f) => (
+                                {filterOptions.map((f) => (
                                     <button
                                         key={f}
                                         type="button"
@@ -280,8 +313,15 @@ export default function PublicMatchReplaysPage() {
                                                 ? "bg-white text-slate-900 border-white"
                                                 : "bg-transparent text-white/70 border-white/30 hover:bg-white/10",
                                         ].join(" ")}
+                                        style={filter === f && f === "GolTimeA" ? teamButtonStyle(data.teamAColorHex)
+                                            : filter === f && f === "GolTimeB" ? teamButtonStyle(data.teamBColorHex)
+                                            : undefined}
                                     >
-                                        {f === "all" ? `Todos (${data.clips.length})` : f === "Gol" ? `Gols (${totalGoals})` : `Jogadas (${totalJogadas})`}
+                                        {f === "all" ? `Todos (${data.clips.length})`
+                                            : f === "Jogada" ? `Jogadas (${totalJogadas})`
+                                            : f === "Gol" ? `Gols (${totalGoals})`
+                                            : f === "GolTimeA" ? `${teamAName} (${totalGoalsA})`
+                                            : `${teamBName} (${totalGoalsB})`}
                                     </button>
                                 ))}
                             </div>
@@ -295,6 +335,8 @@ export default function PublicMatchReplaysPage() {
                                     clip={clip}
                                     index={i}
                                     onPlay={openLightbox}
+                                    teamAName={teamAName}
+                                    teamBName={teamBName}
                                 />
                             ))}
                         </div>
@@ -310,6 +352,8 @@ export default function PublicMatchReplaysPage() {
                     onClose={closeLightbox}
                     onPrev={prevClip}
                     onNext={nextClip}
+                    teamAName={teamAName}
+                    teamBName={teamBName}
                 />
             )}
 

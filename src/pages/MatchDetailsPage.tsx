@@ -1470,6 +1470,10 @@ export default function MatchDetailsPage() {
                         matchId={matchId}
                         initialClipId={initialClipId}
                         onClipAdded={(clip) => setReplays((prev) => [...prev, clip])}
+                        teamAName={aName}
+                        teamAHex={data?.teamAColor?.hexValue ?? null}
+                        teamBName={bName}
+                        teamBHex={data?.teamBColor?.hexValue ?? null}
                     />
                 </Section>
             )}

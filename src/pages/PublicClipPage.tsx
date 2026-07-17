@@ -4,6 +4,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { PublicApi } from "../api/endpoints";
 import type { PublicClipDto } from "../domains/matches/matchTypes";
 import ReplayPlayer from "../domains/matches/ui/ReplayPlayer";
+import { teamLabel } from "../utils/teamColorUtils";
 
 function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString("pt-BR", {
@@ -38,7 +39,16 @@ export default function PublicClipPage() {
         </div>
     );
 
-    const isGol = clip.eventType === "Gol";
+    const isGol = clip.eventType === "Gol" || clip.eventType === "GolTimeA" || clip.eventType === "GolTimeB";
+    const teamAName = teamLabel("A", { name: clip.teamAColorName, hex: clip.teamAColorHex });
+    const teamBName = teamLabel("B", { name: clip.teamBColorName, hex: clip.teamBColorHex });
+    const eventLabel = clip.eventType === "GolTimeA"
+        ? `Gol ${teamAName}`
+        : clip.eventType === "GolTimeB"
+            ? `Gol ${teamBName}`
+            : clip.eventType === "Jogada"
+                ? "Jogada"
+                : clip.eventType;
 
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
@@ -56,7 +66,7 @@ export default function PublicClipPage() {
                             ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                             : "bg-blue-500/20 text-blue-400 border border-blue-500/30",
                     ].join(" ")}>
-                        {clip.eventType}
+                        {eventLabel}
                     </span>
 
                     {isGol && clip.goalNumber != null && clip.totalGoals != null && (

@@ -1,7 +1,8 @@
 import { Loader2, RefreshCw, Trophy, Zap } from "lucide-react";
 import { useState } from "react";
-import type { GoalDto, PlayerInMatchDto } from "../matchTypes";
+import type { GoalDto, PlayerInMatchDto, ReplayEventType } from "../matchTypes";
 import { GoalTracker } from "./GoalTracker";
+import { teamButtonStyle, teamLabel } from "../../../utils/teamColorUtils";
 
 export function StepPlaying({
     admin,
@@ -20,7 +21,7 @@ export function StepPlaying({
 }: {
     admin: boolean;
     onRefresh: () => void;
-    onPublishEvent?: (type: 'Gol' | 'Jogada') => Promise<void>;
+    onPublishEvent?: (type: ReplayEventType, eventTime: string) => Promise<void>;
     participants: PlayerInMatchDto[];
     goals: GoalDto[];
     addingGoal: boolean;
@@ -32,20 +33,17 @@ export function StepPlaying({
     teamBName?: string;
     teamBHex?: string;
 }) {
-    const [publishingGol, setPublishingGol]       = useState(false);
-    const [publishingJogada, setPublishingJogada] = useState(false);
+    const [publishingType, setPublishingType] = useState<ReplayEventType | null>(null);
+    const teamAReplayName = teamLabel("A", { name: teamAName, hex: teamAHex });
+    const teamBReplayName = teamLabel("B", { name: teamBName, hex: teamBHex });
 
     const COOLDOWN_MS = 1500;
 
-    function handlePublish(type: 'Gol' | 'Jogada') {
+    function handlePublish(type: ReplayEventType, eventTime: string) {
         if (!onPublishEvent) return;
-        if (type === 'Gol') setPublishingGol(true);
-        else setPublishingJogada(true);
-        onPublishEvent(type).catch(() => {});
-        setTimeout(() => {
-            if (type === 'Gol') setPublishingGol(false);
-            else setPublishingJogada(false);
-        }, COOLDOWN_MS);
+        setPublishingType(type);
+        onPublishEvent(type, eventTime).catch(() => {});
+        setTimeout(() => setPublishingType(null), COOLDOWN_MS);
     }
 
     return (
@@ -92,26 +90,38 @@ export function StepPlaying({
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 font-medium uppercase tracking-wide">
                         Replay
                     </p>
-                    <div className="flex gap-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
                         <button
-                            onClick={() => handlePublish('Gol')}
-                            disabled={publishingGol || publishingJogada}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-base transition"
+                            onClick={() => handlePublish('GolTimeA', new Date().toISOString())}
+                            disabled={publishingType !== null}
+                            className="flex items-center justify-center gap-2 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-sm transition"
+                            style={{ backgroundColor: "#059669", borderColor: "#059669", ...teamButtonStyle(teamAHex) }}
                         >
-                            {publishingGol
+                            {publishingType === 'GolTimeA'
                                 ? <Loader2 size={18} className="animate-spin" />
                                 : <Trophy size={18} />}
-                            GOL
+                            Gol {teamAReplayName}
                         </button>
                         <button
-                            onClick={() => handlePublish('Jogada')}
-                            disabled={publishingGol || publishingJogada}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-base transition"
+                            onClick={() => handlePublish('GolTimeB', new Date().toISOString())}
+                            disabled={publishingType !== null}
+                            className="flex items-center justify-center gap-2 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-sm transition"
+                            style={{ backgroundColor: "#dc2626", borderColor: "#dc2626", ...teamButtonStyle(teamBHex) }}
                         >
-                            {publishingJogada
+                            {publishingType === 'GolTimeB'
+                                ? <Loader2 size={18} className="animate-spin" />
+                                : <Trophy size={18} />}
+                            Gol {teamBReplayName}
+                        </button>
+                        <button
+                            onClick={() => handlePublish('Jogada', new Date().toISOString())}
+                            disabled={publishingType !== null}
+                            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-sm transition"
+                        >
+                            {publishingType === 'Jogada'
                                 ? <Loader2 size={18} className="animate-spin" />
                                 : <Zap size={18} />}
-                            JOGADA
+                            Jogada
                         </button>
                     </div>
                 </div>

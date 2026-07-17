@@ -6,11 +6,20 @@ import { MatchesApi } from "../../../api/endpoints";
 import { type ClipStateMap, VideoCard, Lightbox } from "./ReplayClipComponents";
 import { UploadReplayModal } from "./UploadReplayModal";
 import { ShareTypeModal } from "./ShareTypeModal";
+import { teamButtonStyle, teamLabel } from "../../../utils/teamColorUtils";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 12;
-type Filter = "all" | "Gol" | "Jogada";
+type Filter = "all" | "Gol" | "GolTimeA" | "GolTimeB" | "Jogada";
+
+function isGoalType(type: string) {
+    return type === "Gol" || type === "GolTimeA" || type === "GolTimeB";
+}
+
+function isPlayType(type: string) {
+    return type === "Jogada";
+}
 
 // ── Clip interaction state ────────────────────────────────────────────────────
 
@@ -29,11 +38,13 @@ function Tab({
     count,
     active,
     onClick,
+    colorHex,
 }: {
     label: string;
     count: number;
     active: boolean;
     onClick: () => void;
+    colorHex?: string | null;
 }) {
     return (
         <button
@@ -45,6 +56,7 @@ function Tab({
                     ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm"
                     : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
             ].join(" ")}
+            style={active && colorHex ? teamButtonStyle(colorHex) : undefined}
         >
             {label}
             <span
@@ -95,9 +107,13 @@ type Props = {
     initialClipId?: string;
     /** Callback chamado quando um novo clip é adicionado via upload manual */
     onClipAdded?: (clip: ReplayClipDto) => void;
+    teamAName?: string | null;
+    teamAHex?: string | null;
+    teamBName?: string | null;
+    teamBHex?: string | null;
 };
 
-export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId, onClipAdded }: Props) {
+export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId, onClipAdded, teamAName, teamAHex, teamBName, teamBHex }: Props) {
     const [filter, setFilter]               = useState<Filter>("all");
     const [page, setPage]                   = useState(1);
     const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
@@ -194,8 +210,12 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId,
     }, [groupId]);
 
     const visibleClips = useMemo(() => clips.filter((c) => !deletedIds.has(c.id)), [clips, deletedIds]);
-    const gols    = useMemo(() => visibleClips.filter((c) => c.eventType === "Gol"),    [visibleClips]);
-    const jogadas = useMemo(() => visibleClips.filter((c) => c.eventType === "Jogada"), [visibleClips]);
+    const gols      = useMemo(() => visibleClips.filter((c) => isGoalType(c.eventType)), [visibleClips]);
+    const golsTimeA = useMemo(() => visibleClips.filter((c) => c.eventType === "GolTimeA"), [visibleClips]);
+    const golsTimeB = useMemo(() => visibleClips.filter((c) => c.eventType === "GolTimeB"), [visibleClips]);
+    const jogadas   = useMemo(() => visibleClips.filter((c) => isPlayType(c.eventType)), [visibleClips]);
+    const teamAGoalLabel = `Gols ${teamLabel("A", { name: teamAName, hex: teamAHex })}`;
+    const teamBGoalLabel = `Gols ${teamLabel("B", { name: teamBName, hex: teamBHex })}`;
 
     // Auto-abre o lightbox quando a URL contém ?clip=<clipId>
     useEffect(() => {
@@ -209,9 +229,11 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId,
 
     const filtered = useMemo(() => {
         if (filter === "Gol")    return gols;
+        if (filter === "GolTimeA") return golsTimeA;
+        if (filter === "GolTimeB") return golsTimeB;
         if (filter === "Jogada") return jogadas;
         return visibleClips;
-    }, [filter, visibleClips, gols, jogadas]);
+    }, [filter, visibleClips, gols, golsTimeA, golsTimeB, jogadas]);
 
     useEffect(() => { setPage(1); }, [filter]);
 
@@ -286,6 +308,8 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId,
                 <div className="flex items-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl w-fit">
                     <Tab label="Todos"   count={visibleClips.length}    active={filter === "all"}     onClick={() => setFilter("all")} />
                     {gols.length    > 0 && <Tab label="Gols"    count={gols.length}    active={filter === "Gol"}    onClick={() => setFilter("Gol")} />}
+                    {golsTimeA.length > 0 && <Tab label={teamAGoalLabel} count={golsTimeA.length} active={filter === "GolTimeA"} onClick={() => setFilter("GolTimeA")} colorHex={teamAHex} />}
+                    {golsTimeB.length > 0 && <Tab label={teamBGoalLabel} count={golsTimeB.length} active={filter === "GolTimeB"} onClick={() => setFilter("GolTimeB")} colorHex={teamBHex} />}
                     {jogadas.length > 0 && <Tab label="Jogadas" count={jogadas.length} active={filter === "Jogada"} onClick={() => setFilter("Jogada")} />}
                 </div>
                 <div className="flex items-center gap-2">
@@ -330,6 +354,8 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId,
                             onFavorite={() => toggleFavorite(clip.id)}
                             onDelete={() => handleDelete(clip.id)}
                             onShare={matchId ? () => shareClip(clip.id) : undefined}
+                            teamAName={teamAName}
+                            teamBName={teamBName}
                         />
                     );
                 })}
@@ -379,6 +405,8 @@ export function ReplaySection({ clips, groupId, isAdmin, matchId, initialClipId,
                     onFavorite={toggleFavorite}
                     onDelete={handleDelete}
                     onShare={matchId ? shareClip : undefined}
+                    teamAName={teamAName}
+                    teamBName={teamBName}
                 />
             )}
 

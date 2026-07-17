@@ -10,6 +10,7 @@ import type { ReplayClipDto, ClipLikerDto } from "../matchTypes";
 import { MatchesApi } from "../../../api/endpoints";
 import ReplayPlayer, { type ReplayPlayerHandle } from "./ReplayPlayer";
 import { toUtcDate } from "../../../utils/dateUtils";
+import { teamLabel } from "../../../utils/teamColorUtils";
 
 // ── Stream URL helper ──────────────────────────────────────────────────────────
 // Usa a URL presignada direta do R2. Se o iOS Safari voltar a dar problema
@@ -18,6 +19,17 @@ import { toUtcDate } from "../../../utils/dateUtils";
 
 function useStreamUrl(_groupId: string, _clipId: string, videoUrl: string): string {
     return videoUrl;
+}
+
+function isGoalType(type: string) {
+    return type === "Gol" || type === "GolTimeA" || type === "GolTimeB";
+}
+
+function eventLabel(type: string, teamAName?: string | null, teamBName?: string | null) {
+    if (type === "GolTimeA") return `GOL ${teamLabel("A", { name: teamAName })}`.toUpperCase();
+    if (type === "GolTimeB") return `GOL ${teamLabel("B", { name: teamBName })}`.toUpperCase();
+    if (type === "Gol") return "GOL";
+    return "JOGADA";
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -186,6 +198,8 @@ export function VideoCard({
     onDelete,
     onShare,
     onShowLikers,
+    teamAName,
+    teamBName,
 }: {
     clip: ReplayClipDto;
     globalIndex: number;
@@ -198,8 +212,10 @@ export function VideoCard({
     onDelete?: () => void;
     onShare?: () => void;
     onShowLikers?: (rect: DOMRect) => void;
+    teamAName?: string | null;
+    teamBName?: string | null;
 }) {
-    const isGol    = clip.eventType === "Gol";
+    const isGol    = isGoalType(clip.eventType);
     const streamUrl = useStreamUrl(groupId, clip.id, clip.videoUrl);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -241,7 +257,7 @@ export function VideoCard({
                         color: "#fff",
                         borderColor: isGol ? "rgba(52,211,153,0.4)" : "rgba(96,165,250,0.4)",
                     }}>
-                        {isGol ? "GOL" : "JOGADA"}
+                        {eventLabel(clip.eventType, teamAName ?? (clip as any).teamAColorName, teamBName ?? (clip as any).teamBColorName)}
                     </span>
                 </div>
 
@@ -365,6 +381,8 @@ export function Lightbox({
     onDelete,
     onShare,
     onShowLikers,
+    teamAName,
+    teamBName,
 }: {
     clips: ReplayClipDto[];
     index: number;
@@ -379,9 +397,11 @@ export function Lightbox({
     onDelete?: (clipId: string) => void;
     onShare?: (clipId: string) => void;
     onShowLikers?: (clipId: string, rect: DOMRect) => void;
+    teamAName?: string | null;
+    teamBName?: string | null;
 }) {
     const clip      = clips[index];
-    const isGol     = clip.eventType === "Gol";
+    const isGol     = isGoalType(clip.eventType);
     const canPrev   = index > 0;
     const canNext   = index < clips.length - 1;
     const state     = clipStates[clip.id] ?? { likeCount: 0, isLikedByMe: false, isFavoritedByMe: false };
@@ -549,7 +569,7 @@ export function Lightbox({
                             isGol ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                                   : "bg-blue-500/20 text-blue-400 border-blue-500/30",
                         ].join(" ")}>
-                            {isGol ? "GOL" : "JOGADA"}
+                            {eventLabel(clip.eventType, teamAName ?? (clip as any).teamAColorName, teamBName ?? (clip as any).teamBColorName)}
                         </span>
                         <span className="text-sm text-white/50 tabular-nums truncate">{formatTime(clip.recordedAt)}</span>
                         <span className="text-xs text-white/25 font-mono shrink-0">{index + 1}&thinsp;/&thinsp;{clips.length}</span>

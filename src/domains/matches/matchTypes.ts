@@ -181,11 +181,13 @@ export type MatchHeaderDto = {
     actualStartTime?: string | null;
 };
 
+export type ReplayEventType = "Gol" | "GolTimeA" | "GolTimeB" | "Jogada";
+
 export type ReplayClipDto = {
     id: string;
     objectKey: string;
     videoUrl: string;
-    eventType: "Gol" | "Jogada";
+    eventType: ReplayEventType;
     recordedAt: string;
     likeCount: number;
     isLikedByMe: boolean;
@@ -194,6 +196,10 @@ export type ReplayClipDto = {
 
 export type LikedReplayClipDto = ReplayClipDto & {
     matchId: string;
+    teamAColorName?: string | null;
+    teamAColorHex?: string | null;
+    teamBColorName?: string | null;
+    teamBColorHex?: string | null;
 };
 
 export type ClipLikerDto = {
@@ -205,10 +211,14 @@ export type ClipLikerDto = {
 export type PublicClipDto = {
     id: string;
     videoUrl: string;
-    eventType: "Gol" | "Jogada";
+    eventType: ReplayEventType;
     recordedAt: string;
     goalNumber: number | null;
     totalGoals: number | null;
+    teamAColorName?: string | null;
+    teamAColorHex?: string | null;
+    teamBColorName?: string | null;
+    teamBColorHex?: string | null;
 };
 
 export type PublicMatchReplaysDto = {

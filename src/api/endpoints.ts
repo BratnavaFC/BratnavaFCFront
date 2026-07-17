@@ -134,8 +134,8 @@ export const MatchesApi = {
   playerHistory: (groupId: string, playerId: string, year?: number) => http.get<ApiResponse<unknown[]>>(`/api/Matches/group/${groupId}/player-history`, { params: { playerId, ...(year ? { year } : {}) } }),
   addGuest: (groupId: string, matchId: string, dto: { name: string; isGoalkeeper: boolean; guestStarRating?: number | null }) =>
     http.post<ApiResponse<unknown>>(`/api/Matches/group/${groupId}/${matchId}/guests`, dto),
-  publishEvent: (groupId: string, matchId: string, dto: { type: 'Gol' | 'Jogada'; durationSeconds?: number }) =>
-    http.post<ApiResponse<null>>(`/api/Matches/group/${groupId}/${matchId}/events`, dto),
+  publishEvent: (groupId: string, matchId: string, dto: { type: 'Gol' | 'GolTimeA' | 'GolTimeB' | 'Jogada'; secondsBeforeStart?: number; durationSeconds?: number; eventTime?: string }) =>
+    http.post<ApiResponse<{ queueId: string }>>(`/api/Matches/group/${groupId}/${matchId}/events`, dto),
   setPlayerRole: (
     groupId: string, matchId: string, matchPlayerId: string,
     dto: { isGoalkeeper: boolean }
@@ -166,7 +166,7 @@ export const MatchesApi = {
     http.delete(`/api/Matches/group/${groupId}/replays/${clipId}`),
   setLinkedPoll: (groupId: string, matchId: string, pollId: string | null) =>
     http.patch<ApiResponse<{ linkedPollId: string | null }>>(`/api/Matches/group/${groupId}/${matchId}/linked-poll`, { pollId }),
-  uploadReplay: (groupId: string, matchId: string, file: File, eventType: "Gol" | "Jogada") => {
+  uploadReplay: (groupId: string, matchId: string, file: File, eventType: "Gol" | "GolTimeA" | "GolTimeB" | "Jogada") => {
     const form = new FormData();
     form.append("file", file);
     form.append("eventType", eventType);

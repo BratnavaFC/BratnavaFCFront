@@ -12,6 +12,7 @@ import LoadMoreButton from "../components/LoadMoreButton";
 import type { LikedReplayClipDto } from "../domains/matches/matchTypes";
 import { type ClipStateMap, type LikersData, VideoCard, Lightbox, LikersPopover } from "../domains/matches/ui/ReplayClipComponents";
 import { toUtcDate } from "../utils/dateUtils";
+import { teamButtonStyle, teamLabel } from "../utils/teamColorUtils";
 
 const PAGE_SIZE = 20;
 
@@ -481,7 +482,15 @@ function FavoritesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean 
 
 // ── Tab: Jogos (admin only) ────────────────────────────────────────────────────
 
-type EventFilter = "all" | "Gol" | "Jogada";
+type EventFilter = "all" | "Gol" | "GolTimeA" | "GolTimeB" | "Jogada";
+
+function isGoalReplay(type: string) {
+    return type === "Gol" || type === "GolTimeA" || type === "GolTimeB";
+}
+
+function isPlayReplay(type: string) {
+    return type === "Jogada";
+}
 
 function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean }) {
     const [clips,       setClips]       = useState<LikedReplayClipDto[]>([]);
@@ -565,7 +574,21 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
         }
     }
 
-    const filtered = filter === "all" ? clips : clips.filter((c) => c.eventType === filter);
+    const filtered = filter === "all"
+        ? clips
+        : filter === "Gol"
+            ? clips.filter((c) => isGoalReplay(c.eventType))
+            : filter === "Jogada"
+                ? clips.filter((c) => isPlayReplay(c.eventType))
+                : clips.filter((c) => c.eventType === filter);
+    const hasSplitGoals = clips.some((c) => c.eventType === "GolTimeA" || c.eventType === "GolTimeB");
+    const teamASample = clips.find((c) => c.eventType === "GolTimeA" && (c.teamAColorName || c.teamAColorHex));
+    const teamBSample = clips.find((c) => c.eventType === "GolTimeB" && (c.teamBColorName || c.teamBColorHex));
+    const teamAFilterName = teamLabel("A", { name: teamASample?.teamAColorName, hex: teamASample?.teamAColorHex });
+    const teamBFilterName = teamLabel("B", { name: teamBSample?.teamBColorName, hex: teamBSample?.teamBColorHex });
+    const eventFilters: EventFilter[] = hasSplitGoals
+        ? ["all", "Jogada", "Gol", "GolTimeA", "GolTimeB"]
+        : ["all", "Jogada", "Gol"];
 
     const [expanded, toggleMatch] = useExpandedSet();
     const byMatch = (() => {
@@ -576,8 +599,14 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                 matchId,
                 clips: cs,
                 date: cs[0]?.recordedAt ?? "",
-                goalCount: cs.filter((c) => c.eventType === "Gol").length,
-                playCount: cs.filter((c) => c.eventType === "Jogada").length,
+                goalCount: cs.filter((c) => isGoalReplay(c.eventType)).length,
+                goalACount: cs.filter((c) => c.eventType === "GolTimeA").length,
+                goalBCount: cs.filter((c) => c.eventType === "GolTimeB").length,
+                playCount: cs.filter((c) => isPlayReplay(c.eventType)).length,
+                teamAName: teamLabel("A", { name: cs[0]?.teamAColorName, hex: cs[0]?.teamAColorHex }),
+                teamAHex: cs[0]?.teamAColorHex,
+                teamBName: teamLabel("B", { name: cs[0]?.teamBColorName, hex: cs[0]?.teamBColorHex }),
+                teamBHex: cs[0]?.teamBColorHex,
             }))
             .sort((a, b) => toUtcDate(b.date).getTime() - toUtcDate(a.date).getTime());
     })();
@@ -596,15 +625,22 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                 <div className="flex items-center gap-2">
                     {/* Event filter */}
                     <div className="flex gap-1">
-                        {(["all", "Gol", "Jogada"] as EventFilter[]).map((f) => (
+                        {eventFilters.map((f) => (
                             <button key={f} type="button" onClick={() => setFilter(f)}
                                 className={[
                                     "px-4 py-1.5 rounded-lg text-xs font-semibold transition border",
                                     filter === f
                                         ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white"
                                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-800/50",
-                                ].join(" ")}>
-                                {f === "all" ? "Tudo" : f === "Gol" ? "⚽ Gols" : "✨ Jogadas"}
+                                ].join(" ")}
+                                style={filter === f && f === "GolTimeA" ? teamButtonStyle(teamASample?.teamAColorHex)
+                                    : filter === f && f === "GolTimeB" ? teamButtonStyle(teamBSample?.teamBColorHex)
+                                    : undefined}>
+                                {f === "all" ? "Tudo"
+                                    : f === "Jogada" ? "✨ Jogadas"
+                                    : f === "Gol" ? "⚽ Todos os gols"
+                                    : f === "GolTimeA" ? `⚽ ${teamAFilterName}`
+                                    : `⚽ ${teamBFilterName}`}
                             </button>
                         ))}
                     </div>
@@ -650,6 +686,8 @@ function MatchesTab({ groupId, isAdmin }: { groupId: string; isAdmin: boolean })
                                     style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#6366f1" }}>
                                     <Gamepad2 size={11} />
                                     {group.goalCount > 0 && <span>⚽ {group.goalCount}</span>}
+                                    {group.goalACount > 0 && <span>{group.teamAName} {group.goalACount}</span>}
+                                    {group.goalBCount > 0 && <span>{group.teamBName} {group.goalBCount}</span>}
                                     {group.playCount > 0 && <span>✨ {group.playCount}</span>}
                                     · {group.clips.length} vídeo{group.clips.length !== 1 ? "s" : ""}
                                 </div>

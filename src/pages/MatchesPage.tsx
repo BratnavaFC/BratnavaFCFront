@@ -1210,10 +1210,15 @@ export default function MatchesPage() {
         currentMatchId,
     ]);
 
-    async function publishMatchEvent(type: 'Gol' | 'Jogada') {
+    async function publishMatchEvent(type: 'Gol' | 'GolTimeA' | 'GolTimeB' | 'Jogada', eventTime: string) {
         if (!groupId || !currentMatchId) return;
         try {
-            await MatchesApi.publishEvent(groupId, currentMatchId, { type, durationSeconds: 20 });
+            await MatchesApi.publishEvent(groupId, currentMatchId, {
+                type,
+                secondsBeforeStart: 20,
+                durationSeconds: 20,
+                eventTime,
+            });
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao enviar evento de replay."));
         }
