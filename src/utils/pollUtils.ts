@@ -1,10 +1,6 @@
 /**
  * Verifica se o prazo de uma enquete já passou.
  *
- * Usa offset explícito -03:00 (Brasília, UTC-3 fixo desde 2019) para garantir
- * que o prazo seja interpretado igual para todos os usuários,
- * independente do fuso horário do browser.
- *
  * @param deadlineDate  - Data no formato "YYYY-MM-DD"
  * @param deadlineTime  - Hora no formato "HH:MM" (padrão: "23:59")
  */
@@ -14,7 +10,7 @@ export function isDeadlinePassed(
 ): boolean {
     if (!deadlineDate) return false;
     const timeStr = deadlineTime ?? '23:59';
-    const deadline = new Date(`${deadlineDate}T${timeStr}:00-03:00`);
+    const deadline = new Date(`${deadlineDate}T${timeStr}:00`);
     return Date.now() > deadline.getTime();
 }
 
