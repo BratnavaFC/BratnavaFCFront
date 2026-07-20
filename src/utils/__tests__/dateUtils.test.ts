@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toUtcDate, formatUtcDate } from '../dateUtils';
+import { toUtcDate, formatUtcDate, parseApiInstant } from '../dateUtils';
 
 describe('toUtcDate', () => {
     it('keeps the literal hour when ISO string has no timezone', () => {
@@ -64,5 +64,27 @@ describe('formatUtcDate', () => {
         const result = formatUtcDate('2025-05-15T12:00:00Z');
         expect(result).not.toBeNull();
         expect(result!.short).toContain('15');
+    });
+});
+
+describe('parseApiInstant', () => {
+    it('keeps timezone-less values as local wall time', () => {
+        const d = parseApiInstant('2026-07-14T23:02:00');
+
+        expect(d?.getFullYear()).toBe(2026);
+        expect(d?.getMonth()).toBe(6);
+        expect(d?.getDate()).toBe(14);
+        expect(d?.getHours()).toBe(23);
+        expect(d?.getMinutes()).toBe(2);
+    });
+
+    it('converts UTC values to Sao Paulo wall time', () => {
+        const d = parseApiInstant('2026-07-15T02:02:00Z');
+
+        expect(d?.getFullYear()).toBe(2026);
+        expect(d?.getMonth()).toBe(6);
+        expect(d?.getDate()).toBe(14);
+        expect(d?.getHours()).toBe(23);
+        expect(d?.getMinutes()).toBe(2);
     });
 });

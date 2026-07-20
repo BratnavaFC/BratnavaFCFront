@@ -41,6 +41,31 @@ export function formatUtcDate(iso?: string | null) {
     };
 }
 
+/**
+ * Datas de acao/auditoria chegam como instantes UTC. Quando o banco devolve
+ * DateTime sem Kind, o JSON pode vir sem Z; nesses casos ainda devemos tratar
+ * como UTC para exibir o horario local correto.
+ */
+export function parseApiInstant(iso?: string | null): Date | null {
+    if (!iso) return null;
+    const date = hasTimezone(iso) ? toSaoPauloWallDate(iso) : new Date(stripTimezone(iso));
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function formatApiInstantDateTime(iso?: string | null): string | null {
+    const date = parseApiInstant(iso);
+    if (!date) return null;
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(date);
+}
+
 export function stripTimezone(iso: string): string {
     return iso
         .replace(/Z$/i, '')
