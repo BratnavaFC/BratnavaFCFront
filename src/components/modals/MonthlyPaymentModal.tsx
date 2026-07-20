@@ -8,7 +8,8 @@ const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov
 
 interface MonthlyCell {
     month: number; status: number; amount: number; discount: number;
-    discountReason?: string; paidAt?: string; hasProof: boolean; proofFileName?: string;
+    discountReason?: string; paidAt?: string; markedByUserName?: string;
+    markedByUserKind?: string; hasProof: boolean; proofFileName?: string;
 }
 interface PlayerRow  { playerId: string; playerName: string; months: MonthlyCell[]; }
 
@@ -26,6 +27,14 @@ interface MonthlyModalProps {
     groupId: string; row: PlayerRow; month: number; year: number; isAdmin: boolean;
     onClose(): void; onSaved(): void;
 }
+
+const paymentAuditText = (paidAt?: string, markedByUserName?: string, markedByUserKind?: string) => {
+    if (!paidAt) return '';
+    const date = new Date(paidAt).toLocaleDateString('pt-BR');
+    if (!markedByUserName) return `Pago em ${date}`;
+    const suffix = markedByUserKind === 'self' ? ' (próprio usuário)' : '';
+    return `Pago em ${date} por ${markedByUserName}${suffix}`;
+};
 
 function MonthlyPaymentModal({ open, groupId, row, month, year, isAdmin, onClose, onSaved }: MonthlyModalProps) {
     useEffect(() => {
@@ -83,6 +92,11 @@ function MonthlyPaymentModal({ open, groupId, row, month, year, isAdmin, onClose
                     Valor: <span className="font-semibold">R$ {(cell?.amount ?? 0).toFixed(2)}</span>
                     {(cell?.discount ?? 0) > 0 && <> · Desconto: <span className="text-green-600 font-semibold">R$ {cell!.discount.toFixed(2)}</span></>}
                 </p>
+                {cell?.paidAt && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        {paymentAuditText(cell.paidAt, cell.markedByUserName, cell.markedByUserKind)}
+                    </p>
+                )}
 
                 {isAdmin && (
                     <div className="space-y-3 mb-4">

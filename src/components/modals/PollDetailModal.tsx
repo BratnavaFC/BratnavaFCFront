@@ -13,6 +13,7 @@ import { compressImage } from '../../lib/compressImage';
 import ModalBackdrop from './ModalBackdrop';
 import PollClosePollModal from './PollClosePollModal';
 import { isDeadlinePassed, formatDeadline } from '../../utils/pollUtils';
+import { formatApiInstantDateTime } from '../../utils/dateUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ interface PollVote {
     optionId: string;
     playerId: string;
     playerName: string;
+    votedAt?: string;
     guests?: { id: string; guestName?: string; name?: string; isAdult: boolean }[];
 }
 
@@ -36,6 +38,7 @@ interface PollMemberVote {
     playerId: string;
     playerName: string;
     votedOptionIds: string[];
+    votedAt?: string | null;
 }
 
 interface Poll {
@@ -126,6 +129,10 @@ function eventPresenceNames(poll: Poll) {
         v.playerName,
         ...((v.guests ?? []).map(g => `${g.guestName ?? g.name ?? 'Convidado'} (convidado de ${v.playerName})`)),
     ]);
+}
+
+function formatVoteDateTime(votedAt?: string | null) {
+    return formatApiInstantDateTime(votedAt) ?? 'Ainda não respondeu';
 }
 
 // ─── AdminVotePanel ───────────────────────────────────────────────────────────
@@ -230,7 +237,12 @@ function AdminVotePanel({
                                     </div>
                                     <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-800 ${hasVoted ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                                 </div>
-                                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{member.playerName}</span>
+                                <div className="min-w-0 flex-1">
+                                    <span className="block text-sm text-slate-700 dark:text-slate-300 truncate">{member.playerName}</span>
+                                    <span className="block text-[10px] text-slate-400 dark:text-slate-500">
+                                        {formatVoteDateTime(member.votedAt)}
+                                    </span>
+                                </div>
 
                                 {isBusy ? (
                                     <Loader2 size={14} className="animate-spin text-slate-400" />
@@ -247,6 +259,30 @@ function AdminVotePanel({
                                                     className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all border ${
                                                         voted
                                                             ? baseColor + ' border-transparent scale-105'
+                                                            : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
+                                                    }`}
+                                                >
+                                                    {opt.text}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : poll.allowMultipleVotes ? (
+                                    <div className="flex gap-1 shrink-0 flex-wrap justify-end max-w-[260px]">
+                                        {poll.options.map(opt => {
+                                            const voted = votedIds.includes(opt.id);
+                                            const nextIds = voted
+                                                ? votedIds.filter(id => id !== opt.id)
+                                                : [...votedIds, opt.id];
+
+                                            return (
+                                                <button
+                                                    key={opt.id}
+                                                    type="button"
+                                                    onClick={() => handleSetVote(member.playerId, nextIds)}
+                                                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all border ${
+                                                        voted
+                                                            ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white'
                                                             : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                                                     }`}
                                                 >

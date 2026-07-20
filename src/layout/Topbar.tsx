@@ -270,12 +270,23 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
             .then((res) => {
                 const list = ((res.data?.data ?? []) as unknown) as MyPlayerDto[];
                 setMyPlayers(list);
-                if (list.length > 0 && !active.activePlayerId) {
-                    const groupId = list[0].groupId;
-                    updateActive({ activePlayerId: list[0].playerId, activeGroupId: groupId });
-                    fetchGroupRoles(groupId);
-                } else if (active.activeGroupId) {
-                    fetchGroupRoles(active.activeGroupId);
+                const memberships = list.filter((p: any) => !p.isGuest);
+                const currentGroupId = useAccountStore.getState().getActive()?.activeGroupId ?? null;
+                const currentPlayerId = useAccountStore.getState().getActive()?.activePlayerId ?? null;
+                const activeMembership = memberships.find(p => p.groupId === currentGroupId);
+                const activePlayerMembership = memberships.find(p => p.playerId === currentPlayerId);
+                const next = activeMembership ?? activePlayerMembership ?? memberships[0] ?? null;
+
+                if (next) {
+                    updateActive({ activePlayerId: next.playerId, activeGroupId: next.groupId });
+                    fetchGroupRoles(next.groupId);
+                } else if (!god) {
+                    updateActive({
+                        activePlayerId: null,
+                        activeGroupId: null,
+                        activeGroupIsAdmin: false,
+                        activeGroupIsFinanceiro: false,
+                    });
                 }
             })
             .catch(() => setMyPlayers([]));
@@ -289,9 +300,11 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                         .map((g) => ({ groupId: g.id ?? g.groupId ?? '', groupName: g.name ?? g.groupName ?? 'Patota' }))
                         .filter((g) => g.groupId);
                     setGodGroups(all);
-                    // Auto-seleciona a primeira patota se nenhuma estiver ativa
-                    if (all.length > 0 && !useAccountStore.getState().getActive()?.activeGroupId) {
-                        updateActive({ activeGroupId: all[0].groupId });
+                    // Auto-seleciona uma patota valida se nenhuma estiver ativa ou se a ativa nao existe mais
+                    const currentGroupId = useAccountStore.getState().getActive()?.activeGroupId;
+                    const hasCurrent = !!currentGroupId && all.some((g) => g.groupId === currentGroupId);
+                    if (all.length > 0 && !hasCurrent) {
+                        updateActive({ activeGroupId: all[0].groupId, activePlayerId: null });
                         fetchGroupRoles(all[0].groupId);
                     }
                 })

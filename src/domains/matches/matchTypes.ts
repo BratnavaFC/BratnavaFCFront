@@ -28,6 +28,7 @@ export type PlayerInMatchDto = {
     isGuest: boolean;
     team: number; // 0 unassigned, 1 A, 2 B
     inviteResponse: number; // 1 None, 2 Rejected, 3 Accepted
+    inviteRespondedAt?: string | null;
     absenceType?: number | null;        // null = rejeição manual ou não-rejeitado
     absenceDescription?: string | null; // ex: "Viagem - Férias em SP"
     didNotPlay?: boolean;               // admin marcou que o jogador não apareceu

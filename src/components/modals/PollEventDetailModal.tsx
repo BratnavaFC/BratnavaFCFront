@@ -11,6 +11,7 @@ import { extractApiError } from '../../lib/apiError';
 import ModalBackdrop from './ModalBackdrop';
 import PollClosePollModal from './PollClosePollModal';
 import { isDeadlinePassed, formatDeadline } from '../../utils/pollUtils';
+import { formatApiInstantDateTime } from '../../utils/dateUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ interface PollVote {
     optionId: string;
     playerId: string;
     playerName: string;
+    votedAt?: string;
     guests: PollGuest[];
 }
 
@@ -42,6 +44,7 @@ interface PollMemberVote {
     playerId: string;
     playerName: string;
     votedOptionIds: string[];
+    votedAt?: string | null;
 }
 
 interface Poll {
@@ -128,6 +131,10 @@ function formatCost(costType?: string | null, costAmount?: number | null): strin
     const label = costType === 'individual' ? 'por pessoa' : 'rateio grupo';
     if (costAmount) return `R$ ${costAmount.toFixed(2)} ${label}`;
     return label;
+}
+
+function formatVoteDateTime(votedAt?: string | null) {
+    return formatApiInstantDateTime(votedAt) ?? 'Ainda não respondeu';
 }
 
 // ─── AdminVotePanel ───────────────────────────────────────────────────────────
@@ -224,7 +231,12 @@ function AdminVotePanel({
                                     </div>
                                     <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-800 ${hasVoted ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                                 </div>
-                                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{member.playerName}</span>
+                                <div className="min-w-0 flex-1">
+                                    <span className="block text-sm text-slate-700 dark:text-slate-300 truncate">{member.playerName}</span>
+                                    <span className="block text-[10px] text-slate-400 dark:text-slate-500">
+                                        {formatVoteDateTime(member.votedAt)}
+                                    </span>
+                                </div>
 
                                 {isBusy ? (
                                     <Loader2 size={14} className="animate-spin text-slate-400" />

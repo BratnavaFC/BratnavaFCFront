@@ -113,6 +113,7 @@ export interface PlayerInMatchDto {
   isGoalkeeper?: boolean;
   team?: number;
   inviteResponse?: number;
+  inviteRespondedAt?: string | null;
   absenceType?: number | null;
   absenceDescription?: string | null;
 }

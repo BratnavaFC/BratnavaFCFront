@@ -7,7 +7,8 @@ import { getResponseMessage } from "../../api/apiResponse";
 interface ExtraChargePayment {
     playerId: string; playerName: string; amount: number; discount: number;
     finalAmount: number; discountReason?: string; status: number;
-    paidAt?: string; hasProof: boolean; proofFileName?: string;
+    paidAt?: string; markedByUserName?: string; markedByUserKind?: string;
+    hasProof: boolean; proofFileName?: string;
 }
 interface ExtraCharge {
     id: string; name: string; description?: string; amount: number;
@@ -29,6 +30,14 @@ interface ExtraPaymentModalProps {
     groupId: string; charge: ExtraCharge; payment: ExtraChargePayment;
     isAdmin: boolean; onClose(): void; onSaved(): void;
 }
+
+const paymentAuditText = (paidAt?: string, markedByUserName?: string, markedByUserKind?: string) => {
+    if (!paidAt) return '';
+    const date = new Date(paidAt).toLocaleDateString('pt-BR');
+    if (!markedByUserName) return `Pago em ${date}`;
+    const suffix = markedByUserKind === 'self' ? ' (próprio usuário)' : '';
+    return `Pago em ${date} por ${markedByUserName}${suffix}`;
+};
 
 function ExtraPaymentModal({ open, groupId, charge, payment, isAdmin, onClose, onSaved }: ExtraPaymentModalProps) {
     useEffect(() => {
@@ -79,6 +88,11 @@ function ExtraPaymentModal({ open, groupId, charge, payment, isAdmin, onClose, o
                     {charge.name} · R$ {payment.amount.toFixed(2)}
                     {payment.discount > 0 && <> · Desconto: <span className="text-green-600 font-semibold">R$ {payment.discount.toFixed(2)}</span></>}
                 </p>
+                {payment.paidAt && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        {paymentAuditText(payment.paidAt, payment.markedByUserName, payment.markedByUserKind)}
+                    </p>
+                )}
 
                 {isAdmin && (
                     <div className="space-y-3 mb-4">
