@@ -23,7 +23,9 @@ import {
     AlertCircle,
     CreditCard,
     Users2,
+    Trash2,
 } from "lucide-react";
+import ExitPendingPaymentsModal, { type ExitPendingPayments } from "../../components/modals/ExitPendingPaymentsModal";
 
 type Status = 1 | 2; // 1 Active, 2 Inactive
 type Role = 1 | 2 | 3; // 1 User, 2 Admin, 3 GodMode
@@ -125,7 +127,6 @@ function Modal({
                             </div>
                             <div>
                                 <div className="text-base font-semibold text-slate-900 dark:text-white">{title}</div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400">Bratnava FC</div>
                             </div>
                         </div>
 
@@ -263,6 +264,7 @@ function EditUserModal({
     canEditAdminFields,
     isSelf,
     onChangePassword,
+    onDeleteAccount,
     onSaved,
 }: {
     open: boolean;
@@ -271,6 +273,7 @@ function EditUserModal({
     canEditAdminFields: boolean;
     isSelf?: boolean;
     onChangePassword?: () => void;
+    onDeleteAccount?: () => void;
     onSaved: () => Promise<void> | void;
 }) {
     const [saving, setSaving] = useState(false);
@@ -430,6 +433,16 @@ function EditUserModal({
                                 </Button>
                             )}
 
+                            {isSelf && onDeleteAccount && (
+                                <Button
+                                    variant="danger"
+                                    onClick={() => { onClose(); setTimeout(() => onDeleteAccount(), 200); }}
+                                    iconLeft={<Trash2 size={16} />}
+                                >
+                                    Excluir conta
+                                </Button>
+                            )}
+
                             {canEditAdminFields && (
                                 <Button
                                     variant={isInactive ? "secondary" : "danger"}
@@ -534,6 +547,102 @@ function ChangePasswordModal({
                 </div>
             </div>
         </Modal>
+    );
+}
+
+function DeleteAccountModal({
+    open,
+    onClose,
+}: {
+    open: boolean;
+    onClose: () => void;
+}) {
+    const logoutActive = useAccountStore((s) => s.logoutActive);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [pendingExit, setPendingExit] = useState<ExitPendingPayments | null>(null);
+    const [password, setPassword] = useState("");
+    const [confirmation, setConfirmation] = useState("");
+
+    useEffect(() => {
+        if (!open) return;
+        setError(null);
+        setPassword("");
+        setConfirmation("");
+    }, [open]);
+
+    async function handleDelete() {
+        setError(null);
+
+        if (!password.trim()) return setError("Informe sua senha atual.");
+        if (confirmation.trim().toUpperCase() !== "EXCLUIR") {
+            return setError("Digite EXCLUIR para confirmar.");
+        }
+
+        setSaving(true);
+        try {
+            await UsersApi.deleteAccount({ password, confirmation });
+            toast.success("Conta excluída com sucesso.");
+            onClose();
+            logoutActive();
+        } catch (e: any) {
+            const pending = e?.response?.data?.data as ExitPendingPayments | undefined;
+            if (pending && pending.count > 0) {
+                setPendingExit(pending);
+            } else {
+                setError(getResponseMessage(e, "Falha ao excluir conta."));
+            }
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function finishDelete(forceWithoutPayment: boolean) {
+        await UsersApi.deleteAccount({ password, confirmation, forceWithoutPayment });
+        toast.success("Conta excluÃ­da com sucesso.");
+        setPendingExit(null);
+        onClose();
+        logoutActive();
+    }
+
+    return (
+        <>
+        <Modal open={open} onClose={onClose} title="Excluir conta" widthClass="max-w-xl">
+            <div className="space-y-4">
+                {error && (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                        {error}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-3">
+                    <Field label="Senha atual">
+                        <Input type="password" value={password} onChange={setPassword} />
+                    </Field>
+
+                    <Field label="Confirmação">
+                        <Input value={confirmation} onChange={setConfirmation} placeholder="Digite EXCLUIR" />
+                    </Field>
+                </div>
+
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                    <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+                    <Button variant="danger" onClick={handleDelete} loading={saving} iconLeft={<Trash2 size={16} />}>
+                        Excluir minha conta
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+        <ExitPendingPaymentsModal
+            open={!!pendingExit}
+            pending={pendingExit}
+            title="Antes de excluir, existem pendências"
+            forceLabel="Excluir mesmo assim"
+            onClose={() => setPendingExit(null)}
+            onContinueAfterPayment={() => finishDelete(true)}
+            onForceContinue={() => finishDelete(true)}
+        />
+        </>
     );
 }
 
@@ -648,6 +757,7 @@ export default function AdminUsersPage() {
     const [editOpen, setEditOpen] = useState(false);
     const [editUser, setEditUser] = useState<UserListItemDto | null>(null);
     const [passOpen, setPassOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -894,6 +1004,7 @@ export default function AdminUsersPage() {
                         canEditAdminFields={true}
                         isSelf={!!myUserId && editUser?.id === myUserId}
                         onChangePassword={() => setPassOpen(true)}
+                        onDeleteAccount={() => setDeleteOpen(true)}
                         onSaved={refreshAfterSave}
                     />
                 </div>
@@ -941,6 +1052,14 @@ export default function AdminUsersPage() {
                                     >
                                         <KeyRound size={14} />
                                         <span className="hidden sm:inline">Alterar senha</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeleteOpen(true)}
+                                        className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300 dark:hover:bg-rose-900/70 transition"
+                                    >
+                                        <Trash2 size={14} />
+                                        <span className="hidden sm:inline">Excluir conta</span>
                                     </button>
                                 </div>
                             </div>
@@ -1035,6 +1154,8 @@ export default function AdminUsersPage() {
                         onClose={() => setEditOpen(false)}
                         user={editUser}
                         canEditAdminFields={false}
+                        isSelf={true}
+                        onDeleteAccount={() => setDeleteOpen(true)}
                         onSaved={refreshAfterSave}
                     />
                 </div>
@@ -1047,6 +1168,11 @@ export default function AdminUsersPage() {
                     userId={myUserId}
                 />
             )}
+
+            <DeleteAccountModal
+                open={deleteOpen}
+                onClose={() => setDeleteOpen(false)}
+            />
         </div>
     );
 }

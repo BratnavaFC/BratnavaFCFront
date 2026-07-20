@@ -4,7 +4,7 @@ import {
     CheckCircle2, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
     Upload, Download, Loader2, DollarSign, Calendar, Users,
     TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, RefreshCw,
-    Pencil, RotateCcw
+    Pencil, RotateCcw, Info
 } from 'lucide-react';
 import useAccountStore from '../auth/accountStore';
 import { PaymentsApi, GroupSettingsApi, TransactionsApi } from '../api/endpoints';
@@ -21,7 +21,9 @@ import { useConfirm } from '../components/ConfirmDialog';
 // ── Tipos locais ──────────────────────────────────────────────────────────────
 interface MonthlyCell {
     month: number; status: number; amount: number; discount: number;
-    discountReason?: string; paidAt?: string; hasProof: boolean; proofFileName?: string;
+    discountReason?: string; paidAt?: string; markedByUserId?: string;
+    markedByUserName?: string; markedByUserKind?: string;
+    hasProof: boolean; proofFileName?: string;
 }
 interface PlayerRow  { playerId: string; playerName: string; months: MonthlyCell[]; isGoalkeeper?: boolean; }
 interface MonthlyGrid { year: number; monthlyFee?: number; goalkeeperMonthlyFee?: number; players: PlayerRow[]; }
@@ -29,7 +31,8 @@ interface MonthlyGrid { year: number; monthlyFee?: number; goalkeeperMonthlyFee?
 interface ExtraChargePayment {
     playerId: string; playerName: string; amount: number; discount: number;
     finalAmount: number; discountReason?: string; status: number;
-    paidAt?: string; hasProof: boolean; proofFileName?: string;
+    paidAt?: string; markedByUserId?: string; markedByUserName?: string;
+    markedByUserKind?: string; hasProof: boolean; proofFileName?: string;
 }
 interface ExtraCharge {
     id: string; name: string; description?: string; amount: number;
@@ -42,6 +45,34 @@ const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julh
 const CATEGORY_NAMES = ['Aluguel de Quadra','Arbitragem','Uniforme','Material','Outros'];
 
 const cls = (...c: (string|false|undefined)[]) => c.filter(Boolean).join(' ');
+const paymentAuditText = (paidAt?: string, markedByUserName?: string, markedByUserKind?: string) => {
+    if (!paidAt) return '';
+    const date = new Date(paidAt).toLocaleDateString('pt-BR');
+    if (!markedByUserName) return `Pago em ${date}`;
+    const suffix = markedByUserKind === 'self' ? ' (próprio usuário)' : '';
+    return `Pago em ${date} por ${markedByUserName}${suffix}`;
+};
+
+function PaymentAuditInfoButton({ paidAt, markedByUserName, markedByUserKind }: {
+    paidAt?: string; markedByUserName?: string; markedByUserKind?: string;
+}) {
+    if (!paidAt) return null;
+    const text = paymentAuditText(paidAt, markedByUserName, markedByUserKind);
+    return (
+        <button
+            type="button"
+            title={text}
+            aria-label={text}
+            onClick={(e) => {
+                e.stopPropagation();
+                toast.info(text);
+            }}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-700 transition"
+        >
+            <Info size={16} />
+        </button>
+    );
+}
 
 // ── Tipos do Caixa ────────────────────────────────────────────────────────────
 interface TransactionDto {
@@ -56,6 +87,15 @@ interface TransactionMonthSummaryDto {
 }
 interface PendingTotalsDto {
     totalMonthlyPending: number; totalExtraChargesPending: number; grandTotal: number;
+}
+interface ExitDebtAlertDto {
+    notificationId: string;
+    groupId: string;
+    playerId: string;
+    playerName: string;
+    count: number;
+    total: number;
+    createdAt: string;
 }
 
 // ── Componente de card de cobrança extra (admin) ──────────────────────────────
@@ -182,11 +222,10 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                             <div key={payment.playerId} className="flex items-center gap-3 px-4 py-2.5">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{payment.playerName}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        R$ {payment.finalAmount.toFixed(2)}
-                                        {payment.discount > 0 && <span className="text-green-600 ml-1">(desconto R$ {payment.discount.toFixed(2)})</span>}
-                                        {payment.paidAt && <span className="ml-2">· {new Date(payment.paidAt).toLocaleDateString('pt-BR')}</span>}
-                                    </p>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                        <p>R$ {payment.finalAmount.toFixed(2)}</p>
+                                        {payment.discount > 0 && <p className="text-green-600 mt-0.5">Desconto R$ {payment.discount.toFixed(2)}</p>}
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     {payment.hasProof && (
@@ -209,6 +248,7 @@ function ChargeCard({ charge, open, paidCt, pendCt, finalized, groupId, onToggle
                                         {paid ? <CheckCircle2 size={11}/> : <XCircle size={11}/>}
                                         {paid ? 'Pago' : 'Pendente'}
                                     </span>
+                                    <PaymentAuditInfoButton paidAt={payment.paidAt} markedByUserName={payment.markedByUserName} markedByUserKind={payment.markedByUserKind} />
                                     {!charge.isCancelled && (
                                         <button onClick={() => onEditPayment(payment)}
                                             className="text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
@@ -272,6 +312,7 @@ export default function PaymentsPage() {
     const [transactions, setTransactions] = useState<TransactionDto[]>([]);
     const [summaries, setSummaries]       = useState<TransactionMonthSummaryDto[]>([]);
     const [pendingTotals, setPendingTotals] = useState<PendingTotalsDto | null>(null);
+    const [exitDebtAlerts, setExitDebtAlerts] = useState<ExitDebtAlertDto[]>([]);
     const [txLoading, setTxLoading]       = useState(false);
     // Add transaction modal
     const [addModal, setAddModal]         = useState<{ type: 0 | 1 } | null>(null);
@@ -419,6 +460,37 @@ export default function PaymentsPage() {
         } catch { /* silencioso */ }
     }, [groupId]);
 
+    const loadExitDebtAlerts = useCallback(async () => {
+        if (!groupId || !isAdmin) return;
+        try {
+            const res = await PaymentsApi.getExitDebtAlerts(groupId);
+            setExitDebtAlerts(((res.data as any)?.data ?? []) as ExitDebtAlertDto[]);
+        } catch { /* silencioso */ }
+    }, [groupId, isAdmin]);
+
+    const keepExitDebtAlert = useCallback(async (notificationId: string) => {
+        if (!groupId) return;
+        try {
+            await PaymentsApi.keepExitDebtAlert(groupId, notificationId);
+            toast.success('Pendência mantida.');
+            loadExitDebtAlerts();
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao manter pendência.')); }
+    }, [groupId, loadExitDebtAlerts]);
+
+    const payExitDebtAlert = useCallback(async (notificationId: string) => {
+        if (!groupId) return;
+        try {
+            await PaymentsApi.markExitDebtAlertAsPaid(groupId, notificationId);
+            toast.success('Pendências marcadas como pagas.');
+            loadExitDebtAlerts();
+            loadMonthly();
+            loadExtra();
+            loadPendingTotals();
+            if (caixaSubTab === 'mes') loadCaixaMes();
+            else loadCaixaGeral();
+        } catch (e) { toast.error(getResponseMessage(e, 'Erro ao marcar como pago.')); }
+    }, [groupId, loadExitDebtAlerts, loadMonthly, loadExtra, loadPendingTotals, caixaSubTab, loadCaixaMes, loadCaixaGeral]);
+
     const syncCaixa = useCallback(async () => {
         if (!groupId || syncing) return;
         setSyncing(true);
@@ -476,6 +548,7 @@ export default function PaymentsPage() {
     useEffect(() => { if (isAdmin && tab === 'caixa' && caixaSubTab === 'mes')   loadCaixaMes();   }, [isAdmin, tab, caixaSubTab, loadCaixaMes]);
     useEffect(() => { if (isAdmin && tab === 'caixa' && caixaSubTab === 'geral') loadCaixaGeral(); }, [isAdmin, tab, caixaSubTab, loadCaixaGeral]);
     useEffect(() => { if (isAdmin && tab === 'caixa') loadPendingTotals(); }, [isAdmin, tab, loadPendingTotals]);
+    useEffect(() => { if (isAdmin) loadExitDebtAlerts(); }, [isAdmin, loadExitDebtAlerts]);
 
     // Jogadores para a modal de criar cobrança extra
     const mensalistas = grid?.players.map(p => ({ id: p.playerId, name: p.playerName })) ?? [];
@@ -610,6 +683,38 @@ export default function PaymentsPage() {
 
             {/* Conteúdo */}
             <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
+                {isAdmin && exitDebtAlerts.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                        {exitDebtAlerts.map(alert => (
+                            <div key={alert.notificationId} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-bold">
+                                        {alert.playerName} saiu com {alert.count} pendência{alert.count === 1 ? '' : 's'} financeira{alert.count === 1 ? '' : 's'}.
+                                    </p>
+                                    <p className="text-xs text-amber-700">
+                                        Total em aberto: R$ {alert.total.toFixed(2)}. O que deseja fazer?
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => keepExitDebtAlert(alert.notificationId)}
+                                        className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                                    >
+                                        Manter pendência
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => payExitDebtAlert(alert.notificationId)}
+                                        className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700"
+                                    >
+                                        Marcar tudo como pago
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* === VIEW NÃO-ADMIN === */}
                 {/* Mensalidades do usuário */}
@@ -742,10 +847,9 @@ export default function PaymentsPage() {
                                                     <div key={charge.id} className="border border-green-100 rounded-xl bg-green-50/40 p-4 flex items-center gap-4">
                                                         <div className="flex-1 min-w-0">
                                                             <span className="font-semibold text-sm text-slate-700 dark:text-slate-300">{charge.name}</span>
-                                                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex gap-3 flex-wrap">
-                                                                <span>R$ {payment.finalAmount.toFixed(2)}</span>
-                                                                {payment.discount > 0 && <span className="text-green-600">Desconto: R$ {payment.discount.toFixed(2)}</span>}
-                                                                {payment.paidAt && <span>Pago em {new Date(payment.paidAt).toLocaleDateString('pt-BR')}</span>}
+                                                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                                <p>R$ {payment.finalAmount.toFixed(2)}</p>
+                                                                {payment.discount > 0 && <p className="text-green-600 mt-0.5">Desconto R$ {payment.discount.toFixed(2)}</p>}
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
@@ -763,6 +867,7 @@ export default function PaymentsPage() {
                                                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                                                                 <CheckCircle2 size={11}/> Pago
                                                             </span>
+                                                            <PaymentAuditInfoButton paidAt={payment.paidAt} markedByUserName={payment.markedByUserName} markedByUserKind={payment.markedByUserKind} />
                                                             <button onClick={() => setExtraModal({ charge, payment })}
                                                                 className="text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                                                 Ver

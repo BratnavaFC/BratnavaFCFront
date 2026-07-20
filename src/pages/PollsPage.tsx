@@ -61,6 +61,7 @@ interface PollVote {
     optionId: string;
     playerId: string;
     playerName: string;
+    votedAt?: string;
     guests: { id: string; voterPlayerId: string; voterPlayerName: string; guestName: string; isAdult: boolean; }[];
 }
 
@@ -68,6 +69,7 @@ interface PollMemberVote {
     playerId: string;
     playerName: string;
     votedOptionIds: string[];
+    votedAt?: string | null;
 }
 
 interface Poll {

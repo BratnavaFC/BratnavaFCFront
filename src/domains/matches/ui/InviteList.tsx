@@ -7,6 +7,7 @@ import { useGroupIcons } from "../../../hooks/useGroupIcons";
 import { IconRenderer } from "../../../components/IconRenderer";
 import { resolveIcon } from "../../../lib/groupIcons";
 import { resolveAbsenceIcon } from "../../../lib/absenceIcons";
+import { formatApiInstantDateTime } from "../../../utils/dateUtils";
 
 // ── Variant config ────────────────────────────────────────────────────────────
 
@@ -93,6 +94,8 @@ export function InviteList({
         const busy     = !!mutatingInvite[pid];
         const showAccept = canAct && (variant === "pending" || variant === "rejected");
         const showReject = canAct && (variant === "pending" || variant === "accepted");
+        const respondedAt = variant !== "pending" ? formatApiInstantDateTime(p.inviteRespondedAt) : null;
+        const respondedLabel = variant === "accepted" ? "Aceitou" : "Recusou";
 
         return (
             <div
@@ -169,6 +172,11 @@ export function InviteList({
                             </span>
                         )}
                     </div>
+                    {respondedAt && (
+                        <div className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                            {respondedLabel} em {respondedAt}
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions */}

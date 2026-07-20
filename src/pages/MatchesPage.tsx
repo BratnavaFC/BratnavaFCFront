@@ -69,6 +69,8 @@ export default function MatchesPage() {
     // Derived — used throughout all handlers (same variable name kept for minimal churn)
     const selectedMatch  = upcomingMatches[selectedIdx] ?? null;
     const currentMatchId = creatingNew ? null : (selectedMatch?.matchId ?? null);
+    const currentMatchIdRef = useRef<string | null>(null);
+    const selectedIdxRef = useRef(0);
 
     const [current, setCurrent] = useState<MatchDetailsDto | null>(null);
     const [godPreview, setGodPreview] = useState<StepKey | null>(null);
@@ -335,22 +337,26 @@ export default function MatchesPage() {
 
             if (list.length === 0) {
                 setSelectedIdx(0);
+                currentMatchIdRef.current = null;
+                selectedIdxRef.current = 0;
                 setCurrent(null);
                 return;
             }
 
             // ── 4. Determine which match to show ──────────────────────────────
             // Priority: explicit selectMatchId arg → URL param → keep current idx
-            const matchIdToSelect = selectMatchId ?? searchParams.get("match") ?? null;
+            const matchIdToSelect = selectMatchId ?? currentMatchIdRef.current ?? searchParams.get("match") ?? null;
             const idxFromArg = matchIdToSelect
                 ? list.findIndex((m) => m.matchId === matchIdToSelect)
                 : -1;
 
             const targetIdx = idxFromArg >= 0
                 ? idxFromArg
-                : Math.min(selectedIdx, list.length - 1);
+                : Math.min(selectedIdxRef.current, list.length - 1);
 
             setSelectedIdx(targetIdx);
+            currentMatchIdRef.current = list[targetIdx].matchId;
+            selectedIdxRef.current = targetIdx;
             lastSelectedMatchRef.current = list[targetIdx].matchId;
 
             // ── 5. Load step payload for selected match ───────────────────────
@@ -382,6 +388,8 @@ export default function MatchesPage() {
         if (match.matchId === currentMatchId) return; // already selected
 
         setSelectedIdx(idx);
+        currentMatchIdRef.current = match.matchId;
+        selectedIdxRef.current = idx;
         setCurrent(null);
         lastLoadedStepRef.current   = null;
         lastSelectedMatchRef.current = match.matchId;
@@ -422,6 +430,11 @@ export default function MatchesPage() {
     const lastSelectedMatchRef = useRef<string | null>(null);
 
     // When the step or the selected match changes, load the new step payload once
+    useEffect(() => {
+        currentMatchIdRef.current = currentMatchId;
+        selectedIdxRef.current = selectedIdx;
+    }, [currentMatchId, selectedIdx]);
+
     useEffect(() => {
         if (!currentMatchId || stepKey === "create") return;
 
@@ -467,7 +480,9 @@ export default function MatchesPage() {
     // Non-admin auto-refresh: poll the full upcoming list so users see status advances
     useEffect(() => {
         if (!readOnlyUser || !groupId) return;
-        const intervalId = window.setInterval(() => { loadUpcoming(); }, NON_ADMIN_POLL_INTERVAL_MS);
+        const intervalId = window.setInterval(() => {
+            loadUpcoming(currentMatchIdRef.current ?? undefined);
+        }, NON_ADMIN_POLL_INTERVAL_MS);
         return () => window.clearInterval(intervalId);
         // eslint-disable-next-line
     }, [readOnlyUser, groupId]);
