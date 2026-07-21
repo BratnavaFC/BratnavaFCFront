@@ -11,6 +11,7 @@ import { usePollStore } from "../stores/pollStore";
 import { usePaymentStore, calcPendingPaymentsCount } from "../stores/paymentStore";
 import { GroupInvitesApi, PollsApi, PaymentsApi } from "../api/endpoints";
 import { useThemeStore } from "../stores/themeStore";
+import { useGroupIcons, useShowPlayerStats } from "../hooks/useGroupIcons";
 
 type Item = { to: string; label: string; icon?: any; imgIcon?: string; badge?: number; end?: boolean };
 type NavGroup = { groupLabel?: string; items: Item[] };
@@ -27,6 +28,9 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     // GodMode/Admin users always have full group-admin access; activeGroupIsAdmin
     // is the per-group reactive flag for regular users.
     const isGroupAdm   = activeGroupIsAdmin || isAdminOrGod;
+    useGroupIcons(activeGrpId);
+    const showPlayerStats = useShowPlayerStats(activeGrpId);
+    const canSeeVisualStats = !!activeGrpId && (isGroupAdm || showPlayerStats);
 
     const pendingCount            = useInviteStore((s) => s.pendingCount);
     const setPendingCount         = useInviteStore((s) => s.setPendingCount);
@@ -78,7 +82,6 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 { to: "/app/birthday-status", label: "Aniversários",   icon: Cake },
                 { to: "/app/schedules",       label: "Agendamentos",   icon: CalendarClock },
                 { to: "/app/settings",        label: "Configurações",  icon: Settings },
-                ...(activeGrpId ? [{ to: `/app/groups/${activeGrpId}/visual-stats`, label: "Visual Stats", icon: BarChart3 }] : []),
               ]
             : [];
 
@@ -94,14 +97,15 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                     { to: "/app/matches",  label: "Partidas",   icon: CalendarDays },
                     { to: "/app/history",  label: "Histórico",  icon: History },
                     { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
-                    ...(activeGrpId && isGroupAdm ? [{ to: `/app/groups/${activeGrpId}/player-history`, label: "Player History", icon: TrendingUp }] : []),
+                    ...(canSeeVisualStats ? [{ to: `/app/groups/${activeGrpId}/visual-stats`, label: "Estatísticas", icon: BarChart3 }] : []),
+                    ...(activeGrpId && isGroupAdm ? [{ to: `/app/groups/${activeGrpId}/player-history`, label: "Meu Histórico", icon: TrendingUp }] : []),
                     ...(activeGrpId && isGroupAdm ? [{ to: '/app/team-builder', label: 'Monte seu Time', icon: Trophy }] : []),
                 ],
             },
             {
                 groupLabel: "Clube",
                 items: [
-                    { to: "/app/groups",      label: "Grupos",    icon: Users },
+                    { to: "/app/groups",      label: "Minha patota", icon: Users },
                     { to: "/app/team-colors", label: "Cores",     icon: Palette },
                     { to: "/app/absences",    label: "Ausências", icon: CalendarOff },
                 ],
@@ -133,7 +137,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                 ],
             },
         ].filter((g) => g.items.length > 0);
-    }, [isAdminOrGod, isGod, isGroupAdm, activeGrpId, pendingCount, pendingPollsCount, pendingPaymentsCount]);
+    }, [isAdminOrGod, isGod, isGroupAdm, activeGrpId, canSeeVisualStats, pendingCount, pendingPollsCount, pendingPaymentsCount]);
 
     return (
         <aside className={`h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${open ? "w-64" : "w-16"}`}>

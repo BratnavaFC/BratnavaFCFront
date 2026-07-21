@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { TeamGenApi } from "../api/endpoints";
+import { GroupSettingsApi, TeamGenApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import {
     BarChart3,
@@ -40,11 +40,18 @@ type PlayerVisualStatsItem = {
     ties: number;
     losses: number;
     winRate: number;
+    points?: number;
+    classificationRank?: number;
     mvps: number;
     mvpVotes: number;
+    mvpsRank?: number;
+    mvpVotesRank?: number;
     goals: number;
     assists: number;
     ownGoals: number;
+    goalsRank?: number;
+    assistsRank?: number;
+    ownGoalsRank?: number | null;
     synergies: PlayerSynergyItem[];
 };
 
@@ -233,8 +240,15 @@ function buildGlobalSynergy(players: PlayerVisualStatsItem[]): GlobalSynergyRow[
 
 /* ===================== Page ===================== */
 
-type SortKey = "winrate" | "wins" | "games" | "mvps" | "mvpvotes" | "goals" | "assists" | "owngoals" | "name";
+type SortKey = "points" | "winrate" | "wins" | "games" | "mvps" | "mvpvotes" | "goals" | "assists" | "owngoals" | "name";
 type SynergySortKey = "wr" | "wins" | "assistsReceived" | "assistsGiven";
+type StatsViewMode = "general" | "perMatch" | "classification";
+
+type StatsTabSettings = {
+    general: boolean;
+    perMatch: boolean;
+    classification: boolean;
+};
 
 export default function VisualStatsPage() {
     const { groupId } = useParams();
@@ -244,6 +258,11 @@ export default function VisualStatsPage() {
     const _icons = useGroupIcons(groupId ?? activeGroupId);
 
     const [data, setData] = useState<PlayerVisualStatsReport | null>(null);
+    const [tabSettings, setTabSettings] = useState<StatsTabSettings>({
+        general: true,
+        perMatch: true,
+        classification: true,
+    });
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
 
@@ -253,7 +272,7 @@ export default function VisualStatsPage() {
     const [sortKey, setSortKey] = useState<SortKey>("winrate");
     const [minTogether, setMinTogether] = useState(1);
     const [synergySortKey, setSynergySortKey] = useState<SynergySortKey>("wr");
-    const [perMatch, setPerMatch] = useState(false);
+    const [viewMode, setViewMode] = useState<StatsViewMode>("general");
 
     useEffect(() => {
         let mounted = true;
@@ -261,11 +280,20 @@ export default function VisualStatsPage() {
             try {
                 setLoading(true);
                 setErr(null);
-                if (!groupId) throw new Error("groupId não encontrado.");
-                const res: any = await TeamGenApi.visualStats(groupId);
-                const payload: PlayerVisualStatsReport = res?.data?.data ?? res?.data ?? res;
+                if (!groupId) throw new Error("Grupo não encontrado.");
+                const [statsRes, settingsRes]: any = await Promise.all([
+                    TeamGenApi.visualStats(groupId),
+                    GroupSettingsApi.get(groupId).catch(() => null),
+                ]);
+                const payload: PlayerVisualStatsReport = statsRes?.data?.data ?? statsRes?.data ?? statsRes;
+                const settings = settingsRes?.data?.data ?? null;
                 if (!mounted) return;
                 setData(payload);
+                setTabSettings({
+                    general: settings?.showStatsGeneralTab ?? true,
+                    perMatch: settings?.showStatsPerMatchTab ?? true,
+                    classification: settings?.showStatsClassificationTab ?? true,
+                });
             } catch (e: any) {
                 if (!mounted) return;
                 setErr(e?.message || "Falha ao carregar dados.");
@@ -278,8 +306,29 @@ export default function VisualStatsPage() {
     }, [groupId]);
 
     const players = data?.players ?? [];
+    const perMatch = viewMode === "perMatch";
+    const classificationMode = viewMode === "classification";
+    const enabledTabs = useMemo(() => {
+        const tabs: StatsViewMode[] = [];
+        if (tabSettings.general) tabs.push("general");
+        if (tabSettings.perMatch) tabs.push("perMatch");
+        if (tabSettings.classification) tabs.push("classification");
+        return tabs.length > 0 ? tabs : (["general"] as StatsViewMode[]);
+    }, [tabSettings]);
+
+    useEffect(() => {
+        if (!enabledTabs.includes(viewMode)) {
+            const next = enabledTabs[0] ?? "general";
+            setViewMode(next);
+            setSortKey(next === "classification" ? "points" : "winrate");
+        }
+    }, [enabledTabs, viewMode]);
 
     const MIN_GAMES_WR = 3;
+
+    function points(p: PlayerVisualStatsItem) {
+        return p.points ?? ((p.wins || 0) * 3 + (p.ties || 0));
+    }
 
     function pmVal(value: number, games: number): number {
         return games > 0 ? value / games : 0;
@@ -293,7 +342,14 @@ export default function VisualStatsPage() {
         const q = search.trim().toLowerCase();
         let list = players.filter(p => isActive(p.status));
         if (q) list = list.filter((p) => p.name.toLowerCase().includes(q));
-        if (sortKey === "winrate") {
+        if (sortKey === "points") {
+            list.sort((a, b) =>
+                points(b) !== points(a) ? points(b) - points(a)
+                    : (b.wins || 0) !== (a.wins || 0) ? (b.wins || 0) - (a.wins || 0)
+                    : (b.gamesPlayed || 0) - (a.gamesPlayed || 0)
+            );
+        }
+        else if (sortKey === "winrate") {
             list.sort((a, b) => {
                 const aValid = a.gamesPlayed >= MIN_GAMES_WR;
                 const bValid = b.gamesPlayed >= MIN_GAMES_WR;
@@ -335,12 +391,15 @@ export default function VisualStatsPage() {
 
     const globalSynergy = useMemo(() => buildGlobalSynergy(players), [players]);
 
+    const activePlayers = useMemo(() => players.filter(p => isActive(p.status)), [players]);
+
     /** Competition-style ranking: players with identical values share the same rank,
      *  and the next rank skips taken positions (1, 1, 1, 4). */
     const sortedRanks = useMemo(() => {
         const ranks = new Map<string, number>();
         const getValue = (p: PlayerVisualStatsItem): number | string => {
             switch (sortKey) {
+                case "points":   return points(p);
                 case "winrate":  return p.gamesPlayed < MIN_GAMES_WR ? -Infinity : normalizeWR(p.winRate);
                 case "wins":     return perMatch ? pmVal(p.wins || 0, p.gamesPlayed) : p.wins || 0;
                 case "games":    return p.gamesPlayed || 0;
@@ -364,6 +423,42 @@ export default function VisualStatsPage() {
         }
         return ranks;
     }, [sorted, sortKey, MIN_GAMES_WR]);
+
+    function buildMetricRanks(metric: (p: PlayerVisualStatsItem) => number) {
+        const ordered = [...activePlayers].sort((a, b) => metric(b) - metric(a) || a.name.localeCompare(b.name, "pt-BR"));
+        const ranks = new Map<string, number>();
+        for (let i = 0; i < ordered.length; i++) {
+            const tied = i > 0 && metric(ordered[i]) === metric(ordered[i - 1]);
+            ranks.set(ordered[i].playerId, tied ? ranks.get(ordered[i - 1].playerId)! : i + 1);
+        }
+        return ranks;
+    }
+
+    const classificationRanks = useMemo(() => ({
+        goals: buildMetricRanks(p => p.goals || 0),
+        assists: buildMetricRanks(p => p.assists || 0),
+        mvps: buildMetricRanks(p => p.mvps || 0),
+        mvpVotes: buildMetricRanks(p => p.mvpVotes || 0),
+        ownGoals: buildMetricRanks(p => p.ownGoals || 0),
+    }), [activePlayers]);
+
+    function rankText(rank: number | undefined) {
+        return rank ? `${rank}º` : "—";
+    }
+
+    function metricRank(p: PlayerVisualStatsItem, key: "goals" | "assists" | "mvps" | "mvpVotes" | "ownGoals") {
+        if (key === "goals") return p.goalsRank ?? classificationRanks.goals.get(p.playerId);
+        if (key === "assists") return p.assistsRank ?? classificationRanks.assists.get(p.playerId);
+        if (key === "mvps") return p.mvpsRank ?? classificationRanks.mvps.get(p.playerId);
+        if (key === "mvpVotes") return p.mvpVotesRank ?? classificationRanks.mvpVotes.get(p.playerId);
+        return p.ownGoalsRank ?? classificationRanks.ownGoals.get(p.playerId);
+    }
+
+    function rowRank(p: PlayerVisualStatsItem, idx: number) {
+        return classificationMode
+            ? p.classificationRank ?? sortedRanks.get(p.playerId) ?? idx + 1
+            : sortedRanks.get(p.playerId) ?? idx + 1;
+    }
 
     /* ── Loading ── */
     if (loading) {
@@ -415,26 +510,41 @@ export default function VisualStatsPage() {
                     </div>
                 </div>
 
-                {/* Switch Geral / Por partida */}
+                {/* Switch Geral / Por partida / Classificacao */}
                 <div className="relative mt-4 flex gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setPerMatch(false)}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
-                            !perMatch ? 'bg-white text-slate-900 border-white' : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
-                        }`}
-                    >
-                        Geral
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setPerMatch(true)}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
-                            perMatch ? 'bg-white text-slate-900 border-white' : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
-                        }`}
-                    >
-                        Por partida
-                    </button>
+                    {tabSettings.general && (
+                        <button
+                            type="button"
+                            onClick={() => { setViewMode("general"); if (sortKey === "points") setSortKey("winrate"); }}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                                viewMode === "general" ? 'bg-white text-slate-900 border-white' : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
+                            }`}
+                        >
+                            Geral
+                        </button>
+                    )}
+                    {tabSettings.perMatch && (
+                        <button
+                            type="button"
+                            onClick={() => { setViewMode("perMatch"); if (sortKey === "points") setSortKey("winrate"); }}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                                viewMode === "perMatch" ? 'bg-white text-slate-900 border-white' : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
+                            }`}
+                        >
+                            Por partida
+                        </button>
+                    )}
+                    {tabSettings.classification && (
+                        <button
+                            type="button"
+                            onClick={() => { setViewMode("classification"); setSortKey("points"); }}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                                classificationMode ? 'bg-white text-slate-900 border-white' : 'bg-transparent text-white/70 border-white/30 hover:bg-white/10'
+                            }`}
+                        >
+                            Classificação
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -470,6 +580,7 @@ export default function VisualStatsPage() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                                 {(
                                     [
+                                        ...(classificationMode ? [{ k: "points" as SortKey, label: "Pontos" as React.ReactNode }] : []),
                                         { k: "winrate",  label: "Win Rate" },
                                         { k: "wins",     label: "Vitórias" },
                                         { k: "games",    label: "Jogos" },
@@ -512,7 +623,7 @@ export default function VisualStatsPage() {
                                             >
                                                 {/* Rank */}
                                                 <div className="w-6 shrink-0 flex justify-center pt-0.5">
-                                                    <RankBadge rank={sortedRanks.get(p.playerId) ?? idx + 1} icons={_icons} />
+                                                    <RankBadge rank={rowRank(p, idx)} icons={_icons} />
                                                 </div>
 
                                                 {/* Player info */}
@@ -534,7 +645,11 @@ export default function VisualStatsPage() {
 
                                                     {/* WR bar */}
                                                     <div className="mt-1.5">
-                                                        {p.gamesPlayed < MIN_GAMES_WR ? (
+                                                        {classificationMode ? (
+                                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                                {points(p)} pts
+                                                            </div>
+                                                        ) : p.gamesPlayed < MIN_GAMES_WR ? (
                                                             <span className="text-xs text-slate-300 dark:text-slate-600">
                                                                 — <span className="text-[10px]">(&lt;{MIN_GAMES_WR}j)</span>
                                                             </span>
@@ -559,7 +674,7 @@ export default function VisualStatsPage() {
                                                             {" "}
                                                             <span className="text-red-500 font-semibold">{perMatch ? pmFmt(p.losses, p.gamesPlayed) : p.losses}D</span>
                                                         </span>
-                                                        {((p.goals || 0) > 0 || perMatch) && (
+                                                        {!classificationMode && ((p.goals || 0) > 0 || perMatch) && (
                                                             <>
                                                                 <span className="text-slate-200 dark:text-slate-700">·</span>
                                                                 <span className="inline-flex items-center gap-0.5 font-medium text-slate-700 dark:text-slate-300">
@@ -567,7 +682,7 @@ export default function VisualStatsPage() {
                                                                 </span>
                                                             </>
                                                         )}
-                                                        {((p.assists || 0) > 0 || perMatch) && (
+                                                        {!classificationMode && ((p.assists || 0) > 0 || perMatch) && (
                                                             <>
                                                                 <span className="text-slate-200 dark:text-slate-700">·</span>
                                                                 <span className="inline-flex items-center gap-0.5 font-medium text-slate-700 dark:text-slate-300">
@@ -575,13 +690,13 @@ export default function VisualStatsPage() {
                                                                 </span>
                                                             </>
                                                         )}
-                                                        {(p.ownGoals || 0) > 0 && (
+                                                        {!classificationMode && (p.ownGoals || 0) > 0 && (
                                                             <>
                                                                 <span className="text-slate-200 dark:text-slate-700">·</span>
                                                                 <span className="font-medium text-red-500">GC {perMatch ? pmFmt(p.ownGoals || 0, p.gamesPlayed) : p.ownGoals}</span>
                                                             </>
                                                         )}
-                                                        {(p.mvpVotes || 0) > 0 && (
+                                                        {!classificationMode && (p.mvpVotes || 0) > 0 && (
                                                             <>
                                                                 <span className="text-slate-200 dark:text-slate-700">·</span>
                                                                 <span className="font-medium text-slate-500 dark:text-slate-400">
@@ -589,11 +704,25 @@ export default function VisualStatsPage() {
                                                                 </span>
                                                             </>
                                                         )}
+                                                        {classificationMode && (
+                                                            <>
+                                                                <span className="text-slate-200 dark:text-slate-700">·</span>
+                                                                <span><IconRenderer value={resolveIcon(_icons, 'goal')} size={10} /> {rankText(metricRank(p, "goals"))}</span>
+                                                                <span><IconRenderer value={resolveIcon(_icons, 'assist')} size={10} /> {rankText(metricRank(p, "assists"))}</span>
+                                                                <span>MVP {rankText(metricRank(p, "mvps"))}</span>
+                                                                <span>Votos {rankText(metricRank(p, "mvpVotes"))}</span>
+                                                                <span>GC {(p.ownGoals || 0) > 0 ? rankText(metricRank(p, "ownGoals")) : "—"}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 {/* WR value */}
-                                                {p.gamesPlayed >= MIN_GAMES_WR && (
+                                                {classificationMode ? (
+                                                    <div className="shrink-0 font-black text-sm tabular-nums text-slate-900 dark:text-white">
+                                                        {points(p)}
+                                                    </div>
+                                                ) : p.gamesPlayed >= MIN_GAMES_WR && (
                                                     <div className="shrink-0 font-bold text-sm tabular-nums" style={{ color }}>
                                                         {pct(wr)}
                                                     </div>
@@ -614,7 +743,7 @@ export default function VisualStatsPage() {
                                         <th className="px-4 py-2.5 text-left">Jogador</th>
                                         <th className="px-4 py-2.5 text-right w-10">J</th>
                                         <th className="px-4 py-2.5 text-center w-24">V / E / D</th>
-                                        <th className="px-4 py-2.5 text-left min-w-[130px]">Win Rate</th>
+                                        <th className="px-4 py-2.5 text-left min-w-[130px]">{classificationMode ? "Pontos" : "Win Rate"}</th>
                                         <th className="px-4 py-2.5 text-right w-14">MVP</th>
                                         <th className="px-4 py-2.5 text-right w-16" title="Votos MVP">Votos</th>
                                         <th className="px-4 py-2.5 text-right w-12" title="Gols"><IconRenderer value={resolveIcon(_icons, 'goal')} size={13} /></th>
@@ -641,7 +770,7 @@ export default function VisualStatsPage() {
                                                 >
                                                     {/* Rank */}
                                                     <td className="px-4 py-2.5 text-center">
-                                                        <RankBadge rank={sortedRanks.get(p.playerId) ?? idx + 1} icons={_icons} />
+                                                        <RankBadge rank={rowRank(p, idx)} icons={_icons} />
                                                     </td>
 
                                                     {/* Name */}
@@ -680,7 +809,12 @@ export default function VisualStatsPage() {
 
                                                     {/* WR (mínimo 3 jogos) */}
                                                     <td className="px-4 py-2.5">
-                                                        {p.gamesPlayed < MIN_GAMES_WR ? (
+                                                        {classificationMode ? (
+                                                            <div className="flex items-center justify-end gap-1 text-slate-900 dark:text-white">
+                                                                <span className="text-lg font-black tabular-nums">{points(p)}</span>
+                                                                <span className="text-[10px] font-semibold uppercase text-slate-400">pts</span>
+                                                            </div>
+                                                        ) : p.gamesPlayed < MIN_GAMES_WR ? (
                                                             <span className="text-xs text-slate-300 dark:text-slate-600">— <span className="text-[10px]">(&lt;{MIN_GAMES_WR}j)</span></span>
                                                         ) : (
                                                             <div className="flex items-center gap-2">
@@ -702,7 +836,9 @@ export default function VisualStatsPage() {
 
                                                     {/* MVPs */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums">
-                                                        {p.mvps > 0 ? (
+                                                        {classificationMode ? (
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{rankText(metricRank(p, "mvps"))}</span>
+                                                        ) : p.mvps > 0 ? (
                                                             <span className="inline-flex items-center gap-1 text-amber-500 font-semibold text-xs">
                                                                 <IconRenderer value={resolveIcon(_icons, 'mvp')} size={11} />
                                                                 {perMatch ? pmFmt(p.mvps, p.gamesPlayed) : p.mvps}
@@ -714,7 +850,9 @@ export default function VisualStatsPage() {
 
                                                     {/* MVP votes */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
-                                                        {(p.mvpVotes || 0) > 0 ? (
+                                                        {classificationMode ? (
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{rankText(metricRank(p, "mvpVotes"))}</span>
+                                                        ) : (p.mvpVotes || 0) > 0 ? (
                                                             <span className="font-semibold text-slate-500 dark:text-slate-400">
                                                                 {perMatch ? pmFmt(p.mvpVotes || 0, p.gamesPlayed) : p.mvpVotes}
                                                             </span>
@@ -725,21 +863,29 @@ export default function VisualStatsPage() {
 
                                                     {/* Goals */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
-                                                        {(p.goals || 0) > 0 || perMatch
+                                                        {classificationMode ? (
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{rankText(metricRank(p, "goals"))}</span>
+                                                        ) : (p.goals || 0) > 0 || perMatch
                                                             ? <span className="font-semibold text-slate-700 dark:text-slate-300">{perMatch ? pmFmt(p.goals || 0, p.gamesPlayed) : p.goals}</span>
                                                             : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
 
                                                     {/* Assists */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
-                                                        {(p.assists || 0) > 0 || perMatch
+                                                        {classificationMode ? (
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{rankText(metricRank(p, "assists"))}</span>
+                                                        ) : (p.assists || 0) > 0 || perMatch
                                                             ? <span className="font-semibold text-slate-700 dark:text-slate-300">{perMatch ? pmFmt(p.assists || 0, p.gamesPlayed) : p.assists}</span>
                                                             : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>
 
                                                     {/* Own goals */}
                                                     <td className="px-4 py-2.5 text-right tabular-nums text-xs">
-                                                        {(p.ownGoals || 0) > 0
+                                                        {classificationMode ? ((p.ownGoals || 0) > 0 ? (
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{rankText(metricRank(p, "ownGoals"))}</span>
+                                                        ) : (
+                                                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                                                        )) : (p.ownGoals || 0) > 0
                                                             ? <span className="font-semibold text-red-500">{perMatch ? pmFmt(p.ownGoals || 0, p.gamesPlayed) : p.ownGoals}</span>
                                                             : <span className="text-slate-300 dark:text-slate-600">—</span>}
                                                     </td>

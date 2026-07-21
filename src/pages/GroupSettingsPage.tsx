@@ -134,6 +134,9 @@ export default function GroupSettingsPage() {
     const [mvpTieRule,           setMvpTieRule]           = useState<number>(1);
     const [mvpTieMaxPlayers,     setMvpTieMaxPlayers]     = useState<number>(2);
     const [showPlayerStats,      setShowPlayerStats]      = useState<boolean>(false);
+    const [showStatsGeneralTab, setShowStatsGeneralTab] = useState<boolean>(true);
+    const [showStatsPerMatchTab, setShowStatsPerMatchTab] = useState<boolean>(true);
+    const [showStatsClassificationTab, setShowStatsClassificationTab] = useState<boolean>(true);
     const [autoFinalizeMvpHours, setAutoFinalizeMvpHours] = useState<number | null>(null);
 
     // ── tab ────────────────────────────────────────────────────────
@@ -207,6 +210,9 @@ export default function GroupSettingsPage() {
                 setMvpTieRule(gs.mvpTieRule ?? 1);
                 setMvpTieMaxPlayers(gs.mvpTieMaxPlayers ?? 2);
                 setShowPlayerStats(gs.showPlayerStats ?? false);
+                setShowStatsGeneralTab(gs.showStatsGeneralTab ?? true);
+                setShowStatsPerMatchTab(gs.showStatsPerMatchTab ?? true);
+                setShowStatsClassificationTab(gs.showStatsClassificationTab ?? true);
                 setPaymentDueDay(gs.paymentDueDay ?? null);
                 setAutoFinalizeMvpHours(gs.autoFinalizeMvpHours ?? null);
                 setMatchSchedulingEnabled(gs.matchSchedulingEnabled ?? false);
@@ -345,6 +351,23 @@ export default function GroupSettingsPage() {
         return `${day ?? '--'}/${month ?? '--'}/${year ?? '----'} ${rawTime.slice(0, 5)}`;
     }
 
+    function setStatsTab(next: {
+        general?: boolean;
+        perMatch?: boolean;
+        classification?: boolean;
+    }) {
+        const general = next.general ?? showStatsGeneralTab;
+        const perMatch = next.perMatch ?? showStatsPerMatchTab;
+        const classification = next.classification ?? showStatsClassificationTab;
+        if (!general && !perMatch && !classification) {
+            toast.error('Deixe pelo menos uma aba de estatisticas ativa.');
+            return;
+        }
+        setShowStatsGeneralTab(general);
+        setShowStatsPerMatchTab(perMatch);
+        setShowStatsClassificationTab(classification);
+    }
+
     async function save() {
         if (!groupId) return;
         setMsg(null);
@@ -371,6 +394,9 @@ export default function GroupSettingsPage() {
                 mvpTieRule,
                 mvpTieMaxPlayers: mvpTieRule === 2 ? mvpTieMaxPlayers : undefined,
                 showPlayerStats,
+                showStatsGeneralTab,
+                showStatsPerMatchTab,
+                showStatsClassificationTab,
                 paymentDueDay: paymentMode === 0 ? paymentDueDay : null,
                 autoFinalizeMvpHours,
                 matchSchedulingEnabled,
@@ -733,6 +759,29 @@ export default function GroupSettingsPage() {
                                             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 ${showPlayerStats ? 'bg-slate-900 dark:bg-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 shadow transition-transform ${showPlayerStats ? 'translate-x-6' : 'translate-x-1'}`} />
                                         </button>
+                                    </div>
+                                    <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-2">Abas disponiveis</div>
+                                        <div className="grid sm:grid-cols-3 gap-2">
+                                            {[
+                                                { key: 'general', label: 'Geral', checked: showStatsGeneralTab, onChange: (value: boolean) => setStatsTab({ general: value }) },
+                                                { key: 'perMatch', label: 'Por partida', checked: showStatsPerMatchTab, onChange: (value: boolean) => setStatsTab({ perMatch: value }) },
+                                                { key: 'classification', label: 'Classificacao', checked: showStatsClassificationTab, onChange: (value: boolean) => setStatsTab({ classification: value }) },
+                                            ].map((tab) => (
+                                                <button
+                                                    key={tab.key}
+                                                    type="button"
+                                                    onClick={() => tab.onChange(!tab.checked)}
+                                                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                                                        tab.checked
+                                                            ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                                                            : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+                                                    }`}
+                                                >
+                                                    {tab.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

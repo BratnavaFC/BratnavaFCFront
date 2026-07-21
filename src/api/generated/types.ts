@@ -141,7 +141,18 @@ export interface PlayerVisualStatsItem {
   ties?: number;
   losses?: number;
   winRate?: number;
+  points?: number;
+  classificationRank?: number;
   mvps?: number;
+  mvpVotes?: number;
+  mvpsRank?: number;
+  mvpVotesRank?: number;
+  goals?: number;
+  assists?: number;
+  ownGoals?: number;
+  goalsRank?: number;
+  assistsRank?: number;
+  ownGoalsRank?: number | null;
   synergies?: PlayerSynergyItem[];
 }
 
@@ -230,6 +241,9 @@ export interface UpsertGroupSettingsDto {
   matchScheduleDayOfWeek?: DayOfWeek;
   matchScheduleTime?: string;
   manualMatchSchedules?: ManualMatchScheduleDto[];
+  showStatsGeneralTab?: boolean;
+  showStatsPerMatchTab?: boolean;
+  showStatsClassificationTab?: boolean;
 }
 
 export interface ManualMatchScheduleDto {
