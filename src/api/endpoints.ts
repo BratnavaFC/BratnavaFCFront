@@ -18,6 +18,26 @@ import type {
 } from './generated/types';
 import type { LikedReplayClipDto, ReplayClipDto, ClipLikerDto, MatchHeaderDto } from '../domains/matches/matchTypes';
 
+export type EnvironmentCheckDto = {
+  name: string;
+  kind: string;
+  status: 'ok' | 'degraded' | 'down' | 'not_configured' | string;
+  detail: string;
+  durationMs: number | null;
+  checkedAt: string;
+};
+
+export type SystemStatusDto = {
+  overall: 'ok' | 'degraded' | 'down' | string;
+  environment: string;
+  checkedAt: string;
+  checks: EnvironmentCheckDto[];
+};
+
+export const StatusApi = {
+  get: () => http.get<ApiResponse<SystemStatusDto>>('/api/status'),
+};
+
 export const AuthApi = {
   login: (dto: LoginDto) => http.post<ApiResponse<unknown>>('/api/Authentication/login', dto),
   refresh: (dto: RefreshTokenDto) => http.post<ApiResponse<unknown>>('/api/Authentication/refresh-token', dto),

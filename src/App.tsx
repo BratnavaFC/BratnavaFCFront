@@ -31,6 +31,7 @@ import PlayerHistoryPage from './pages/PlayerHistoryPage';
 import TeamBuilderPage   from './pages/TeamBuilderPage';
 import PublicClipPage from './pages/PublicClipPage';
 import PublicMatchReplaysPage from './pages/PublicMatchReplaysPage';
+import StatusPage from './pages/StatusPage';
 
 export default function App() {
     const activeAccountId = useAccountStore((s) => s.activeAccountId);
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/app" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/status" element={<StatusPage />} />
             <Route path="/public/clip/:clipId" element={<PublicClipPage />} />
             <Route path="/public/match/:matchId" element={<PublicMatchReplaysPage />} />
 
