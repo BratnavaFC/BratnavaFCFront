@@ -940,9 +940,16 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                 const betCount = members.filter((p) => p.hasBet).length;
                 return (
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <button
-                            type="button"
+                        <div
+                            role="button"
+                            tabIndex={0}
                             onClick={() => setShowBetStatus((v) => !v)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setShowBetStatus((v) => !v);
+                                }
+                            }}
                             className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                             <div className="text-left">
                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -971,7 +978,7 @@ function CurrentBetTab({ groupId }: { groupId: string }) {
                                 </button>
                                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${showBetStatus ? "rotate-180" : ""}`} />
                             </div>
-                        </button>
+                        </div>
 
                         {showBetStatus && (
                             <div className="border-t border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
