@@ -11,6 +11,10 @@ applyTheme(localStorage.getItem('bratnava-theme') === 'dark' ? 'dark' : 'light')
 
 initSecurityGuard();
 
+if (window.location.pathname === '/status' && !window.location.hash) {
+    window.history.replaceState(null, '', '/#/status');
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <HashRouter>

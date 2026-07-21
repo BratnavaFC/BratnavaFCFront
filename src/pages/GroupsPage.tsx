@@ -8,6 +8,7 @@ import { InviteModal } from "../components/modals/InviteModal";
 import { LeaveConfirmModal } from "../components/modals/LeaveConfirmModal";
 import { EditPlayerModal } from "../components/modals/EditPlayerModal";
 import { CreatorLeaveModal } from "../components/modals/CreatorLeaveModal";
+import ExitPendingPaymentsModal, { type ExitPendingPayments } from "../components/modals/ExitPendingPaymentsModal";
 import { GroupsApi, PaymentsApi, PlayersApi } from "../api/endpoints";
 import { useAccountStore } from "../auth/accountStore";
 import { AlertCircle, Check, CheckCircle2, Loader2, LogOut, Pencil, Plus, UserPlus, Users2, X } from "lucide-react";
@@ -84,6 +85,7 @@ export default function GroupsPage() {
     const isAdminOfGroup      = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupIsAdmin ?? false);
     const isFinanceiroOfGroup = useAccountStore((s) => s.accounts.find(a => a.userId === s.activeAccountId)?.activeGroupIsFinanceiro ?? false);
     const currentUserId = active?.userId ?? "";
+    const updateActive = useAccountStore((s) => s.updateActive);
     const isGod = isGodMode();
 
     // ── Estado: lista de patotas do usuário ──
@@ -108,6 +110,7 @@ export default function GroupsPage() {
     const [addGuestOpen, setAddGuestOpen] = useState(false);
     const [editPlayer, setEditPlayer] = useState<PlayerDto | null>(null);
     const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+    const [pendingLeave, setPendingLeave] = useState<ExitPendingPayments | null>(null);
     const [creatorLeaveOpen, setCreatorLeaveOpen] = useState(false);
 
     // ── Grupos únicos do usuário (sem repetição) ──
@@ -156,6 +159,24 @@ export default function GroupsPage() {
             .then(res => setMyPlayers((res.data.data as MyPlayerItem[]) ?? []))
             .catch((e) => { setMyPlayers([]); toast.error(getResponseMessage(e, 'Erro ao carregar patotas.')); })
             .finally(() => setMineLoading(false));
+    }
+
+    function syncActiveMembership(players: MyPlayerItem[]) {
+        const remainingPlayers = players.filter(p => !p.isGuest);
+        const currentGroupId = useAccountStore.getState().getActive()?.activeGroupId ?? null;
+        const stillInCurrentGroup = !!currentGroupId && remainingPlayers.some(p => p.groupId === currentGroupId);
+        const nextPlayer = stillInCurrentGroup
+            ? remainingPlayers.find(p => p.groupId === currentGroupId)
+            : remainingPlayers[0];
+
+        updateActive({
+            activeGroupId: nextPlayer?.groupId ?? null,
+            activePlayerId: nextPlayer?.playerId ?? null,
+            activeGroupIsAdmin: false,
+            activeGroupIsFinanceiro: false,
+        });
+        setExpandedGroupId(nextPlayer?.groupId ?? null);
+        if (!nextPlayer) setGroup(null);
     }
 
     function openGroup(groupId: string) {
@@ -257,11 +278,30 @@ export default function GroupsPage() {
         try {
             await PlayersApi.leaveGroup(activePlayerId);
             setLeaveConfirmOpen(false);
-            await loadMine();
-            loadGroup();
-        } catch (e) {
-            toast.error(getResponseMessage(e, 'Erro ao sair da patota.'));
+            const res = await PlayersApi.mine();
+            const players = (res.data.data as MyPlayerItem[]) ?? [];
+            setMyPlayers(players);
+            syncActiveMembership(players);
+        } catch (e: any) {
+            const pending = e?.response?.data?.data as ExitPendingPayments | undefined;
+            if (pending && pending.count > 0) {
+                setPendingLeave(pending);
+            } else {
+                toast.error(getResponseMessage(e, 'Erro ao sair da patota.'));
+            }
         }
+    }
+
+    async function finishLeave(forceWithoutPayment: boolean) {
+        if (!activePlayerId) return;
+        await PlayersApi.leaveGroup(activePlayerId, { forceWithoutPayment });
+        toast.success("Você saiu da patota.");
+        setPendingLeave(null);
+        setLeaveConfirmOpen(false);
+        const res = await PlayersApi.mine();
+        const players = (res.data.data as MyPlayerItem[]) ?? [];
+        setMyPlayers(players);
+        syncActiveMembership(players);
     }
 
     // ── Conteúdo dos jogadores (reutilizado em 1 grupo e accordion) ──
@@ -722,6 +762,16 @@ export default function GroupsPage() {
                 activePlayerId={activePlayerId}
                 onClose={() => setCreatorLeaveOpen(false)}
                 onDone={() => { setCreatorLeaveOpen(false); loadMine(); loadGroup(); }}
+            />
+
+            <ExitPendingPaymentsModal
+                open={!!pendingLeave}
+                pending={pendingLeave}
+                title="Antes de sair, existem pendências"
+                forceLabel="Sair mesmo assim"
+                onClose={() => setPendingLeave(null)}
+                onContinueAfterPayment={() => finishLeave(true)}
+                onForceContinue={() => finishLeave(true)}
             />
         </div>
     );

@@ -18,6 +18,26 @@ import type {
 } from './generated/types';
 import type { LikedReplayClipDto, ReplayClipDto, ClipLikerDto, MatchHeaderDto } from '../domains/matches/matchTypes';
 
+export type EnvironmentCheckDto = {
+  name: string;
+  kind: string;
+  status: 'ok' | 'degraded' | 'down' | 'not_configured' | string;
+  detail: string;
+  durationMs: number | null;
+  checkedAt: string;
+};
+
+export type SystemStatusDto = {
+  overall: 'ok' | 'degraded' | 'down' | string;
+  environment: string;
+  checkedAt: string;
+  checks: EnvironmentCheckDto[];
+};
+
+export const StatusApi = {
+  get: () => http.get<ApiResponse<SystemStatusDto>>('/api/status'),
+};
+
 export const AuthApi = {
   login: (dto: LoginDto) => http.post<ApiResponse<unknown>>('/api/Authentication/login', dto),
   refresh: (dto: RefreshTokenDto) => http.post<ApiResponse<unknown>>('/api/Authentication/refresh-token', dto),
@@ -40,6 +60,11 @@ export const UsersApi = {
 
     changePassword: (userId: string, dto: { currentPassword: string; newPassword: string }) =>
         http.put<ApiResponse<null>>(`/api/Users/${userId}/password`, dto),
+
+    exitPending: () => http.get<ApiResponse<unknown>>('/api/Users/me/exit-pending'),
+
+    deleteAccount: (dto: { password: string; confirmation: string; forceWithoutPayment?: boolean }) =>
+        http.delete<ApiResponse<null>>('/api/Users/me', { data: dto }),
 
     inactivate: (userId: string) => http.put<ApiResponse<null>>(`/api/Users/${userId}/inactivate`),
     reactivate: (userId: string) => http.put<ApiResponse<null>>(`/api/Users/${userId}/reactivate`),
@@ -78,7 +103,8 @@ export const PlayersApi = {
   reactivate: (playerId: string) => http.post<ApiResponse<null>>(`/api/Players/${playerId}/reactivate`),
   mine: () => http.get<ApiResponse<unknown[]>>("/api/Players/mine"),
   byUser: (userId: string) => http.get<ApiResponse<unknown[]>>(`/api/Players/by-user/${userId}`),
-  leaveGroup: (playerId: string) => http.post<ApiResponse<null>>(`/api/Players/${playerId}/leave`),
+  leaveGroup: (playerId: string, dto?: { forceWithoutPayment?: boolean }) =>
+    http.post<ApiResponse<null>>(`/api/Players/${playerId}/leave`, dto ?? {}),
   removeFromGroup: (playerId: string) => http.post<ApiResponse<null>>(`/api/Players/${playerId}/remove-from-group`),
 };
 
@@ -390,6 +416,14 @@ export const PaymentsApi = {
                           http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/my-pending-items`),
   paySelected:          (groupId: string, dto: any) =>
                           http.post<ApiResponse<null>>(`/api/groups/${groupId}/payments/pay-selected`, dto),
+  getExitPending:       (groupId: string) =>
+                          http.get<ApiResponse<unknown>>(`/api/groups/${groupId}/payments/exit-pending`),
+  getExitDebtAlerts:    (groupId: string) =>
+                          http.get<ApiResponse<unknown[]>>(`/api/groups/${groupId}/payments/exit-debt-alerts`),
+  keepExitDebtAlert:    (groupId: string, notificationId: string) =>
+                          http.post<ApiResponse<null>>(`/api/groups/${groupId}/payments/exit-debt-alerts/${notificationId}/keep`),
+  markExitDebtAlertAsPaid: (groupId: string, notificationId: string) =>
+                          http.post<ApiResponse<null>>(`/api/groups/${groupId}/payments/exit-debt-alerts/${notificationId}/mark-paid`),
 
   // Diagnóstico / teste
   clearAllPayments:     (groupId: string) =>
