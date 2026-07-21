@@ -292,7 +292,9 @@ export default function MatchesPage() {
             const dDto = (detailsRes as any)?.data?.data as any;
             const goals        = (dDto?.goals ?? dDto?.Goals ?? []) as any[];
             const linkedPollId = dDto?.linkedPollId ?? dDto?.LinkedPollId ?? null;
-            setCurrent((prev) => mergeCurrent(prev, { goals, linkedPollId } as any));
+            const teamAGoals   = dDto?.teamAGoals ?? dDto?.TeamAGoals ?? null;
+            const teamBGoals   = dDto?.teamBGoals ?? dDto?.TeamBGoals ?? null;
+            setCurrent((prev) => mergeCurrent(prev, { goals, linkedPollId, teamAGoals, teamBGoals } as any));
             return;
         }
 
@@ -1219,6 +1221,8 @@ export default function MatchesPage() {
                 durationSeconds: 20,
                 eventTime,
             });
+            await refreshCurrent();
+            toast.success(type === 'Jogada' ? "Evento registrado com sucesso." : "Gol registrado com sucesso.");
         } catch (e) {
             toast.error(getResponseMessage(e, "Falha ao enviar evento de replay."));
         }
