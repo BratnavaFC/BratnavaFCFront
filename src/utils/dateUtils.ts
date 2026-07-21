@@ -41,6 +41,20 @@ export function formatUtcDate(iso?: string | null) {
     };
 }
 
+export function formatApiInstantDateTime(iso?: string | null): string | null {
+    if (!iso) return null;
+    const d = toUtcDate(iso);
+    if (Number.isNaN(d.getTime())) return null;
+
+    return d.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 export function stripTimezone(iso: string): string {
     return iso
         .replace(/Z$/i, '')
