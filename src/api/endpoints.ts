@@ -25,6 +25,14 @@ export type EnvironmentCheckDto = {
   detail: string;
   durationMs: number | null;
   checkedAt: string;
+  warnings?: EnvironmentWarningDto[];
+};
+
+export type EnvironmentWarningDto = {
+  dependency: string;
+  message: string;
+  error: string | null;
+  occurredAt: string;
 };
 
 export type SystemStatusDto = {
@@ -32,10 +40,44 @@ export type SystemStatusDto = {
   environment: string;
   checkedAt: string;
   checks: EnvironmentCheckDto[];
+  ignoredProblems?: EnvironmentWarningDto[];
 };
 
 export const StatusApi = {
   get: () => http.get<ApiResponse<SystemStatusDto>>('/api/status'),
+};
+
+export type ScheduledActionRecipientDto = {
+  userId: string | null;
+  playerId: string | null;
+  name: string;
+  role: string;
+};
+
+export type ScheduledActionDto = {
+  id: string;
+  source: 'notification' | 'configured' | string;
+  entityType: string;
+  entityId: string | null;
+  triggerType: string;
+  title: string;
+  description: string;
+  scheduledForUtc: string;
+  scheduledForLocal: string;
+  scheduledForDisplay: string;
+  status: string;
+  targetAudience: string;
+  recipients: ScheduledActionRecipientDto[];
+  recipientCount: number;
+  canCancel: boolean;
+  hangfireJobId: string | null;
+};
+
+export const ScheduledActionsApi = {
+  list: (groupId: string, take = 80) =>
+    http.get<ApiResponse<ScheduledActionDto[]>>(`/api/groups/${groupId}/scheduled-actions`, { params: { take } }),
+  cancel: (groupId: string, scheduledJobId: string) =>
+    http.delete<ApiResponse<null>>(`/api/groups/${groupId}/scheduled-actions/${scheduledJobId}`),
 };
 
 export const AuthApi = {

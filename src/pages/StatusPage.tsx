@@ -86,6 +86,30 @@ function CheckCard({ check }: { check: EnvironmentCheckDto }) {
 
             <p className="mt-4 text-sm leading-relaxed text-slate-700">{check.detail}</p>
 
+            {check.warnings?.length ? (
+                <div className="mt-4 space-y-2">
+                    {check.warnings.map((warning, index) => (
+                        <div
+                            key={`${warning.occurredAt}-${index}`}
+                            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+                        >
+                            <div className="flex items-start gap-2 font-bold">
+                                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                                <span>{warning.message}</span>
+                            </div>
+                            {warning.error && (
+                                <p className="mt-1 break-words font-mono text-[11px] leading-relaxed text-amber-900">
+                                    {warning.error}
+                                </p>
+                            )}
+                            <p className="mt-1 text-[11px] text-amber-700">
+                                Ocorrido em {formatDate(warning.occurredAt)}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
                 <span>Duração: {check.durationMs == null ? '-' : `${check.durationMs} ms`}</span>
                 <span>Verificado: {formatDate(check.checkedAt)}</span>
@@ -124,6 +148,7 @@ export default function StatusPage() {
             degraded: list.filter(c => c.status === 'degraded').length,
             down: list.filter(c => c.status === 'down').length,
             notConfigured: list.filter(c => c.status === 'not_configured').length,
+            warnings: data?.ignoredProblems?.length ?? list.reduce((total, c) => total + (c.warnings?.length ?? 0), 0),
         };
     }, [data]);
 
@@ -172,7 +197,7 @@ export default function StatusPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
                             <div className="rounded-lg bg-emerald-50 px-4 py-3 text-emerald-700">
                                 <div className="text-lg font-black">{counts.ok}</div>
                                 <div className="text-[11px] font-bold uppercase">OK</div>
@@ -189,6 +214,10 @@ export default function StatusPage() {
                                 <div className="text-lg font-black">{counts.notConfigured}</div>
                                 <div className="text-[11px] font-bold uppercase">Sem config</div>
                             </div>
+                            <div className="rounded-lg bg-amber-50 px-4 py-3 text-amber-700">
+                                <div className="text-lg font-black">{counts.warnings}</div>
+                                <div className="text-[11px] font-bold uppercase">Alertas</div>
+                            </div>
                         </div>
                     </div>
 
@@ -198,6 +227,45 @@ export default function StatusPage() {
                         </div>
                     )}
                 </section>
+
+                {data?.ignoredProblems?.length ? (
+                    <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                                <AlertTriangle size={20} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs font-black uppercase text-amber-700">Problemas ignorados pela aplicação</p>
+                                <h2 className="mt-1 text-base font-black text-amber-950">
+                                    A API subiu, mas estes erros foram tolerados para manter o sistema online
+                                </h2>
+                                <div className="mt-4 space-y-3">
+                                    {data.ignoredProblems.map((problem, index) => (
+                                        <article
+                                            key={`${problem.dependency}-${problem.occurredAt}-${index}`}
+                                            className="rounded-lg border border-amber-200 bg-white/70 p-3"
+                                        >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black uppercase text-amber-800">
+                                                    {problem.dependency}
+                                                </span>
+                                                <span className="text-xs font-semibold text-amber-700">
+                                                    {formatDate(problem.occurredAt)}
+                                                </span>
+                                            </div>
+                                            <p className="mt-2 text-sm font-bold text-amber-950">{problem.message}</p>
+                                            {problem.error && (
+                                                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-slate-950 p-3 text-[11px] leading-relaxed text-amber-100">
+                                                    {problem.error}
+                                                </pre>
+                                            )}
+                                        </article>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                ) : null}
 
                 {loading && !data ? (
                     <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white py-16 text-slate-500">
