@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import {
     LayoutDashboard, Users, Palette, CalendarDays, CalendarCheck, History, Settings, User, ShieldAlert,
     Menu, X, DollarSign, Presentation, Vote, Cake, Sun, Moon, Film, CalendarOff, Coins, BarChart3, TrendingUp, Trophy,
+    CalendarClock,
 } from "lucide-react";
 import useAccountStore from "../auth/accountStore";
 import { useInviteStore } from "../stores/inviteStore";
@@ -75,6 +76,7 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
             ? [
                 { to: "/app/spotlight",       label: "Spotlight",      icon: Presentation },
                 { to: "/app/birthday-status", label: "Aniversários",   icon: Cake },
+                { to: "/app/schedules",       label: "Agendamentos",   icon: CalendarClock },
                 { to: "/app/settings",        label: "Configurações",  icon: Settings },
                 ...(activeGrpId ? [{ to: `/app/groups/${activeGrpId}/visual-stats`, label: "Visual Stats", icon: BarChart3 }] : []),
               ]

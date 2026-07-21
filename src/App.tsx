@@ -32,6 +32,7 @@ import TeamBuilderPage   from './pages/TeamBuilderPage';
 import PublicClipPage from './pages/PublicClipPage';
 import PublicMatchReplaysPage from './pages/PublicMatchReplaysPage';
 import StatusPage from './pages/StatusPage';
+import ScheduledActionsPage from './pages/ScheduledActionsPage';
 
 export default function App() {
     const activeAccountId = useAccountStore((s) => s.activeAccountId);
@@ -78,6 +79,15 @@ export default function App() {
                     element={
                         <GroupAdminRoute>
                             <GroupSettingsPage />
+                        </GroupAdminRoute>
+                    }
+                />
+
+                <Route
+                    path="schedules"
+                    element={
+                        <GroupAdminRoute>
+                            <ScheduledActionsPage />
                         </GroupAdminRoute>
                     }
                 />
