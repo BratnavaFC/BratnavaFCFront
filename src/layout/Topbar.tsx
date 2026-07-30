@@ -14,7 +14,6 @@ import {
     Bell,
 } from "lucide-react";
 import { useAccountStore } from "../auth/accountStore";
-import { isAdmin } from "../auth/guards";
 import { PlayersApi, GroupsApi, GroupSettingsApi, NotificationsApi, type AppNotificationDto } from "../api/endpoints";
 import { Field } from "../components/Field";
 import { notificationRoute, parseNotifData } from "../lib/notificationRouter";
@@ -204,8 +203,11 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
     const updateActive     = useAccountStore((s) => s.updateActive);
 
     const active = getActive();
-    const admin  = isAdmin();
     const isGod  = active?.roles?.includes("GodMode") ?? false;
+
+    // Criar patota não exige role de plataforma: POST /api/Groups aceita User,
+    // Admin e GodMode, e quem cria já entra como admin do próprio grupo.
+    const canCreateGroup = !!active?.userId;
 
     const [myPlayers, setMyPlayers]         = useState<MyPlayerDto[]>([]);
     const [godGroups,  setGodGroups]         = useState<{ groupId: string; groupName: string }[]>([]);
@@ -534,8 +536,8 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                 {/* ── RIGHT ── */}
                 <div className="flex items-center gap-2 shrink-0">
 
-                    {/* Create group — admin only */}
-                    {admin && !isMobile && (
+                    {/* Create group — qualquer usuário autenticado */}
+                    {canCreateGroup && !isMobile && (
                         <button
                             type="button"
                             title="Criar grupo"
@@ -709,7 +711,7 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
                                 {/* Actions */}
                                 <div className="mx-3 my-1 border-t border-slate-100 dark:border-slate-800" />
 
-                                {admin && (
+                                {canCreateGroup && (
                                     <button
                                         type="button"
                                         onClick={() => { setUserMenuOpen(false); setCreateGroupOpen(true); }}
