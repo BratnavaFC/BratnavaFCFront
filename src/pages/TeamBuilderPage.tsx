@@ -191,26 +191,44 @@ function StatsPanel({ stats }: { stats: TeamBuilderStatsDto }) {
                 ))}
             </div>
 
-            {/* Goals scoreboard */}
-            <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 px-4 py-3 flex items-center justify-center gap-4">
-                <div className="text-center">
-                    <div className="text-2xl">⚽</div>
-                    <div className="text-2xl font-black text-white">{stats.goalsScored}</div>
-                    <div className="text-[10px] text-slate-400">marcados</div>
+            {/* Goals scoreboard — placar do TIME (soma das partidas juntos) */}
+            <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 px-4 py-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 text-center mb-2">
+                    Gols do time · nas partidas juntos
                 </div>
-                <div className="text-slate-600 text-2xl font-thin">|</div>
-                <div className="text-center">
-                    <div className="text-2xl">🥅</div>
-                    <div className="text-2xl font-black text-white">{stats.goalsConceded}</div>
-                    <div className="text-[10px] text-slate-400">sofridos</div>
+                <div className="flex items-center justify-center gap-4">
+                    <div className="text-center">
+                        <div className="text-2xl">⚽</div>
+                        <div className="text-2xl font-black text-white">{stats.goalsScored}</div>
+                        <div className="text-[10px] text-slate-400">a favor</div>
+                    </div>
+                    <div className="text-slate-600 text-2xl font-thin">|</div>
+                    <div className="text-center">
+                        <div className="text-2xl">🥅</div>
+                        <div className="text-2xl font-black text-white">{stats.goalsConceded}</div>
+                        <div className="text-[10px] text-slate-400">sofridos</div>
+                    </div>
                 </div>
+            </div>
+
+            {/* Gols marcados pelos próprios jogadores selecionados */}
+            <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 px-4 py-3 flex items-center gap-3">
+                <div className="text-2xl">🎽</div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-white">Gols deles</div>
+                    <div className="text-[10px] text-slate-400">marcados pelos jogadores selecionados</div>
+                </div>
+                <div className="text-2xl font-black text-white tabular-nums">{stats.goalsScoredByPlayers}</div>
             </div>
 
             {/* Assists */}
             {stats.assistPairs.length > 0 && (
                 <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 p-4 space-y-2">
-                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                        🎯 <span>Assistências entre eles</span>
+                    <div>
+                        <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                            🎯 <span>Assistências entre eles</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5">passes para gol de um selecionado para outro</p>
                     </div>
                     {stats.assistPairs.map((a, i) => (
                         <div key={i} className="flex items-center gap-2 text-sm">
