@@ -211,12 +211,15 @@ export default function PlayerHistoryPage() {
 
     // Players list (for admin selector)
     const [players, setPlayers] = useState<PlayerOption[]>([]);
-    // Initialize from URL param → own player from store → null
+    // Item 1: só admins podem abrir o histórico de OUTRO jogador via ?playerId=.
+    // Para membros comuns, sempre o próprio jogador — evita link com ?playerId de
+    // terceiro cair no 403 do backend e mostrar erro genérico.
     // This ensures loadHistory fires immediately without waiting for async init()
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(
-        preselectedPlayerId ?? activePlayerId ?? null
+        isGroupAdm ? (preselectedPlayerId ?? activePlayerId ?? null) : (activePlayerId ?? null)
     );
     const [selectedPlayerName, setSelectedPlayerName] = useState<string>("");
+    const [selectedPlayerIsGk, setSelectedPlayerIsGk] = useState(false);
 
     // Match data
     const [matches, setMatches] = useState<MatchItem[]>([]);
@@ -226,6 +229,7 @@ export default function PlayerHistoryPage() {
 
     // Filters
     const [selectedYear, setSelectedYear] = useState<number | null>(null);
+    const [resultFilter, setResultFilter] = useState<"W" | "D" | "L" | null>(null);
     const [search, setSearch] = useState("");
     const [playerSearch, setPlayerSearch] = useState("");
 
@@ -258,6 +262,7 @@ export default function PlayerHistoryPage() {
                     if (defaultPlayer) {
                         setSelectedPlayerId(defaultPlayer.id);
                         setSelectedPlayerName(defaultPlayer.name);
+                        setSelectedPlayerIsGk(defaultPlayer.isGoalkeeper);
                     }
                 } else {
                     // Non-admins: selectedPlayerId already initialized from activePlayerId.
@@ -267,7 +272,10 @@ export default function PlayerHistoryPage() {
                             const mineRes: any = await PlayersApi.mine();
                             const mine: any[] = mineRes?.data?.data ?? mineRes?.data ?? [];
                             const myPlayer = mine.find((p: any) => p.id === activePlayerId);
-                            if (myPlayer) setSelectedPlayerName(myPlayer.name);
+                            if (myPlayer) {
+                                setSelectedPlayerName(myPlayer.name);
+                                setSelectedPlayerIsGk(!!myPlayer.isGoalkeeper);
+                            }
                         } catch { /* name stays empty — history still loads */ }
                     }
                 }
@@ -331,6 +339,7 @@ export default function PlayerHistoryPage() {
     const filtered = useMemo(() => {
         let list = matches;
         if (selectedYear) list = list.filter(m => getYear(m.playedAt) === selectedYear);
+        if (resultFilter) list = list.filter(m => getResult(m) === resultFilter);
         if (search.trim()) {
             const q = search.trim().toLowerCase();
             list = list.filter(m =>
@@ -339,17 +348,26 @@ export default function PlayerHistoryPage() {
             );
         }
         return list;
-    }, [matches, selectedYear, search]);
+    }, [matches, selectedYear, resultFilter, search]);
 
-    // Stats for filtered view
+    // Stats do recorte atual — passada única (item 9: evita 3 filters + reduces)
     const stats = useMemo(() => {
-        const wins = filtered.filter(m => getResult(m) === "W").length;
-        const draws = filtered.filter(m => getResult(m) === "D").length;
-        const losses = filtered.filter(m => getResult(m) === "L").length;
-        const goals = filtered.reduce((s, m) => s + m.playerGoals, 0);
-        const assists = filtered.reduce((s, m) => s + m.playerAssists, 0);
-        const mvps = filtered.filter(m => m.isPlayerMvp).length;
-        return { total: filtered.length, wins, draws, losses, goals, assists, mvps };
+        let wins = 0, draws = 0, losses = 0, goals = 0, assists = 0, mvps = 0, conceded = 0, cleanSheets = 0;
+        for (const m of filtered) {
+            const r = getResult(m);
+            if (r === "W") wins++; else if (r === "D") draws++; else if (r === "L") losses++;
+            goals += m.playerGoals;
+            assists += m.playerAssists;
+            if (m.isPlayerMvp) mvps++;
+            const opp = (m.playerTeam === 1 ? m.teamBGoals : m.teamAGoals) ?? 0;
+            conceded += opp;
+            if (opp === 0) cleanSheets++;
+        }
+        const total = filtered.length;
+        const points = wins * 3 + draws;           // aproveitamento estilo campeonato
+        const winPct = total > 0 ? Math.round((wins / total) * 100) : 0;
+        const aproveitamento = total > 0 ? Math.round((points / (total * 3)) * 100) : 0;
+        return { total, wins, draws, losses, goals, assists, mvps, conceded, cleanSheets, winPct, aproveitamento };
     }, [filtered]);
 
     // Filtered player list for the selector search
@@ -362,6 +380,14 @@ export default function PlayerHistoryPage() {
     function handleNavigate(matchId: string) {
         navigate(`/app/history/${resolvedGroupId}/${matchId}`);
     }
+
+    // Seleção de jogador (admin) — mantém id, nome e flag de goleiro em sincronia
+    const selectPlayer = useCallback((p: PlayerOption) => {
+        setSelectedPlayerId(p.id);
+        setSelectedPlayerName(p.name);
+        setSelectedPlayerIsGk(p.isGoalkeeper);
+        setPlayerSearch("");
+    }, []);
 
     // Group matches by month
     const groupedByMonth = useMemo(() => {
@@ -453,11 +479,7 @@ export default function PlayerHistoryPage() {
                                             <button
                                                 key={p.id}
                                                 type="button"
-                                                onClick={() => {
-                                                    setSelectedPlayerId(p.id);
-                                                    setSelectedPlayerName(p.name);
-                                                    setPlayerSearch("");
-                                                }}
+                                                onClick={() => selectPlayer(p)}
                                                 className={cx(
                                                     "w-full text-left px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors",
                                                     p.id === selectedPlayerId ? "text-amber-400 font-semibold" : "text-white"
@@ -477,7 +499,7 @@ export default function PlayerHistoryPage() {
                                         <button
                                             key={p.id}
                                             type="button"
-                                            onClick={() => { setSelectedPlayerId(p.id); setSelectedPlayerName(p.name); }}
+                                            onClick={() => selectPlayer(p)}
                                             className={cx(
                                                 "px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors",
                                                 p.id === selectedPlayerId
@@ -504,35 +526,45 @@ export default function PlayerHistoryPage() {
 
                     {/* Stats summary */}
                     {!loading && filtered.length > 0 && (
-                        <div className="flex gap-2 flex-wrap">
-                            <SummaryCard label="Jogos" value={stats.total} />
-                            <SummaryCard label="V" value={<span className="text-green-400">{stats.wins}</span>} />
-                            <SummaryCard label="E" value={<span className="text-slate-400">{stats.draws}</span>} />
-                            <SummaryCard label="D" value={<span className="text-red-400">{stats.losses}</span>} />
-                            {stats.total > 0 && (
-                                <SummaryCard
-                                    label="Win %"
-                                    value={`${Math.round((stats.wins / stats.total) * 100)}%`}
-                                />
-                            )}
-                            {(stats.goals > 0 || stats.assists > 0) && (
-                                <SummaryCard
-                                    label="Gols"
-                                    value={<span className="inline-flex items-center gap-1"><IconRenderer value={resolveIcon(_icons, 'goal')} size={16} />{stats.goals}</span>}
-                                />
-                            )}
-                            {stats.assists > 0 && (
-                                <SummaryCard
-                                    label="Assists"
-                                    value={<span className="inline-flex items-center gap-1"><IconRenderer value={resolveIcon(_icons, 'assist')} size={16} />{stats.assists}</span>}
-                                />
-                            )}
-                            {stats.mvps > 0 && (
-                                <SummaryCard
-                                    label="MVPs"
-                                    value={<span className="inline-flex items-center gap-1 text-amber-400"><IconRenderer value={resolveIcon(_icons, 'mvp')} size={16} />{stats.mvps}</span>}
-                                />
-                            )}
+                        <div className="space-y-2">
+                            {/* Item 6: deixa claro o escopo do resumo (ano filtrado ou tudo) */}
+                            <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">
+                                Resumo · {selectedYear ?? "todos os anos"}
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                                <SummaryCard label="Jogos" value={stats.total} />
+                                <SummaryCard label="V" value={<span className="text-green-400">{stats.wins}</span>} />
+                                <SummaryCard label="E" value={<span className="text-slate-400">{stats.draws}</span>} />
+                                <SummaryCard label="D" value={<span className="text-red-400">{stats.losses}</span>} />
+                                <SummaryCard label="Win %" value={`${stats.winPct}%`} />
+                                {/* Item 7: aproveitamento estilo campeonato (V=3, E=1) */}
+                                <SummaryCard label="Aproveit." value={`${stats.aproveitamento}%`} />
+                                {/* Item 5: métricas de goleiro — sem elas o GK via a tela quase vazia */}
+                                {selectedPlayerIsGk && (
+                                    <>
+                                        <SummaryCard label="S/ sofrer" value={stats.cleanSheets} />
+                                        <SummaryCard label="Sofridos" value={stats.conceded} />
+                                    </>
+                                )}
+                                {(stats.goals > 0 || stats.assists > 0) && (
+                                    <SummaryCard
+                                        label="Gols"
+                                        value={<span className="inline-flex items-center gap-1"><IconRenderer value={resolveIcon(_icons, 'goal')} size={16} />{stats.goals}</span>}
+                                    />
+                                )}
+                                {stats.assists > 0 && (
+                                    <SummaryCard
+                                        label="Assists"
+                                        value={<span className="inline-flex items-center gap-1"><IconRenderer value={resolveIcon(_icons, 'assist')} size={16} />{stats.assists}</span>}
+                                    />
+                                )}
+                                {stats.mvps > 0 && (
+                                    <SummaryCard
+                                        label="MVPs"
+                                        value={<span className="inline-flex items-center gap-1 text-amber-400"><IconRenderer value={resolveIcon(_icons, 'mvp')} size={16} />{stats.mvps}</span>}
+                                    />
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -600,6 +632,31 @@ export default function PlayerHistoryPage() {
                         ))}
                     </div>
 
+                    {/* Item 11: filtro por resultado — clique alterna; clicar no ativo limpa */}
+                    <div className="flex gap-1">
+                        {([["W", "V"], ["D", "E"], ["L", "D"]] as const).map(([key, label]) => {
+                            const activeCls = key === "W" ? "bg-green-500 border-green-500 text-white"
+                                : key === "D" ? "bg-slate-400 dark:bg-slate-600 border-slate-400 dark:border-slate-600 text-white"
+                                : "bg-red-500 border-red-500 text-white";
+                            return (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    title={key === "W" ? "Só vitórias" : key === "D" ? "Só empates" : "Só derrotas"}
+                                    onClick={() => setResultFilter(prev => (prev === key ? null : key))}
+                                    className={cx(
+                                        "w-8 h-8 rounded-lg text-xs font-black border transition-colors",
+                                        resultFilter === key
+                                            ? activeCls
+                                            : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                    )}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     {/* Search */}
                     <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 flex-1 min-w-[140px] max-w-xs">
                         <Search size={13} className="text-slate-400 shrink-0" />
@@ -635,7 +692,9 @@ export default function PlayerHistoryPage() {
 
             {!loading && !err && filtered.length === 0 && selectedPlayerId && (
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-10 text-center text-sm text-slate-400 dark:text-slate-500">
-                    Nenhuma partida encontrada{selectedYear ? ` em ${selectedYear}` : ""}.
+                    {matches.length === 0
+                        ? "Você ainda não jogou nenhuma partida finalizada por aqui 👟"
+                        : `Nenhuma partida${selectedYear ? ` em ${selectedYear}` : ""}${resultFilter ? " com esse resultado" : ""}${search.trim() ? " para essa busca" : ""}.`}
                 </div>
             )}
 
@@ -668,6 +727,13 @@ export default function PlayerHistoryPage() {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* Item 10: o backend retorna no máximo as 500 partidas mais recentes */}
+            {!loading && !err && matches.length >= 500 && (
+                <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
+                    Mostrando as 500 partidas mais recentes.
+                </p>
             )}
         </div>
     );
