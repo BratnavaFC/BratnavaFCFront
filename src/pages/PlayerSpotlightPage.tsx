@@ -114,7 +114,7 @@ function CoverSlide({ isFullscreen }: { isFullscreen: boolean }) {
         <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden select-none">
             {/* Radial amber glow */}
             <div className="absolute inset-0 pointer-events-none"
-                style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(217,119,6,0.22) 0%, transparent 70%)' }} />
+                style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(37,99,235,0.24) 0%, transparent 70%)' }} />
 
             {/* Dot grid */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
@@ -126,16 +126,9 @@ function CoverSlide({ isFullscreen }: { isFullscreen: boolean }) {
                     src={`${import.meta.env.BASE_URL}bratnava-logo.png`}
                     alt="Bratnava FC"
                     className="w-full h-full object-contain"
-                    style={{ filter: 'drop-shadow(0 0 18px rgba(251,191,36,0.55))' }}
+                    style={{ filter: 'drop-shadow(0 0 18px rgba(59,130,246,0.55))' }}
                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                 />
-            </div>
-
-            {/* Badge edição */}
-            <div className="relative z-10 mb-4 px-4 py-1 rounded-full border border-amber-400/40 bg-amber-400/10">
-                <span className={cls('font-bold tracking-[0.2em] uppercase text-amber-300', isFullscreen ? 'text-xl' : 'text-xs')}>
-                    2ª Edição
-                </span>
             </div>
 
             {/* Título */}
@@ -146,20 +139,20 @@ function CoverSlide({ isFullscreen }: { isFullscreen: boolean }) {
                     textShadow: '0 4px 40px rgba(0,0,0,0.7)',
                 }}
             >
-                <span style={{ WebkitTextStroke: isFullscreen ? '2px #fbbf24' : '1px #fbbf24', color: 'transparent' }}>
-                    Hamburgada
+                <span style={{ WebkitTextStroke: isFullscreen ? '2px #3b82f6' : '1px #3b82f6', color: 'transparent' }}>
+                    Entrevero
                 </span>
                 <br />
-                <span className="text-amber-400" style={{ textShadow: '0 0 40px rgba(251,191,36,0.5)' }}>
+                <span className="text-blue-500" style={{ textShadow: '0 0 40px rgba(59,130,246,0.55)' }}>
                     do Bratnava!
                 </span>
             </h1>
 
             {/* Divider */}
             <div className="relative z-10 my-5 flex items-center gap-3 w-64">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent to-amber-400/50" />
-                <span className={cls('text-amber-400/70', isFullscreen ? 'text-2xl' : 'text-lg')}>🍔</span>
-                <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-400/50" />
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent to-blue-500/50" />
+                <span className={cls('text-lg', isFullscreen ? 'text-2xl' : 'text-lg')}>🥘</span>
+                <div className="flex-1 h-px bg-gradient-to-l from-transparent to-blue-500/50" />
             </div>
 
             {/* Data */}
@@ -486,28 +479,28 @@ function PlayerSlide({ player, isFullscreen }: { player: PlayerSpotlightItem; is
                     items={player.bestPartners}   accentClass="text-emerald-400" barClass="bg-emerald-500/60"
                     emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
                     isFullscreen={fs}
-                    renderExtra={r => <span className={cls('text-emerald-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
+                    renderExtra={r => <span className={cls('text-emerald-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}<span className="text-white/30 font-normal"> · {r.count}j</span></span>}
                 />
                 <RelationList
                     icon={TrendingDown} label="Piores parceiros"
                     items={player.worstPartners}  accentClass="text-orange-400" barClass="bg-orange-500/60"
                     emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
                     isFullscreen={fs}
-                    renderExtra={r => <span className={cls('text-orange-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
+                    renderExtra={r => <span className={cls('text-orange-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}<span className="text-white/30 font-normal"> · {r.count}j</span></span>}
                 />
                 <RelationList
                     icon={Swords} label="Mais me vencem"
                     items={player.mostBeatenBy}   accentClass="text-red-400" barClass="bg-red-500/60"
                     emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
                     isFullscreen={fs}
-                    renderExtra={r => <span className={cls('text-red-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
+                    renderExtra={r => <span className={cls('text-red-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}<span className="text-white/30 font-normal"> · {r.count}j</span></span>}
                 />
                 <RelationList
                     icon={Shield} label="Mais venci"
                     items={player.leastBeatenBy}  accentClass="text-sky-400" barClass="bg-sky-500/60"
                     emptyMsg="Sem dados suficientes" getBarValue={r => r.rate}
                     isFullscreen={fs}
-                    renderExtra={r => <span className={cls('text-sky-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}</span>}
+                    renderExtra={r => <span className={cls('text-sky-300 font-bold shrink-0', fs ? 'text-base' : 'text-xs')}>{pct(r.rate)}<span className="text-white/30 font-normal"> · {r.count}j</span></span>}
                 />
                 <RelationList
                     icon={Star} label="Mais me assistiram"
@@ -658,7 +651,7 @@ export default function PlayerSpotlightPage() {
 
     // ── Gradientes por slide ──────────────────────────────────────────────────
     const gradients = [
-        'from-slate-900 via-amber-950 to-orange-950',   // capa
+        'from-slate-950 via-blue-950 to-indigo-950',     // capa — Entrevero (azul)
         'from-slate-900 via-teal-950 to-slate-900',     // stats
         'from-slate-900 via-indigo-950 to-slate-900',
         'from-slate-900 via-emerald-950 to-slate-900',
@@ -675,7 +668,7 @@ export default function PlayerSpotlightPage() {
     }
 
     function getSlideLabel(idx: number): string {
-        if (idx === SLIDE_COVER) return 'Hamburgada 🍔';
+        if (idx === SLIDE_COVER) return 'Entrevero 🥘';
         if (idx === SLIDE_STATS) return 'Estatísticas 🏆';
         return players[idx - PLAYER_OFFSET]?.name ?? '';
     }
@@ -747,7 +740,7 @@ export default function PlayerSpotlightPage() {
                             onClick={() => goTo(SLIDE_COVER)}
                             title="Capa"
                             className={cls('rounded-full transition-all duration-300',
-                                current === SLIDE_COVER ? 'w-5 h-2 bg-amber-400' : 'w-2 h-2 bg-white/25 hover:bg-white/50')}
+                                current === SLIDE_COVER ? 'w-5 h-2 bg-blue-500' : 'w-2 h-2 bg-white/25 hover:bg-white/50')}
                         />
                         {/* Stats */}
                         <button
