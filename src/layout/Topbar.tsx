@@ -17,6 +17,7 @@ import { useAccountStore } from "../auth/accountStore";
 import { PlayersApi, GroupsApi, GroupSettingsApi, NotificationsApi, type AppNotificationDto } from "../api/endpoints";
 import { Field } from "../components/Field";
 import { notificationRoute, parseNotifData } from "../lib/notificationRouter";
+import { useRealtimeNotifications, type RealtimeNotification } from "../hooks/useRealtimeNotifications";
 
 type MyPlayerDto = {
     playerId: string;
@@ -311,7 +312,16 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
         return () => window.removeEventListener("focus", onFocus);
     }, [active?.userId]);
 
-    // ── unread-count polling (scoped to active group) ───────────────────────
+    // ── unread-count: uma leitura por conexão, o resto via SignalR ───────────
+    //
+    // Antes isto era um setInterval de 60s mais um listener de `focus`, ou seja pelo menos 60
+    // requests por hora por aba aberta — e como o endpoint consulta o Postgres, o compute do
+    // Neon (que só suspende após 5 min de inatividade) nunca chegava a dormir enquanto
+    // alguém tivesse o app aberto.
+    //
+    // Agora: busca uma vez, e o servidor avisa quando chega notificação nova. As duas
+    // direções ficam cobertas — subir vem do push, descer já era local em
+    // handleMarkRead/handleMarkAllRead.
     useEffect(() => {
         // Troca de grupo/conta: fecha o painel e reseta paginação
         setBellOpen(false);
@@ -319,24 +329,40 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
         setNotifPage(1);
         setNotifTotal(0);
 
+        if (!active?.userId) setUnreadCount(0);
+    }, [active?.userId, active?.activeGroupId]);
+
+    const fetchUnreadCount = useCallback(() => {
         if (!active?.userId) { setUnreadCount(0); return; }
 
-        const groupId = active.activeGroupId ?? undefined;
-
-        const fetchCount = () => {
-            NotificationsApi.unreadCount(groupId)
-                .then(res => setUnreadCount(res.data?.data ?? 0))
-                .catch(() => {});
-        };
-
-        fetchCount();
-        const interval = setInterval(fetchCount, 60_000);
-        window.addEventListener("focus", fetchCount);
-        return () => {
-            clearInterval(interval);
-            window.removeEventListener("focus", fetchCount);
-        };
+        NotificationsApi.unreadCount(active.activeGroupId ?? undefined)
+            .then(res => setUnreadCount(res.data?.data ?? 0))
+            .catch(() => {});
     }, [active?.userId, active?.activeGroupId]);
+
+    // Busca ao (re)conectar, não em intervalo. Cobre dois casos: o que chegou enquanto a
+    // conexão estava caída, e a correção de drift — handleMarkRead decrementa local e engole
+    // o erro do PATCH, então sem este resync um PATCH que falhou deixaria o badge errado.
+    const handleRealtimeNotification = useCallback((event: RealtimeNotification) => {
+        // O evento não carrega a contagem de propósito: calculá-la no servidor exigiria um
+        // COUNT por usuário do lote de push, recolocando no banco a carga que a mudança veio
+        // remover. Incrementar aqui é simétrico ao decremento que já existe.
+        //
+        // O filtro espelha EXATAMENTE o escopo de NotificationService.GetUnreadCountAsync:
+        // com groupId informado ele faz `Where(n => n.GroupId == groupId)`, o que exclui as
+        // notificações sem grupo. Se incrementássemos naquelas, o badge subiria acima do que a
+        // busca inicial contou e o próximo resync derrubaria de volta — drift visível.
+        const activeGroupId = active?.activeGroupId ?? null;
+
+        if (activeGroupId) {
+            if (!event.groupId) return;
+            if (event.groupId.toLowerCase() !== activeGroupId.toLowerCase()) return;
+        }
+
+        setUnreadCount(prev => prev + 1);
+    }, [active?.activeGroupId]);
+
+    useRealtimeNotifications(handleRealtimeNotification, fetchUnreadCount);
 
     function handleBellClick() {
         const nextOpen = !bellOpen;
@@ -370,14 +396,32 @@ export default function Topbar({ isMobile = false, onMenuClick }: Props) {
     }
 
     function handleMarkRead(id: string) {
-        NotificationsApi.markRead(id).catch(() => {});
+        // Atualiza otimista e desfaz se o PATCH falhar. Antes, o `.catch(() => {})` silencioso
+        // era coberto pelo poll de 60s, que em até um minuto trazia a contagem real de volta.
+        // Sem o poll, um erro engolido deixaria o badge errado até a próxima reconexão — que
+        // numa conexão estável pode não vir.
+        NotificationsApi.markRead(id).catch(() => {
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: false } : n));
+            setUnreadCount(prev => prev + 1);
+        });
+
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
     }
 
     function handleMarkAllRead() {
         const groupId = active?.activeGroupId ?? undefined;
-        NotificationsApi.markAllRead(groupId).catch(() => {});
+
+        // Snapshot antes de zerar: "marcar todas" não é reversível por dedução — sem guardar o
+        // estado anterior não há como voltar quais estavam lidas se o PATCH falhar.
+        const previousNotifications = notifications;
+        const previousUnreadCount = unreadCount;
+
+        NotificationsApi.markAllRead(groupId).catch(() => {
+            setNotifications(previousNotifications);
+            setUnreadCount(previousUnreadCount);
+        });
+
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         setUnreadCount(0);
     }
