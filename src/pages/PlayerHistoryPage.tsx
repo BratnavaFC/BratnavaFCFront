@@ -410,9 +410,6 @@ export default function PlayerHistoryPage() {
     // É o próprio jogador do usuário? (define o título e o tom da página)
     const isOwnPlayer = !!selectedPlayerId && selectedPlayerId === activePlayerId;
 
-    // Forma recente — últimos 5 jogos do recorte atual (mais antigo à esquerda)
-    const recentForm = useMemo(() => filtered.slice(0, 5).reverse(), [filtered]);
-
     /* ── Render ── */
     if (loadingPlayers) {
         return (
@@ -564,34 +561,6 @@ export default function PlayerHistoryPage() {
                                         value={<span className="inline-flex items-center gap-1 text-amber-400"><IconRenderer value={resolveIcon(_icons, 'mvp')} size={16} />{stats.mvps}</span>}
                                     />
                                 )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Forma recente — últimos jogos */}
-                    {!loading && recentForm.length > 0 && (
-                        <div className="flex items-center gap-2 mt-4">
-                            <span className="text-[10px] uppercase tracking-widest text-white/50 font-semibold shrink-0">
-                                Forma
-                            </span>
-                            <div className="flex gap-1">
-                                {recentForm.map(m => {
-                                    const r = getResult(m);
-                                    const my  = m.playerTeam === 1 ? m.teamAGoals : m.teamBGoals;
-                                    const opp = m.playerTeam === 1 ? m.teamBGoals : m.teamAGoals;
-                                    return (
-                                        <span
-                                            key={m.matchId}
-                                            title={`${fmtDate(m.playedAt)} · ${my}–${opp}`}
-                                            className={cx(
-                                                "w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-black shadow-sm",
-                                                resultClass(r)
-                                            )}
-                                        >
-                                            {resultLabel(r)}
-                                        </span>
-                                    );
-                                })}
                             </div>
                         </div>
                     )}
