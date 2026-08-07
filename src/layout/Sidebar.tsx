@@ -78,7 +78,6 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
     const groups: NavGroup[] = useMemo(() => {
         const adminItems: Item[] = isGroupAdm
             ? [
-                { to: "/app/spotlight",       label: "Spotlight",      icon: Presentation },
                 { to: "/app/birthday-status", label: "Aniversários",   icon: Cake },
                 { to: "/app/schedules",       label: "Agendamentos",   icon: CalendarClock },
                 { to: "/app/settings",        label: "Configurações",  icon: Settings },
@@ -98,8 +97,9 @@ export default function Sidebar({ open, pinned, onToggle, onClose }: any) {
                     { to: "/app/history",  label: "Histórico",  icon: History },
                     { to: "/app/calendar", label: "Calendário", icon: CalendarCheck },
                     ...(canSeeVisualStats ? [{ to: `/app/groups/${activeGrpId}/visual-stats`, label: "Estatísticas", icon: BarChart3 }] : []),
-                    ...(activeGrpId && isGroupAdm ? [{ to: `/app/groups/${activeGrpId}/player-history`, label: "Meu Histórico", icon: TrendingUp }] : []),
-                    ...(activeGrpId && isGroupAdm ? [{ to: '/app/team-builder', label: 'Monte seu Time', icon: Trophy }] : []),
+                    ...(activeGrpId ? [{ to: `/app/groups/${activeGrpId}/player-history`, label: "Meu Histórico", icon: TrendingUp }] : []),
+                    { to: '/app/team-builder', label: 'Monte seu Time', icon: Trophy },
+                    { to: '/app/spotlight',    label: 'Spotlight',      icon: Presentation },
                 ],
             },
             {

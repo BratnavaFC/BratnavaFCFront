@@ -307,17 +307,6 @@ function PlayerSelector({
 export default function TeamBuilderPage() {
     const active   = useAccountStore(s => s.getActive());
     const groupId  = active?.activeGroupId;
-    const isAdmin  = active?.activeGroupIsAdmin
-                  || active?.roles?.includes('Admin')
-                  || active?.roles?.includes('GodMode');
-
-    if (!isAdmin) {
-        return (
-            <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400 text-sm">
-                Acesso restrito a administradores do grupo.
-            </div>
-        );
-    }
 
     const [allPlayers, setAllPlayers] = useState<TeamBuilderPlayerDto[]>([]);
     const [selected,   setSelected]   = useState<TeamBuilderPlayerDto[]>([]);
