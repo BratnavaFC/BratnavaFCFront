@@ -1,9 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, X, ChevronRight, MapPin } from 'lucide-react';
 import { GroupsApi, TeamBuilderApi } from '../api/endpoints';
 import type { TeamBuilderStatsDto, TeamBuilderPlayerDto } from '../api/endpoints';
 import { useAccountStore } from '../auth/accountStore';
+import { toUtcDate } from '../utils/dateUtils';
 import { toast } from 'sonner';
+
+// ─── Small helpers (match history) ─────────────────────────────────────────────
+
+function ColorDot({ hex }: { hex?: string | null }) {
+    return (
+        <span
+            className="h-2.5 w-2.5 rounded-full inline-block border border-black/20 shrink-0"
+            style={{ backgroundColor: hex || '#64748b' }}
+        />
+    );
+}
+
+function fmtShort(iso: string) {
+    return toUtcDate(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
 
 // ─── Posições no campo (x e y em %) ──────────────────────────────────────────
 
@@ -151,7 +168,9 @@ function FootballField({
 
 // ─── Stats panel ──────────────────────────────────────────────────────────────
 
-function StatsPanel({ stats }: { stats: TeamBuilderStatsDto }) {
+function StatsPanel({ stats, groupId }: { stats: TeamBuilderStatsDto; groupId?: string | null }) {
+    const navigate = useNavigate();
+
     if (stats.neverPlayedTogether) {
         return (
             <div className="rounded-2xl bg-slate-900 dark:bg-slate-800 border border-slate-700 p-6 text-center space-y-2 animate-[fadeUp_.3s_ease_both]">
@@ -164,16 +183,52 @@ function StatsPanel({ stats }: { stats: TeamBuilderStatsDto }) {
 
     const total = stats.wins + stats.draws + stats.losses;
     const winPct = total > 0 ? Math.round(stats.wins / total * 100) : 0;
+    const points = stats.wins * 3 + stats.draws;
+    const aproveitamento = total > 0 ? Math.round(points / (total * 3) * 100) : 0;
+    const saldo = stats.goalsScored - stats.goalsConceded;
+    const mediaFeitos = total > 0 ? (stats.goalsScored / total).toFixed(1) : '0';
+    const mediaSofridos = total > 0 ? (stats.goalsConceded / total).toFixed(1) : '0';
+
+    const nSel = stats.players.length;
+    const grupoNoun = nSel <= 2 ? 'Dupla' : nSel === 3 ? 'Trio' : nSel === 4 ? 'Quarteto' : 'Quinteto';
+    const lowSample = stats.totalMatches < 3;
+
+    // Veredito de química baseado no aproveitamento (mais justo que win% com empates)
+    const verdict =
+        aproveitamento >= 70 ? { emoji: '🔥', label: `${grupoNoun} afiado`,   color: 'text-emerald-400' } :
+        aproveitamento >= 55 ? { emoji: '💪', label: 'Boa entrosagem',        color: 'text-emerald-400' } :
+        aproveitamento >= 45 ? { emoji: '⚖️', label: 'Equilíbrio',            color: 'text-amber-400'   } :
+        aproveitamento >= 30 ? { emoji: '🌱', label: 'Ainda entrosando',      color: 'text-orange-400'  } :
+                               { emoji: '😅', label: 'Não engrenam (ainda)',  color: 'text-rose-400'    };
+
+    const seg = (v: number) => (total > 0 ? (v / total) * 100 : 0);
 
     return (
         <div className="space-y-3 animate-[fadeUp_.3s_ease_both]">
-            {/* Header */}
-            <div className="flex items-center gap-2 px-1">
-                <span className="text-lg">📊</span>
-                <span className="font-bold text-slate-800 dark:text-white text-sm">
-                    {stats.totalMatches} partida{stats.totalMatches !== 1 ? 's' : ''} juntos
-                </span>
-                <span className="ml-auto text-xs text-slate-400">{winPct}% de vitória</span>
+            {/* Veredito + medidor de química */}
+            <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                    <span className="text-3xl leading-none">{verdict.emoji}</span>
+                    <div className="min-w-0">
+                        <div className={`font-black leading-tight ${verdict.color}`}>{verdict.label}</div>
+                        <div className="text-[11px] text-slate-400">
+                            {stats.totalMatches} partida{stats.totalMatches !== 1 ? 's' : ''} juntos
+                            {lowSample && <span className="text-amber-400/80"> · poucos jogos</span>}
+                        </div>
+                    </div>
+                    <div className="ml-auto text-right shrink-0">
+                        <div className="text-2xl font-black text-white leading-none">{aproveitamento}%</div>
+                        <div className="text-[10px] text-slate-400">aproveitamento</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{winPct}% vitórias</div>
+                    </div>
+                </div>
+
+                {/* Barra segmentada V / E / D */}
+                <div className="flex h-2.5 rounded-full overflow-hidden bg-white/5">
+                    <div className="bg-green-500 transition-all" style={{ width: `${seg(stats.wins)}%` }} />
+                    <div className="bg-amber-500 transition-all" style={{ width: `${seg(stats.draws)}%` }} />
+                    <div className="bg-red-500 transition-all"   style={{ width: `${seg(stats.losses)}%` }} />
+                </div>
             </div>
 
             {/* W / D / L */}
@@ -191,26 +246,69 @@ function StatsPanel({ stats }: { stats: TeamBuilderStatsDto }) {
                 ))}
             </div>
 
-            {/* Goals scoreboard */}
-            <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 px-4 py-3 flex items-center justify-center gap-4">
-                <div className="text-center">
-                    <div className="text-2xl">⚽</div>
-                    <div className="text-2xl font-black text-white">{stats.goalsScored}</div>
-                    <div className="text-[10px] text-slate-400">marcados</div>
+            {/* Goals scoreboard — placar do TIME (soma das partidas juntos) */}
+            <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 px-4 py-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 text-center mb-2">
+                    Gols do time · nas partidas juntos
                 </div>
-                <div className="text-slate-600 text-2xl font-thin">|</div>
-                <div className="text-center">
-                    <div className="text-2xl">🥅</div>
-                    <div className="text-2xl font-black text-white">{stats.goalsConceded}</div>
-                    <div className="text-[10px] text-slate-400">sofridos</div>
+                <div className="flex items-stretch justify-center gap-3">
+                    <div className="text-center flex-1">
+                        <div className="text-2xl">⚽</div>
+                        <div className="text-2xl font-black text-white">{stats.goalsScored}</div>
+                        <div className="text-[10px] text-slate-400">a favor</div>
+                        <div className="text-[10px] text-slate-500">{mediaFeitos}/jogo</div>
+                    </div>
+                    <div className="w-px bg-white/10" />
+                    <div className="text-center flex-1 flex flex-col justify-center">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Saldo</div>
+                        <div className={`text-3xl font-black leading-none ${saldo > 0 ? 'text-emerald-400' : saldo < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                            {saldo > 0 ? '+' : ''}{saldo}
+                        </div>
+                    </div>
+                    <div className="w-px bg-white/10" />
+                    <div className="text-center flex-1">
+                        <div className="text-2xl">🥅</div>
+                        <div className="text-2xl font-black text-white">{stats.goalsConceded}</div>
+                        <div className="text-[10px] text-slate-400">sofridos</div>
+                        <div className="text-[10px] text-slate-500">{mediaSofridos}/jogo</div>
+                    </div>
                 </div>
             </div>
+
+            {/* Quebra por jogador */}
+            {stats.playerBreakdown.length > 0 && (
+                <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 p-4 space-y-2">
+                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1 mb-1">
+                        👥 <span>Por jogador</span>
+                    </div>
+                    {stats.playerBreakdown.map(p => {
+                        const wp = Math.round(p.winRate * 100);
+                        const wpColor = wp >= 60 ? 'text-emerald-400' : wp >= 45 ? 'text-amber-400' : 'text-rose-400';
+                        return (
+                            <div key={p.id} className="flex items-center gap-2 text-sm">
+                                <span className="flex-1 truncate text-white font-semibold">
+                                    {p.isGoalkeeper ? '🧤 ' : ''}{p.name}
+                                </span>
+                                <div className="flex items-center gap-2.5 text-xs text-slate-300 tabular-nums shrink-0">
+                                    {p.goals > 0 && <span title="Gols">⚽ {p.goals}</span>}
+                                    {p.assists > 0 && <span title="Assistências">🅰️ {p.assists}</span>}
+                                    {p.mvps > 0 && <span title="MVPs" className="text-amber-400">🏅 {p.mvps}</span>}
+                                </div>
+                                <span className={`text-xs font-bold w-9 text-right tabular-nums ${wpColor}`} title="Aproveitamento de vitórias">{wp}%</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Assists */}
             {stats.assistPairs.length > 0 && (
                 <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 p-4 space-y-2">
-                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                        🎯 <span>Assistências entre eles</span>
+                    <div>
+                        <div className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                            🎯 <span>Assistências entre eles</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5">passes para gol de um selecionado para outro</p>
                     </div>
                     {stats.assistPairs.map((a, i) => (
                         <div key={i} className="flex items-center gap-2 text-sm">
@@ -220,6 +318,46 @@ function StatsPanel({ stats }: { stats: TeamBuilderStatsDto }) {
                             <span className="ml-auto bg-slate-700 text-slate-200 text-xs font-bold px-2 py-0.5 rounded-full">{a.count}x</span>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Histórico da formação — partidas em que jogaram juntos */}
+            {stats.matches.length > 0 && (
+                <div className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 p-4 space-y-1">
+                    <div className="text-xs font-bold text-slate-300 flex items-center gap-1 mb-1">
+                        📅 <span>Partidas juntos</span>
+                        <span className="ml-auto text-[10px] text-slate-500 font-normal">{stats.matches.length}</span>
+                    </div>
+                    {stats.matches.map(m => {
+                        const badge = m.result > 0
+                            ? { t: 'V', c: 'bg-green-500' }
+                            : m.result === 0
+                                ? { t: 'E', c: 'bg-slate-500' }
+                                : { t: 'D', c: 'bg-red-500' };
+                        return (
+                            <button
+                                key={m.matchId}
+                                type="button"
+                                onClick={() => groupId && navigate(`/app/history/${groupId}/${m.matchId}`)}
+                                disabled={!groupId}
+                                className="w-full flex items-center gap-2 text-left rounded-lg px-2 py-1.5 hover:bg-white/5 transition disabled:cursor-default"
+                            >
+                                <span className="text-[11px] text-slate-400 tabular-nums w-11 shrink-0">{fmtShort(m.playedAt)}</span>
+                                <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-black text-white shrink-0 ${badge.c}`}>{badge.t}</span>
+                                <span className="inline-flex items-center gap-1 shrink-0">
+                                    <ColorDot hex={m.colorForHex} />
+                                    <span className="text-sm font-bold text-white tabular-nums">{m.goalsFor}–{m.goalsAgainst}</span>
+                                    <ColorDot hex={m.colorAgainstHex} />
+                                </span>
+                                {m.placeName && (
+                                    <span className="text-[10px] text-slate-500 truncate flex items-center gap-0.5 flex-1 min-w-0">
+                                        <MapPin size={9} className="shrink-0" />{m.placeName}
+                                    </span>
+                                )}
+                                <ChevronRight size={14} className="text-slate-600 shrink-0 ml-auto" />
+                            </button>
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -289,17 +427,6 @@ function PlayerSelector({
 export default function TeamBuilderPage() {
     const active   = useAccountStore(s => s.getActive());
     const groupId  = active?.activeGroupId;
-    const isAdmin  = active?.activeGroupIsAdmin
-                  || active?.roles?.includes('Admin')
-                  || active?.roles?.includes('GodMode');
-
-    if (!isAdmin) {
-        return (
-            <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400 text-sm">
-                Acesso restrito a administradores do grupo.
-            </div>
-        );
-    }
 
     const [allPlayers, setAllPlayers] = useState<TeamBuilderPlayerDto[]>([]);
     const [selected,   setSelected]   = useState<TeamBuilderPlayerDto[]>([]);
@@ -384,7 +511,7 @@ export default function TeamBuilderPage() {
                     </div>
 
                     {/* Stats */}
-                    {stats && <StatsPanel stats={stats} />}
+                    {stats && <StatsPanel stats={stats} groupId={groupId} />}
                 </div>
 
                 {/* ── Desktop layout ── */}
@@ -406,7 +533,7 @@ export default function TeamBuilderPage() {
                     <div className="flex flex-col gap-3">
                         <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Estatísticas</p>
                         {stats
-                            ? <StatsPanel stats={stats} />
+                            ? <StatsPanel stats={stats} groupId={groupId} />
                             : (
                                 <div className="flex flex-col items-center justify-center gap-3 h-48 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 dark:text-slate-600">
                                     <span className="text-3xl opacity-50">📊</span>

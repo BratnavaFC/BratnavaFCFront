@@ -498,6 +498,18 @@ export const TeamBuilderApi = {
 
 export type TeamBuilderPlayerDto = { id: string; name: string; isGoalkeeper: boolean };
 export type AssistPairDto        = { assisterId: string; assisterName: string; scorerId: string; scorerName: string; count: number };
+export type PlayerBreakdownDto   = {
+  id: string; name: string; isGoalkeeper: boolean;
+  games: number; wins: number; draws: number; losses: number; winRate: number;
+  goals: number; assists: number; mvps: number;
+};
+export type FormationMatchDto    = {
+  matchId: string; playedAt: string;
+  goalsFor: number; goalsAgainst: number;
+  placeName?: string | null;
+  colorForHex?: string | null; colorAgainstHex?: string | null;
+  result: number; // 1 vitória, 0 empate, -1 derrota
+};
 export type TeamBuilderStatsDto  = {
   neverPlayedTogether:  boolean;
   totalMatches:         number;
@@ -509,6 +521,8 @@ export type TeamBuilderStatsDto  = {
   goalsScoredByPlayers: number;
   assistPairs:          AssistPairDto[];
   players:              TeamBuilderPlayerDto[];
+  playerBreakdown:      PlayerBreakdownDto[];
+  matches:              FormationMatchDto[];
 };
 
 export const GodModeApi = {
